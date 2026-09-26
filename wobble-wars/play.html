@@ -4137,20 +4137,21 @@ function raiseUndead(e){
   tone(160, 0.35, 'sawtooth', 0.08, 70); tone(90, 0.5, 'sine', 0.10, 45, 0.08);
 }
 
-/* ---- the phoenix's beam: one tick of it. Stays on its target until that target is
-   launched or dies, then jumps to the next one in line; the base if nobody is left ---- */
+/* ---- the phoenix's beam: one tick of it. Always on the NEAREST foe: if its target is
+   launched, dies, or gets shoved back behind someone closer, the beam jumps. The base if nobody is left ---- */
 function beamTick(u, d){
   const reach = d.beam.reach!=null ? d.beam.reach : (d.r + d.rng)*(u.rs||1);   // the phoenix's is unlimited
-  let t = u.beamT;
-  if(!t || t.dead || t.dying || t.air || Math.abs(t.x-u.x) > reach){
-    t = null; let bd = 1e9;
-    for(const o of B.units){
-      if(o.team===u.team || o.dead || o.dying || o.air) continue;
-      const dd = Math.abs(o.x-u.x);
-      if(dd <= reach && dd < bd){ bd = dd; t = o; }
-    }
-    u.beamT = t;
+  let near = null, bd = 1e9;
+  for(const o of B.units){
+    if(o.team===u.team || o.dead || o.dying || o.air) continue;
+    const dd = Math.abs(o.x-u.x);
+    if(dd <= reach && dd < bd){ bd = dd; near = o; }
   }
+  let t = u.beamT;
+  const still = t && !t.dead && !t.dying && !t.air && Math.abs(t.x-u.x) <= reach;
+  // a little give (16px) so it doesn't flicker between two blobs standing side by side
+  if(!still || (near && near!==t && Math.abs(t.x-u.x) - bd > 16)) t = near;
+  u.beamT = t;
   const dmg = unitDmg(u);
   if(t){
     dmgUnit(t, dmg, u.team, u);
@@ -6300,15 +6301,6 @@ function drawMenu(dt){
     X.beginPath(); X.moveTo(r*0.25,-r*1.05); X.lineTo(-r*0.55,r*0.15); X.lineTo(-r*0.02,r*0.15);
     X.lineTo(-r*0.30,r*1.05); X.lineTo(r*0.60,-r*0.25); X.lineTo(r*0.05,-r*0.25); X.closePath(); X.fill();
   }, ()=>{ if(save.cheat){ SFX.deny(); return; } openModal('cheat'); });
-  if(document.fullscreenEnabled || document.webkitFullscreenEnabled){
-    iconBtn(366, iy, isz, isFS()? 'EXIT FULL' : 'FULL SCREEN', (r)=>{
-      X.strokeStyle='#ffe9b8'; X.lineWidth=r*0.24; X.lineCap='round'; X.lineJoin='round';
-      const a=r*0.95, b=r*0.40, o=1;
-      for(const [sx,sy] of [[-1,-1],[1,-1],[1,1],[-1,1]]){
-        X.beginPath(); X.moveTo(sx*a, sy*(a-b*o)); X.lineTo(sx*a, sy*a); X.lineTo(sx*(a-b*o), sy*a); X.stroke();
-      }
-    }, ()=>{ toggleFS(); });
-  }
 
   // ---- capsule shelf, bottom centre ----
   const shx=330, shy=430, shw=400, shh=74;
