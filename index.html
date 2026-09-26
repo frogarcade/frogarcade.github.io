@@ -3,90 +3,194 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Free Games</title>
-<meta name="description" content="Free games to play in your browser.">
+<title>frogarcade</title>
+<meta name="description" content="Browser games by frogarcade. Free to play, nothing to install.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐸</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@600;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#101522; --bg2:#182036; --card:#1d2640; --line:#2c3758;
-    --text:#eef2ff; --muted:#9aa6c8; --accent:#ffc83d; --accent2:#ff8a2b;
+    --bg:#0b0b10; --panel:#121219; --panel2:#171721; --line:#ffffff14; --line2:#ffffff24;
+    --text:#f4f4f8; --muted:#a2a2b5; --dim:#6d6d80;
+    --accent:#8b8cff; --accent2:#b9b3ff; --green:#3ddc84;
   }
   *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
   html,body{margin:0}
   body{
-    background:radial-gradient(1200px 600px at 50% -200px,#26345c 0%,var(--bg) 70%) fixed,var(--bg);
-    color:var(--text); font-family:'Nunito',system-ui,sans-serif; min-height:100vh;
+    background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden;
+    font-family:'Space Grotesk',system-ui,sans-serif; -webkit-font-smoothing:antialiased;
   }
-  header{text-align:center; padding:56px 16px 28px}
-  h1{
-    font-family:'Lilita One',sans-serif; font-weight:400; letter-spacing:1px;
-    font-size:clamp(42px,8vw,76px); margin:0; line-height:1;
-    background:linear-gradient(180deg,#fff3b0,var(--accent) 45%,var(--accent2));
-    -webkit-background-clip:text; background-clip:text; color:transparent;
-    filter:drop-shadow(0 4px 0 #0006);
+  /* soft glow + faint grid behind the hero */
+  body::before{
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:-1;
+    background:
+      radial-gradient(900px 480px at 50% -120px,#3a3a8a55,transparent 70%),
+      radial-gradient(600px 400px at 15% 20%,#1f2a5a33,transparent 70%);
   }
-  header p{color:var(--muted); font-size:18px; margin:14px 0 0}
-  main{max-width:1100px; margin:0 auto; padding:12px 16px 64px;
-    display:grid; gap:24px; grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr))}
+  body::after{
+    content:""; position:absolute; left:0; right:0; top:0; height:900px; pointer-events:none; z-index:-1;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:64px 64px; opacity:.35;
+    mask-image:radial-gradient(ellipse 70% 60% at 50% 0%,#000 30%,transparent 75%);
+    -webkit-mask-image:radial-gradient(ellipse 70% 60% at 50% 0%,#000 30%,transparent 75%);
+  }
+  a{color:inherit}
+  .wrap{max-width:1240px; margin:0 auto; padding:0 16px}
+
+  /* nav */
+  nav{position:sticky; top:12px; z-index:10; margin-top:12px}
+  .bar{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:10px 12px 10px 18px; border:1px solid var(--line2); border-radius:22px;
+    background:#101017b3; backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+  }
+  .brand{display:flex; align-items:center; gap:10px; text-decoration:none; font-weight:600; font-size:18px; letter-spacing:-.2px}
+  .logo{width:30px; height:30px; border-radius:9px; display:grid; place-items:center; font-size:18px;
+    background:linear-gradient(135deg,#2c2c5c,#1a1a30); border:1px solid var(--line2)}
+  .links{display:flex; gap:6px}
+  .links a{text-decoration:none; color:var(--muted); font-size:15px; padding:8px 14px; border-radius:14px; transition:.15s}
+  .links a:hover{color:var(--text); background:#ffffff0d}
+
+  /* hero */
+  .hero{text-align:center; padding:92px 0 72px}
+  .pill{
+    display:inline-flex; align-items:center; gap:10px; padding:9px 18px; border-radius:99px;
+    border:1px solid var(--line2); background:#ffffff08; color:var(--muted);
+    font-size:13px; letter-spacing:3px; text-transform:uppercase;
+  }
+  .dot{width:8px; height:8px; border-radius:50%; background:var(--green); box-shadow:0 0 0 4px #3ddc8422, 0 0 12px var(--green);
+    animation:pulse 2s ease-in-out infinite}
+  @keyframes pulse{50%{box-shadow:0 0 0 7px #3ddc8411, 0 0 18px var(--green)}}
+  h1{font-size:clamp(52px,10vw,128px); line-height:.95; letter-spacing:-.045em; font-weight:700; margin:38px 0 26px}
+  h1 .grad{background:linear-gradient(180deg,var(--accent2),var(--accent)); -webkit-background-clip:text; background-clip:text; color:transparent}
+  .lead{color:var(--muted); font-size:clamp(17px,2.1vw,21px); line-height:1.55; max-width:680px; margin:0 auto}
+  .stats{display:inline-flex; margin-top:44px; border:1px solid var(--line2); border-radius:22px; background:#ffffff06; overflow:hidden}
+  .stats div{padding:15px 26px; color:var(--muted); font-size:17px}
+  .stats div + div{border-left:1px solid var(--line2)}
+  .stats b{color:var(--text); font-weight:600}
+
+  /* section label */
+  .label{display:flex; align-items:center; gap:22px; color:var(--dim); font-size:14px; letter-spacing:4px; text-transform:uppercase; margin:0 0 28px}
+  .label::after{content:""; flex:1; height:1px; background:linear-gradient(90deg,var(--line2),transparent)}
+
+  /* cards */
+  .grid{display:grid; gap:24px; grid-template-columns:repeat(auto-fill,minmax(min(340px,100%),1fr)); padding-bottom:88px}
   .card{
-    background:var(--card); border:1px solid var(--line); border-radius:18px; overflow:hidden;
-    display:flex; flex-direction:column; text-decoration:none; color:inherit;
-    box-shadow:0 10px 30px #0005; transition:transform .15s ease, box-shadow .15s ease, border-color .15s;
+    position:relative; display:flex; flex-direction:column; text-decoration:none;
+    padding:14px; border-radius:26px; border:1px solid var(--line2);
+    background:linear-gradient(180deg,var(--panel2),var(--panel));
+    transition:transform .2s ease, border-color .2s ease, box-shadow .2s ease;
   }
-  .card:hover,.card:focus-visible{transform:translateY(-6px); border-color:var(--accent);
-    box-shadow:0 18px 40px #0008; outline:none}
-  .shot{aspect-ratio:16/9; width:100%; object-fit:cover; display:block; background:var(--bg2)}
-  .body{padding:18px 20px 20px; display:flex; flex-direction:column; gap:8px; flex:1}
-  .tag{align-self:flex-start; font-size:12px; font-weight:800; letter-spacing:1px; text-transform:uppercase;
-    color:var(--bg); background:var(--accent); padding:3px 9px; border-radius:99px}
-  h2{font-family:'Lilita One',sans-serif; font-weight:400; font-size:28px; margin:2px 0 0; letter-spacing:.5px}
-  .body p{margin:0; color:var(--muted); line-height:1.45; flex:1}
-  .play{margin-top:10px; text-align:center; font-family:'Lilita One',sans-serif; font-size:22px; letter-spacing:1px;
-    color:#3a2400; background:linear-gradient(180deg,#ffe07a,var(--accent) 50%,var(--accent2));
-    padding:10px; border-radius:12px; box-shadow:0 4px 0 #a4520c}
-  .card:hover .play{filter:brightness(1.08)}
-  footer{text-align:center; color:var(--muted); font-size:14px; padding:0 16px 40px}
+  .card:hover,.card:focus-visible{transform:translateY(-4px); border-color:#8b8cff66; outline:none;
+    box-shadow:0 24px 60px -20px #6f70ff55}
+  .thumb{position:relative; aspect-ratio:16/9; border-radius:16px; overflow:hidden; background:#000}
+  .thumb img{width:100%; height:100%; object-fit:cover; display:block; transition:transform .5s ease}
+  .card:hover .thumb img{transform:scale(1.05)}
+  .thumb::after{content:""; position:absolute; inset:0; background:linear-gradient(180deg,transparent 55%,#0b0b10aa)}
+  .badge{
+    position:absolute; top:14px; left:14px; z-index:1; display:inline-flex; align-items:center; gap:8px;
+    padding:7px 14px 7px 10px; border-radius:99px; font-size:13px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase;
+    background:#0b0b10c4; border:1px solid var(--line2); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+  }
+  .badge i{font-style:normal; font-size:16px}
+  .info{padding:20px 8px 6px; display:flex; flex-direction:column; gap:10px; flex:1}
+  .info h2{margin:0; font-size:26px; letter-spacing:-.5px; font-weight:600}
+  .info p{margin:0; color:var(--muted); line-height:1.55; font-size:16px; flex:1}
+  .foot{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:8px}
+  .tags{display:flex; gap:6px; flex-wrap:wrap}
+  .tags span{font-size:12.5px; color:var(--muted); padding:5px 10px; border-radius:99px; border:1px solid var(--line)}
+  .play{flex:none; font-weight:600; font-size:15px; padding:9px 16px; border-radius:14px; color:#0b0b10;
+    background:linear-gradient(180deg,#c9c4ff,var(--accent)); transition:.2s}
+  .card:hover .play{box-shadow:0 0 24px #8b8cff88}
+
+  footer{border-top:1px solid var(--line); color:var(--dim); font-size:14px; padding:26px 0 40px;
+    display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap}
+
+  @media (max-width:560px){
+    .hero{padding:64px 0 52px}
+    .stats div{padding:12px 16px; font-size:15px}
+    .links a{padding:8px 10px}
+  }
 </style>
 </head>
 <body>
-<header>
-  <h1>FREE GAMES</h1>
-  <p>Click a game to play. No downloads, no sign-ups.</p>
-</header>
-
-<main>
-  <a class="card" href="wobble-wars/">
-    <img class="shot" src="img/wobble-wars.jpg" alt="Wobble Wars main menu">
-    <div class="body">
-      <span class="tag">Strategy</span>
-      <h2>Wobble Wars</h2>
-      <p>Deploy blobs, charge the cannon and push back the slimes across 15 levels of bosses, evolutions and capsules.</p>
-      <div class="play">PLAY</div>
+<div class="wrap">
+  <nav>
+    <div class="bar">
+      <a class="brand" href="#top"><span class="logo">🐸</span>frogarcade</a>
+      <div class="links"><a href="#games">Games</a></div>
     </div>
-  </a>
+  </nav>
 
-  <a class="card" href="wrestling-legends/">
-    <img class="shot" src="img/wrestling-legends.jpg" alt="Wrestling Legends main menu">
-    <div class="body">
-      <span class="tag">3D Fighting</span>
-      <h2>Wrestling Legends</h2>
-      <p>Step into the ring and fight your way up the amateur circuit. Take on challenges and become a legend.</p>
-      <div class="play">PLAY</div>
+  <header class="hero" id="top">
+    <span class="pill"><span class="dot"></span>Playable in your browser</span>
+    <h1>Games I <span class="grad">made.</span></h1>
+    <p class="lead">Browser games you can play right here. Nothing to install, nothing to sign up for. Your progress saves automatically.</p>
+    <div class="stats">
+      <div><b>3</b> games</div>
+      <div><b>0</b> installs</div>
+      <div><b>100%</b> free</div>
     </div>
-  </a>
+  </header>
 
-  <a class="card" href="anime-card-clash/">
-    <img class="shot" src="img/anime-card-clash.jpg" alt="Anime Card Clash main menu">
-    <div class="body">
-      <span class="tag">Cards</span>
-      <h2>Anime Card Clash</h2>
-      <p>Roll for cards, build your deck and battle through the story, towers and challenges.</p>
-      <div class="play">PLAY</div>
+  <section id="games">
+    <div class="label">Games</div>
+    <div class="grid">
+
+      <a class="card" href="wobble-wars/">
+        <div class="thumb">
+          <span class="badge"><i>🔥</i>Featured</span>
+          <img src="img/wobble-wars.jpg" alt="Wobble Wars main menu">
+        </div>
+        <div class="info">
+          <h2>Wobble Wars</h2>
+          <p>Deploy blobs, charge the cannon and push back the slimes across 15 levels of bosses, evolutions and capsules.</p>
+          <div class="foot">
+            <div class="tags"><span>Strategy</span><span>Bosses</span></div>
+            <span class="play">Play →</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="card" href="wrestling-legends/">
+        <div class="thumb">
+          <span class="badge"><i>🥊</i>3D</span>
+          <img src="img/wrestling-legends.jpg" alt="Wrestling Legends main menu">
+        </div>
+        <div class="info">
+          <h2>Wrestling Legends</h2>
+          <p>Step into the ring and fight your way up the amateur circuit. Take on challenges and become a legend.</p>
+          <div class="foot">
+            <div class="tags"><span>Fighting</span><span>3D</span></div>
+            <span class="play">Play →</span>
+          </div>
+        </div>
+      </a>
+
+      <a class="card" href="anime-card-clash/">
+        <div class="thumb">
+          <span class="badge"><i>🃏</i>Cards</span>
+          <img src="img/anime-card-clash.jpg" alt="Anime Card Clash main menu">
+        </div>
+        <div class="info">
+          <h2>Anime Card Clash</h2>
+          <p>Roll for cards, build your deck and battle through the story, towers and challenges.</p>
+          <div class="foot">
+            <div class="tags"><span>Cards</span><span>Collecting</span></div>
+            <span class="play">Play →</span>
+          </div>
+        </div>
+      </a>
+
     </div>
-  </a>
-</main>
+  </section>
 
-<footer>Made with love. Your progress saves in your browser.</footer>
+  <footer>
+    <span>© 2026 frogarcade</span>
+    <span>Made with a lot of evenings 🐸</span>
+  </footer>
+</div>
 </body>
 </html>
