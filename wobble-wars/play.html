@@ -307,6 +307,9 @@ const U = {
   golden:{nm:'GOLDEN BLOB', team:1, hp:4, dmg:8.8, rate:1.5, spd:42, rng:56, r:26, cost:125, cd:12,
           hpUp:1, dmgUp:1.8, wide:1, swT:0.34, hitP:0.48, hitCap:1,      // every hit it takes does exactly 1
           c:['#fff7bc','#ffc536','#a77913']},
+  doctor:{nm:'DOCTOR BLOB', abil:[{t:'immune', vs:['toxic']}], team:1, hp:360, dmg:55, rate:1.2, spd:44, rng:70, r:27, cost:600, cd:15,
+          hpUp:72, dmgUp:11, wide:1, swT:0.50, hitP:0.55, needle:1, kbStep:0.34,
+          c:['#e8ffec','#5fd47a','#2a7a44']},        // a jab with the needle; the oak's poison can't touch him
   baby:  {nm:'BABY BLOB', abil:[{t:'weak', vs:['dark','fire']}], team:1, hp:35, dmg:7, rate:1.0, spd:84, rng:48, r:18, cost:65, cd:1.6,
           hpUp:7, dmgUp:1.4, wide:1, swT:0.30, hitP:0.45, baby:1, kbStep:0.5,
           c:['#e6f9ff','#6fd8ef','#357f96']},
@@ -361,13 +364,13 @@ const U = {
   angel: {nm:'ANGELIC DEMON', traits:['dark','angelic'], team:-1, hp:550, dmg:160, rate:1.4, spd:58, rng:96, r:34, wide:1.06,
           swT:1.00, hitP:0.62, hammer:1, angel:1, kbStep:0.25, aoe:96, aoeOff:48,
           c:['#f6ecff','#8a5ad0','#3a2160']},
-  blower:{nm:'THE BLOWER', team:-1, hp:420, dmg:56, rate:4.0, spd:16, rng:250, r:52, wide:1.25,
+  blower:{nm:'THE BLOWER', traits:['normal'], team:-1, hp:420, dmg:56, rate:4.0, spd:16, rng:250, r:52, wide:1.25,
           swT:1.00, hitP:0.62, aoe:230, aoeOff:120, cloud:1, boss:1, kbStep:0.2,
           c:['#e6efff','#93a6c3','#4d5b70']},
   worker:{nm:'WORKER SLIME', traits:['normal'], team:-1, hp:0.7, dmg:0, rate:3.0, spd:34, rng:40, r:22, wide:1,
           swT:0.85, hitP:0.55, worker:1, summon:'barrier', throwArc:1,
           c:['#ffe9a8','#f2a81f','#8a5a06']},
-  barrier:{nm:'BARRICADE', team:-1, hp:105, dmg:0, rate:99, spd:0, rng:0, r:26, wide:1.25,
+  barrier:{nm:'BARRICADE', traits:['normal'], team:-1, hp:105, dmg:0, rate:99, spd:0, rng:0, r:26, wide:1.25,
           swT:0.3, hitP:0.5, barrier:1, still:1, noKB:1, hpbar:1,
           c:['#ffd9a0','#ef7f2a','#7a3a08']},
   qb:    {nm:'QUARTERBACK SLIME', team:-1, hp:336, dmg:23.5, rate:0.045, spd:0, rng:56, r:34, wide:1.12,
@@ -399,10 +402,10 @@ const U = {
   magmalord:{nm:'MAGMA LORD', traits:['fire'], team:-1, hp:84, dmg:140, rate:0.6, spd:280, rng:36, r:42, wide:1,
           swT:0.30, hitP:0.55, suicide:1, molten:1, elite:1,
           c:['#ffe3ac','#ff6f2a','#883a19']},                       // a magma slime, bigger
-  scrapjaw:{nm:'SCRAPJAW', team:-1, hp:490, dmg:49, rate:3.2, spd:18, rng:96, r:50, wide:1.18,
+  scrapjaw:{nm:'SCRAPJAW', traits:['normal'], team:-1, hp:490, dmg:49, rate:3.2, spd:18, rng:96, r:50, wide:1.18,
           swT:0.85, hitP:0.62, jaw:1, boss:1, kbStep:0.25, aoe:130, aoeOff:70,
           c:['#f0c79a','#b06a34','#5e3010']},
-  oak:   {nm:'THE OLD OAK', team:-1, hp:665, dmg:59, rate:4.0, spd:10, rng:150, r:56, wide:1.05,
+  oak:   {nm:'THE OLD OAK', traits:['toxic'], poison:{mul:1, t:3}, team:-1, hp:665, dmg:29.5, rate:4.0, spd:10, rng:150, r:56, wide:1.05,
           swT:1.00, hitP:0.52, oak:1, boss:1, kbStep:0.2, aoe:180, aoeOff:100, thorns:14, dmgTake:0.75,
           c:['#dfd0a8','#7d6136','#3f2d14']},
   assassin:{nm:'ASSASSIN SLIME', traits:['dark'], team:-1, hp:1, dmg:38, rate:0.07, spd:432, rng:137, r:34, wide:1,
@@ -433,6 +436,7 @@ const UPG = {
   blob:   {nm:'BLOB',        kind:'unit', min:1, max:5, costs:[600, 900, 1300, 1800]},
   golden: {nm:'GOLDEN BLOB', kind:'unit', min:1, max:5, costs:[600, 900, 1300, 1800], capsule:1},   // capsule prize only
   baby:   {nm:'BABY BLOB',  kind:'unit', min:1, max:5, costs:[600, 900, 1300, 1800], capsule:1},
+  doctor: {nm:'DOCTOR BLOB', kind:'unit', min:1, max:5, costs:[800, 1200, 1700, 2300], capsule:1},
   mage:   {nm:'MAGICIAN BLOB', kind:'unit', min:1, max:5, costs:[800, 1200, 1700, 2300], capsule:1},
   elder:  {nm:'ELDERLY BLOB', kind:'unit', min:1, max:5, costs:[1800, 2600, 3500, 4600], capsule:1, godly:1},
   reaper: {nm:'REAPER BLOB',  kind:'unit', min:1, max:5, costs:[1800, 2600, 3500, 4600], capsule:1, godly:1},
@@ -492,6 +496,8 @@ const EVO = {
           note:'+20% HP and +20% speed', c:['#dcefff','#64c0ff','#346ea0']},
   golden:{nm:'GLASSES GOLDEN BLOB', cost:6000, hpMul:1, spdMul:1.20,
           note:'+20% speed', c:['#fffac9','#ffcc4a','#a87e1b']},
+  doctor:{nm:'PLAGUE DOCTOR SLIME', cost:7000, hpMul:1.35, dmgMul:1.35, spdMul:1,
+          note:'+35% HP and damage, and the beaked mask', c:['#dfe8d8','#6f8466','#2c3a28']},
   baby:  {nm:'BALLOON BLOB', cost:6500, hpMul:1.30, dmgMul:1.30, spdMul:1, art:'balloon',
           swT:0.50, hitP:0.60,                       // a real pendulum needs room to wind up
           note:'+30% HP and +30% damage', c:['#effcff','#8ce4f7','#3f8ba3']},
@@ -727,10 +733,10 @@ const XP_LEVELS = [
 
 /* save */
 const SKEY='battleblobs_v2';
-const LV0={blob:1, golden:0, baby:0, mage:0, elder:0, reaper:0, chonk:0, sword:0, dino:0, boom:0, jumper:0, fierce:0, flow:1, tank:1, armour:0, cannon:0};
-const EV0={blob:0, golden:0, baby:0, mage:0, elder:0, reaper:0, chonk:0, sword:0, dino:0, boom:0, jumper:0, fierce:0};
+const LV0={blob:1, golden:0, baby:0, doctor:0, mage:0, elder:0, reaper:0, chonk:0, sword:0, dino:0, boom:0, jumper:0, fierce:0, flow:1, tank:1, armour:0, cannon:0};
+const EV0={blob:0, golden:0, baby:0, doctor:0, mage:0, elder:0, reaper:0, chonk:0, sword:0, dino:0, boom:0, jumper:0, fierce:0};
 let save={best:0, xp:0, q:2, mus:0, vol:{sfx:1, mus:0.5}, slots:0, team:['blob'], tickets:0, rare:0, spun:0, lv:Object.assign({},LV0), evo:Object.assign({},EV0), reinf:{cannon:0, armour:0, flow:0, tank:0}, fin:{cannon:0, armour:0, flow:0, tank:0}};
-let aiMode = 0;     // AI MODE: the game plays itself. Off at every launch, kept between battles
+let aiMode = 0;     // AI MODE: the game plays itself. Off at launch AND at the start of every battle
 let fastMode = 0;   // 0 → 1.5x → 2x → back to 1x. NOT saved: every session starts at 1x
 const SPEEDS = [1, 1.5, 2];
 try{ const raw=JSON.parse(localStorage.getItem(SKEY)||'{}');
@@ -1493,8 +1499,72 @@ function drawSword(px, py, len, dir, ang, evo, sweep){
   X.restore();
 }
 
+/* ---- DOCTOR BLOB kit: head mirror + stethoscope (the plague doctor swaps them for a hat and beak),
+   and the syringe he jabs with. stab: -0.35 drawn back, 1 fully in ---- */
+function drawDoctorKit(cx, cy, rx, ry, dir, evo, stab){
+  X.save(); X.lineCap='round'; X.lineJoin='round';
+  if(!evo){
+    // stethoscope looped round the front
+    X.strokeStyle='#2d3b4c'; X.lineWidth=Math.max(1.5, rx*0.07);
+    X.beginPath(); X.moveTo(cx-rx*0.52, cy-ry*0.02);
+    X.quadraticCurveTo(cx-rx*0.30, cy+ry*0.58, cx+dir*rx*0.08, cy+ry*0.52);
+    X.quadraticCurveTo(cx+rx*0.40, cy+ry*0.50, cx+rx*0.52, cy-ry*0.02); X.stroke();
+    X.fillStyle='#d9e2ea'; X.strokeStyle='#6b7a88'; X.lineWidth=Math.max(1, rx*0.04);
+    X.beginPath(); X.arc(cx+dir*rx*0.10, cy+ry*0.60, rx*0.12, 0, 7); X.fill(); X.stroke();
+    // head mirror on a band
+    X.strokeStyle='#eef3f6'; X.lineWidth=Math.max(1.5, rx*0.08);
+    X.beginPath(); X.ellipse(cx, cy-ry*0.56, rx*0.80, ry*0.20, 0, Math.PI*1.05, Math.PI*1.95); X.stroke();
+    const mx=cx+dir*rx*0.12, my=cy-ry*0.70, mr=rx*0.22;
+    const mg=X.createRadialGradient(mx-mr*0.3, my-mr*0.3, mr*0.1, mx, my, mr);
+    mg.addColorStop(0,'#ffffff'); mg.addColorStop(1,'#a9b8c6');
+    X.fillStyle=mg; X.beginPath(); X.arc(mx, my, mr, 0, 7); X.fill();
+    X.strokeStyle='#6b7a88'; X.lineWidth=Math.max(1, rx*0.05); X.stroke();
+    X.fillStyle='#3a4856'; X.beginPath(); X.arc(mx, my, mr*0.28, 0, 7); X.fill();
+  } else {
+    // a dark cape collar over the shoulders
+    X.fillStyle='#23201f';
+    X.beginPath(); X.moveTo(cx-rx*0.92, cy+ry*0.18); X.quadraticCurveTo(cx, cy+ry*0.52, cx+rx*0.92, cy+ry*0.18);
+    X.lineTo(cx+rx*0.80, cy+ry*0.40); X.quadraticCurveTo(cx, cy+ry*0.78, cx-rx*0.80, cy+ry*0.40); X.closePath(); X.fill();
+  }
+  // the syringe, held out front
+  const L = rx*(evo? 0.95 : 0.78), th = ry*(evo? 0.20 : 0.17);
+  const px = cx + dir*rx*(0.62 + Math.max(-0.35, stab)*0.42), py = cy + ry*0.16;
+  X.translate(px, py); X.scale(dir, 1);
+  X.fillStyle='#c9d3dc'; rr(-L*0.32, -th*0.18, L*0.16, th*0.36, th*0.1); X.fill();          // plunger rod
+  X.fillStyle='#8894a0'; rr(-L*0.38, -th*0.62, L*0.07, th*1.24, th*0.2); X.fill();          // thumb rest
+  X.fillStyle='rgba(235,248,255,.85)'; rr(-L*0.18, -th*0.5, L*0.62, th, th*0.3); X.fill();   // barrel
+  X.fillStyle= evo? '#7b3fb8' : '#57d46a'; rr(-L*0.02, -th*0.34, L*0.44, th*0.68, th*0.2); X.fill();   // the dose
+  X.strokeStyle='#5f6c78'; X.lineWidth=Math.max(1, rx*0.04); rr(-L*0.18, -th*0.5, L*0.62, th, th*0.3); X.stroke();
+  X.strokeStyle='#d8dfe6'; X.lineWidth=Math.max(1, rx*0.035);
+  X.beginPath(); X.moveTo(L*0.44, 0); X.lineTo(L*0.92, 0); X.stroke();                        // the needle
+  X.restore();
+}
 function evoFace(k, cx, ey, rx, ry, dir){
-  if(k==='blob' || k==='golden'){
+  if(k==='doctor'){
+    // PLAGUE DOCTOR: leather mask with round glass eyes, a long beak, and a wide black hat
+    X.save();
+    X.fillStyle='#5a3f28'; X.strokeStyle='#2e1f12'; X.lineWidth=Math.max(1.5, rx*0.05);
+    X.beginPath(); X.ellipse(cx+dir*rx*0.08, ey-ry*0.02, rx*0.66, ry*0.40, 0, 0, 7); X.fill(); X.stroke();
+    X.beginPath();                                   // the beak, curving down toward the ground
+    X.moveTo(cx+dir*rx*0.30, ey-ry*0.12);
+    X.quadraticCurveTo(cx+dir*rx*1.05, ey+ry*0.02, cx+dir*rx*1.22, ey+ry*0.42);
+    X.quadraticCurveTo(cx+dir*rx*0.80, ey+ry*0.30, cx+dir*rx*0.28, ey+ry*0.24);
+    X.closePath(); X.fillStyle='#6d4c30'; X.fill(); X.stroke();
+    X.strokeStyle='rgba(255,220,170,.25)'; X.beginPath(); X.moveTo(cx+dir*rx*0.40, ey-ry*0.02);
+    X.quadraticCurveTo(cx+dir*rx*0.95, ey+ry*0.08, cx+dir*rx*1.12, ey+ry*0.34); X.stroke();
+    const dx=rx*0.30, off=dir*rx*0.06;
+    for(const sgn of [-1,1]){
+      X.fillStyle='#b8322a'; X.beginPath(); X.arc(cx+sgn*dx+off, ey-ry*0.04, rx*0.17, 0, 7); X.fill();
+      X.strokeStyle='#2a1b10'; X.lineWidth=Math.max(1.5, rx*0.06); X.stroke();
+      X.fillStyle='rgba(255,255,255,.6)'; X.beginPath(); X.arc(cx+sgn*dx+off-rx*0.05, ey-ry*0.09, rx*0.05, 0, 7); X.fill();
+    }
+    const hy = ey - ry*0.50;                         // hat
+    X.fillStyle='#1f1c1b';
+    X.beginPath(); X.ellipse(cx, hy, rx*1.10, ry*0.16, 0, 0, 7); X.fill();
+    rr(cx-rx*0.50, hy-ry*0.62, rx*1.00, ry*0.64, rx*0.12); X.fill();
+    X.fillStyle='#4a3b32'; X.fillRect(cx-rx*0.50, hy-ry*0.14, rx*1.00, ry*0.10);
+    X.restore();
+  } else if(k==='blob' || k==='golden'){
     // round spectacles over both eyes
     const dx=rx*0.34, off=dir*rx*0.10, r=rx*0.30;
     X.lineWidth=Math.max(2, rx*0.075); X.strokeStyle='#22384a';
@@ -3750,7 +3820,8 @@ function aiTick(dt){
   B.aiT = (B.aiT||0) - dt;
   if(B.aiT > 0) return;
   B.aiT = 1.0;                                   // it thinks once a second
-  if(Math.random() < 0.08 && B.cannon.ch>=100) fireCannon();
+  const foes = B.units.some(o => o.team<0 && !o.dead && !o.dying);   // never waste a shot on an empty lane
+  if(foes && Math.random() < 0.08 && B.cannon.ch>=100) fireCannon();
   const squad = teamUnits().filter(k => !(U[k].once && B.used[k]));
   // pick something to save up for — the wealthy blob more often than any one blob
   if(!B.aiPick || (B.aiPick!=='wealth' && squad.indexOf(B.aiPick)<0)
@@ -3934,12 +4005,13 @@ function newBattle(li, isXp){
   const L = (isXp? XP_LEVELS : LEVELS)[li];
   setArena(L.size);
   fastMode = 0;                 // every battle opens at 1x, even if the last one was sped up
+  aiMode = 0;                   // ...and with you in charge: AI MODE never carries over
   B = {
     li, L,
     pbHP:baseHP(), pbMax:baseHP(), ebHP:L.bhp, ebMax:L.bhp,
     units:[], parts:[], shots:[], rings:[],
     juice:100, inc:income(), cap:juiceCap(), wealth:0,
-    cd:{blob:0, golden:0, baby:0, mage:0, elder:0, reaper:0, chonk:0, sword:0, dino:0, boom:0, jumper:0, fierce:0}, used:{},
+    cd:{blob:0, golden:0, baby:0, doctor:0, mage:0, elder:0, reaper:0, chonk:0, sword:0, dino:0, boom:0, jumper:0, fierce:0}, used:{},
     cannon:{ch:55, rate:5.5, ready:false, recoil:0},
     isXp:!!isXp, xpT:(L.xpMode && L.xpMode.first) || 0, xpWaveAt:0, xpBonus:0, xpWave:0, pendingXp:[],
     time:0, si:0, loopT:0, poolI:0, bossFired:false, bossWave:0, bossUnits:[], pendingPeons:[], killed:{}, hits:{}, waveGap:WAVE_GAP,
@@ -3983,6 +4055,7 @@ function unlockedUnits(){
   if(save.lv.golden>0) out.push('golden');
   if(save.lv.baby>0) out.push('baby');
   if(save.lv.mage>0) out.push('mage');
+  if(save.lv.doctor>0) out.push('doctor');
   if(save.lv.elder>0) out.push('elder');
   if(save.lv.reaper>0) out.push('reaper');
   if(save.lv.chonk>0) out.push('chonk');
@@ -4232,9 +4305,18 @@ function endAir(u){
    ------------------------------------------------------------------------ */
 const TRAITS = {
   normal: {nm:'NORMAL',  col:'#d8dde2'}, fire:   {nm:'FIRE',    col:'#ff6a2a'},
-  dark:   {nm:'DARK',    col:'#8a5cff'}, angelic:{nm:'ANGELIC', col:'#ffd86a'} };
+  dark:   {nm:'DARK',    col:'#8a5cff'}, angelic:{nm:'ANGELIC', col:'#ffd86a'},
+  toxic:  {nm:'TOXIC',   col:'#8ee23a'} };
 const ABIL_NAMES = { massive:'MASSIVE DMG', extra:'EXTRA DMG', massdef:'RESISTANT', extradef:'EXTRA DEF',
-                     weak:'WEAK', kb:'KNOCKBACK', freeze:'FREEZE', slow:'SLOW' };
+                     weak:'WEAK', kb:'KNOCKBACK', freeze:'FREEZE', slow:'SLOW', immune:'IMMUNE' };
+// POISON: a toxic hitter's poison{mul,t} adds mul x the hit as damage spread over t seconds
+function immuneTo(tgt, src){ return abilsOf(tgt).some(ab => ab.t==='immune' && abilHits(ab, src)); }
+function applyPoison(src, tgt, hit){
+  const P = U[src.k] && U[src.k].poison;
+  if(!P || tgt.dead || tgt.dying || immuneTo(tgt, src)) return;
+  const total = hit * (P.mul||1) + (tgt.poisonT>0 ? tgt.poisonDps*tgt.poisonT : 0);   // a fresh dose tops up what's left
+  tgt.poisonT = P.t || 3; tgt.poisonDps = total / tgt.poisonT; tgt.poisonFrom = src.team;
+}
 function traitsOf(u){ return (u && U[u.k] && U[u.k].traits) || []; }
 function abilsOfKey(k, evo){ const a = U[k].abil || []; const e = evo && EVO[k] && EVO[k].abil; return e ? a.concat(e) : a; }
 function abilsOf(u){ return abilsOfKey(u.k, !!u.evo); }
@@ -4268,6 +4350,8 @@ function traitIcon(t, x, y, r){                       // a coloured disc with a 
   else if(t==='fire'){ X.moveTo(x, y-q); X.quadraticCurveTo(x+q, y, x+q*0.3, y+q); X.lineTo(x-q*0.3, y+q); X.quadraticCurveTo(x-q, y, x, y-q); X.fill(); }
   else if(t==='dark'){ X.arc(x, y, q, 0.6, Math.PI*2-0.6); X.arc(x+q*0.45, y, q*0.7, Math.PI*2-0.9, 0.9, true); X.fill(); }
   else if(t==='angelic'){ X.ellipse(x, y, q, q*0.45, 0, 0, 7); X.stroke(); }
+  else if(t==='toxic'){ X.moveTo(x, y-q*1.05); X.quadraticCurveTo(x+q*0.95, y+q*0.15, x, y+q*0.95);    // a drip
+                        X.quadraticCurveTo(x-q*0.95, y+q*0.15, x, y-q*1.05); X.fill(); }
   X.restore();
 }
 function abilText(ab){
@@ -4290,7 +4374,7 @@ function dmgUnit(u, amount, from, src){
     ring(src.x, GY-U[src.k].r, '#c8a86a', 5, 44, 0.3, 4);
   }
   u.hp -= amount; u.flash = 1;
-  if(u.hp>0 && src && src!==u && src.team!==u.team) applyProcs(src, u);   // knockback / freeze / slow
+  if(u.hp>0 && src && src!==u && src.team!==u.team){ applyProcs(src, u); applyPoison(src, u, amount); }   // knockback / freeze / slow / poison
   if(B) B.hurt[u.k] = (B.hurt[u.k]||0) + 1;       // "once the tree has been hit" style triggers
   if(u.hp<=0){
     u.hp=0;
@@ -4488,6 +4572,11 @@ function updateBattle(dt){
     if(u.push>0){                                  // a shove: slides back a little, keeps its swing
       const st = Math.min(u.push, 320*dt); u.push -= st;
       u.x -= u.team*st; u.x = Math.max(P_FRONT-30, Math.min(E_FRONT+30, u.x));
+    }
+    if(u.poisonT>0){                                   // poison: it bleeds the rest of the hit out over time
+      const st = Math.min(dt, u.poisonT); u.poisonT -= st;
+      const fl = u.flash; dmgUnit(u, u.poisonDps*st, u.poisonFrom); u.flash = fl;   // a slow bleed, not a hit: no white flash
+      if(u.dead || u.dying) continue;
     }
     if(u.freezeT>0){ u.freezeT -= dt; u.moving=false; continue; }   // frozen solid: nothing ticks
     let udt = dt;
@@ -4960,6 +5049,14 @@ function drawUnit(u){
         }
         cy = GY - ry*0.98;
       }
+      else if(d.needle){
+        // draw the syringe back, jab it in, pull it out
+        const h = d.hitP||0.55;
+        if(p < h-0.14){ const q=p/(h-0.14); u.stab = -0.35*q; cx -= dir*5*q; }
+        else if(p < h){ const q=(p-(h-0.14))/0.14; u.stab = -0.35 + 1.35*q; cx += dir*(-5 + 19*q); }
+        else { const q=(p-h)/(1-h); u.stab = 1-q; cx += dir*14*(1-q); }
+        cy = GY - ry*0.98;
+      }
       else if(d.sword || d.dagger || d.knife){
         // overhead wind-up, then a fast downward slash — the dagger swings wider
         const back = d.dagger? -2.95 : d.knife? -2.60 : -2.20, thru = d.dagger? 4.35 : d.knife? 3.90 : 3.15;
@@ -5132,6 +5229,7 @@ function drawUnit(u){
   else if(d.rabbit) drawRabbit(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.team>0 && !d.shadowOf) drawBlob(u,cx,cy,rx,ry,dir,u.flash);
   else drawSlime(u,cx,cy,rx,ry,dir,u.flash);
+  if(d.needle && !u.dead) drawDoctorKit(cx, cy, rx, ry, dir, !!u.evo, u.sw>0? (u.stab||0) : 0);
   if(d.sword && !u.dead)
     drawSword(cx + dir*rx*0.72, cy + ry*0.10, rx*1.55, dir,
               (u.swordA===undefined? -0.55 : u.swordA), !!u.evo, (u.sw>0? (u.swordSweep||0):0));
@@ -5182,6 +5280,14 @@ function drawUnit(u){
     X.globalAlpha=0.9; X.strokeStyle='#ffffff'; X.lineWidth=Math.max(1.5, rx*0.05);
     for(let i=0;i<5;i++){ const a=i*1.26+0.3, r1=rx*0.3, r2=rx*0.95;
       X.beginPath(); X.moveTo(cx+Math.cos(a)*r1, cy+Math.sin(a)*r1*0.9); X.lineTo(cx+Math.cos(a)*r2, cy+Math.sin(a)*r2*0.9); X.stroke(); }
+    X.restore();
+  }
+  if(u.poisonT>0 && !u.dead){                            // poisoned: green bubbles fizzing off it
+    X.save(); X.globalAlpha=0.22; X.fillStyle='#7bdc3a';
+    X.beginPath(); X.ellipse(cx, cy, rx*1.0, ry*0.98, 0, 0, 7); X.fill();
+    for(let i=0;i<5;i++){ const ph2=((T*0.9+i*0.21+u.seed)%1), bx=cx+(i-2)*rx*0.34+Math.sin(T*3+i)*rx*0.06;
+      X.globalAlpha=0.85*(1-ph2); X.fillStyle= i%2? '#b6ff6a' : '#6bd23a';
+      X.beginPath(); X.arc(bx, cy-ry*(0.2+ph2*1.1), rx*(0.07+0.05*(1-ph2)), 0, 7); X.fill(); }
     X.restore();
   }
   if(u.slowT>0 && !u.dead){                              // slowed: sludge dripping off it
@@ -5599,6 +5705,7 @@ function drawMini(k, cx, cy, r, dir, seed){
     eyes(cx,cy-r*0.12,r,dir,'round',false,false);
     if(evoOn(k)) evoFace(k, cx, cy-r*0.12, rw, r, dir);
     if(d.sword) drawSword(cx + dir*rw*0.72, cy + r*0.10, rw*1.5, dir, -0.55, evoOn(k), 0);
+    if(d.needle) drawDoctorKit(cx, cy, rw, r, dir, evoOn(k), 0);
     if(d.coin){
       if(!evoOn(k)){
         X.save(); gooPath(cx,cy,rw,r*1.02,0.022,3,T,seed,true); X.clip();
@@ -5830,15 +5937,14 @@ function drawResult(dt){
   const nextLi = result.li+1;
   const hasNext = win && !result.isXp && nextLi < LEVELS.length && nextLi <= save.best;
   const again = ()=>{ const r=result; result=null; newBattle(r.li, r.isXp); scene='battle'; };
-  if(hasNext){
-    btn(300, by, 190, 52, 'NEXT LEVEL', ()=>{ result=null; newBattle(nextLi, false); scene='battle'; },
-        {c1:'#8ce03e', c2:'#3c7a1c'});
-    btn(510, by, 190, 52, 'RETRY', again);
-  } else {
-    btn(300, by, 190, 52, 'RETRY', again);
-    btn(510, by, 190, 52, 'BLOB LAB', ()=>{ result=null; B=null; scene='upg'; },
-        {c1:'#7ea6ff', c2:'#2f4f9b'});
+  if(win){                                          // a win always goes home first: no chaining straight into the next fight
+    btn(370, by+10, 260, 60, 'BACK TO BASE', ()=>{ result=null; B=null; scene='menu'; },
+        {fs:20, c1:'#8ce03e', c2:'#3c7a1c'});
+    return;
   }
+  btn(300, by, 190, 52, 'RETRY', again);
+  btn(510, by, 190, 52, 'BLOB LAB', ()=>{ result=null; B=null; scene='upg'; },
+      {c1:'#7ea6ff', c2:'#2f4f9b'});
   btn(405, by+62, 190, 46, 'BACK TO BASE', ()=>{ result=null; B=null; scene='menu'; },
       {fs:15, c1:'#2f5f80', c2:'#173447'});
 }
@@ -5855,7 +5961,7 @@ function newBlobs(){
   const out=[];
   for(const k of ['chonk','sword','dino'])
     if(isLocked(k) && !isGated(k) && save.xp>=UPG[k].unlockCost) out.push(k);
-  for(const k of ['blob','golden','baby','mage','chonk','sword','dino'])
+  for(const k of ['blob','golden','baby','mage','doctor','chonk','sword','dino'])
     if(evoAvail(k) && save.xp>=EVO[k].cost) out.push(k);
   return out;
 }
@@ -6153,7 +6259,7 @@ function chunkyBtn(x, y, w, h, label, fn, o){
 let cheatArm = 0;
 const CHEAT_XP = 99999999;
 function cheatAll(){
-  const order = ['blob','chonk','sword','dino','boom','jumper','fierce','golden','baby','mage','elder','reaper'];
+  const order = ['blob','chonk','sword','dino','boom','jumper','fierce','golden','baby','mage','doctor','elder','reaper'];
   for(const k of order.concat(Object.keys(UPG)))           // the main blobs get first claim on the squad
     if(UPG[k] && UPG[k].kind==='unit' && !(save.lv[k]>0)){ save.lv[k]=1; autoEquip(k); }
   save.best  = LEVELS.length;                     // every level open
@@ -6468,7 +6574,7 @@ function pips(x, y, lv, max, col){
 
 const LAB_TABS = [
   {nm:'BLOBS',      keys:['blob','chonk','sword','dino','boom','jumper','fierce']},
-  {nm:'RARE BLOBS', keys:['golden','baby','mage']},
+  {nm:'RARE BLOBS', keys:['golden','baby','mage','doctor']},
   {nm:'GODLY BLOBS', keys:['elder','reaper']},
   {nm:'UPGRADES',   keys:['flow','tank','armour','cannon']}
 ];
@@ -6480,7 +6586,7 @@ function setLabTab(i){ if(i===labTab) return; labTab=i; labIdx=0; labPos=0; }
 function labAccent(k, canEvo){
   if(reinfOn(k)) return '#c06bff';
   if(canEvo || reinfAvail(k)) return '#ffd86a';
-  return {blob:'#3fb0f5', golden:'#e2b64a', baby:'#6fd8ef', mage:'#8a6fd6', chonk:'#ff9236', sword:'#ff5a46', dino:'#35b36a', flow:'#3fe0ff', tank:'#8affc9',
+  return {blob:'#3fb0f5', golden:'#e2b64a', baby:'#6fd8ef', mage:'#8a6fd6', doctor:'#5fd47a', chonk:'#ff9236', sword:'#ff5a46', dino:'#35b36a', flow:'#3fe0ff', tank:'#8affc9',
           armour:'#ffd86a', cannon:'#b07dff'}[k] || '#3fb0f5';
 }
 function labStats(k){
@@ -6540,6 +6646,7 @@ const UNIT_BLURB = {
   golden: 'Only 10 HP — but every hit only takes 1.',
   baby:   'Tiny and very quick. Evolves onto balloons.',
   mage:   'Never attacks. Pulls a rabbit blob out every 4s.',
+  doctor: 'Jabs with a needle. Immune to TOXIC poison.',
   elder:  'Old and slow. The cane comes down on a whole crowd.',
   reaper: 'What it kills may rise again \u2014 on your side.'
 };
@@ -6710,12 +6817,12 @@ function drawUpg(dt){
 /* ================================================================
    BLOB CAPSULE  —  spend a blob ticket, roll a new blob
    ================================================================ */
-const CAPSULE_POOL = ['golden','baby','mage'];   // RARE — nine pulls in ten
+const CAPSULE_POOL = ['golden','baby','mage','doctor'];   // RARE — nine pulls in ten
 const GODLY_POOL   = ['elder','reaper'];          // GODLY — one pull in ten
 const GODLY_CHANCE = 0.10;
 function isGodly(k){ return GODLY_POOL.indexOf(k) >= 0; }
 let capState = {phase:'idle', t:0, spin:0, spinV:0, prize:null};
-const EXCHANGE_XP = 15000, EXCHANGE_GODLY_XP = 30000;   // the one moment you may trade a pull away
+const EXCHANGE_XP = 10000, EXCHANGE_GODLY_XP = 15000;   // trade a pull away: rare 10k, godly 15k
 function tradeXP(k){ return isGodly(k)? EXCHANGE_GODLY_XP : EXCHANGE_XP; }
 function rareKeys(){ return LAB_TABS[1].keys; }
 function ownedRares(){ return rareKeys().filter(k => save.lv[k] > 0); }
@@ -7315,7 +7422,7 @@ function drawHow(dt){
   X.fillText('HOW TO PLAY', 500, 60); X.textAlign='left';
   // the blob list writes itself from the unit table, so it can never go stale
   const COL = {blob:'#3fb0f5', chonk:'#ff9236', sword:'#ff5a46', dino:'#35b36a', boom:'#2fc0ad', jumper:'#ff6fae',
-               fierce:'#7b88f0', golden:'#e2b64a', baby:'#6fd8ef', mage:'#8a6fd6'};
+               fierce:'#7b88f0', golden:'#e2b64a', baby:'#6fd8ef', mage:'#8a6fd6', doctor:'#5fd47a'};
   const f1 = n => (n%1)? n.toFixed(1) : String(n);
   const unitLine = (k)=>{
     const d=U[k], hit = d.bolts? d.bolts.n+' BOLTS' : d.coin? 'OUT + BACK' : d.aoe? 'AREA' : 'SINGLE';
@@ -7834,7 +7941,7 @@ function tickFrame(now){
   else if(scene==='credits'){ drawCredits(dt); if(musKind && musKind!=='menu') stopMusic(); if(!musKind) startMusic('menu'); }
   else if(scene==='select'){ drawSelect(dt); if(musKind && musKind!=='menu') stopMusic(); if(!musKind) startMusic('menu'); }
   else if(scene==='upg'){ drawUpg(dt); if(musKind && musKind!=='menu') stopMusic(); if(!musKind) startMusic('menu'); }
-  else if(scene==='cap'){ drawCapsule(dt); if(musKind && musKind!=='menu') stopMusic(); if(!musKind) startMusic('menu'); }
+  else if(scene==='cap'){ drawCapsule(dt); if(musKind && musKind!=='casino') stopMusic(); if(!musKind) startMusic('casino'); }
   else if(scene==='result' && result) drawResult(dt);
   else if(scene==='battle' && B) drawBattle(dt);
   X.restore();
