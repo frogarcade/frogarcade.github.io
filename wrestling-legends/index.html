@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wrestling Legends</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="game-container"></div>
+
+<!-- ============ MAIN MENU ============ -->
+<div id="menu" class="screen">
+  <div class="menu-inner">
+    <div class="title-block">
+      <div class="title-top">WRESTLING</div>
+      <div class="title-of"><span class="rope-line"></span><span class="rope-line"></span></div>
+      <div class="title-bottom">LEGENDS</div>
+    </div>
+    <div class="subtitle">AMATEUR CIRCUIT &bull; SEASON ONE</div>
+    <div class="menu-buttons">
+      <button class="big-btn" id="btn-fight">🥊 &nbsp;FIGHT</button>
+      <button class="big-btn secondary" id="btn-challenges">⚔️ &nbsp;CHALLENGES</button>
+      <button class="big-btn secondary" id="btn-controls">CONTROLS</button>
+      <button class="big-btn secondary" id="btn-settings">SETTINGS</button>
+    </div>
+    <div id="controls-panel" class="hidden">
+      <div class="ctl-row"><span class="key">W A S D</span> / <span class="key">← ↑ ↓ →</span> Move</div>
+      <div class="ctl-row"><span class="key">MOUSE</span> Look / aim crosshair</div>
+      <div class="ctl-row"><span class="key">CLICK</span> Punch &nbsp;<em>(keep swinging at a downed body — every hit keeps them there longer!)</em></div>
+      <div class="ctl-row"><span class="key">E</span> Grab a knocked-out boxer &nbsp;<em>(press again to heave them)</em></div>
+      <div class="ctl-row"><span class="key">Q</span> Special move</div>
+      <div class="ctl-tip">Knock your opponent out, then hurl them over the ropes to win!</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ BOXER SELECT ============ -->
+<div id="select" class="screen hidden">
+  <div class="sel-top">
+    <div class="select-header" id="sel-title">CHOOSE YOUR WRESTLER</div>
+  </div>
+
+  <div class="team-bar">
+    <div class="team-label">YOUR TEAM</div>
+    <div class="team-slots" id="team-slots"></div>
+    <div class="team-hint" id="team-hint">Pick up to 3</div>
+  </div>
+
+  <div class="juice">
+    <div class="juice-pool">💉 <b id="juice-count">0</b> STEROIDS</div>
+    <button class="juice-btn" id="juice-hp">+ HEALTH <span id="juice-hp-pips"></span></button>
+    <button class="juice-btn" id="juice-dmg">+ DAMAGE <span id="juice-dmg-pips"></span></button>
+  </div>
+
+  <div class="sel-bottom">
+    <div class="sel-info">
+      <div class="sel-name" id="sel-name">JOE AVERAGE</div>
+      <div class="sel-tag" id="sel-tag">The Reliable Everyman</div>
+      <div class="sel-medal" id="sel-medal"></div>
+      <div class="stats" id="sel-stats"></div>
+      <div class="special-desc" id="sel-special"></div>
+      <div class="cups" id="cups-row">
+        <button class="cup" id="cup-bronze">🥉 BRONZE</button>
+        <button class="cup" id="cup-silver">🥈 SILVER</button>
+        <button class="cup" id="cup-gold">🥇 GOLD</button>
+      </div>
+      <button class="pick-btn" id="btn-start">ENTER BRONZE TOURNAMENT</button>
+    </div>
+    <div class="roster" id="roster"></div>
+  </div>
+  <button class="back-btn" id="btn-back">&larr; BACK</button>
+</div>
+
+<!-- ============ CHALLENGES ============ -->
+<div id="challenge-select" class="screen hidden">
+  <div class="sel-top">
+    <div class="select-header">⚔️ CHALLENGES</div>
+    <div class="ch-sub">One wrestler. One opponent. No tag-ins, no second chances.</div>
+  </div>
+
+  <div class="ch-body">
+    <div class="ch-bosses" id="ch-bosses"></div>
+
+    <div class="ch-card" id="ch-card">
+      <div class="ch-card-head">
+        <div class="ch-boss-face" id="ch-boss-face"></div>
+        <div>
+          <div class="ch-boss-name" id="ch-boss-name"></div>
+          <div class="ch-boss-tag" id="ch-boss-tag"></div>
+        </div>
+      </div>
+      <div class="stats" id="ch-boss-stats"></div>
+      <div class="special-desc" id="ch-boss-special"></div>
+      <div class="ch-reward" id="ch-reward"></div>
+    </div>
+  </div>
+
+  <div class="ch-you">
+    <div class="ch-you-label">YOUR CHALLENGER</div>
+    <div class="ch-you-pick" id="ch-you-pick"></div>
+    <div class="ch-you-stats" id="ch-you-stats"></div>
+  </div>
+
+  <div class="roster" id="ch-roster"></div>
+  <button class="pick-btn ch-go" id="ch-start">⚔️ TAKE THE CHALLENGE</button>
+  <button class="back-btn" id="ch-back">&larr; BACK</button>
+</div>
+
+<!-- ============ ROLL REVEAL ============ -->
+<div id="roll-overlay" class="hidden">
+  <div class="roll-box">
+    <div class="roll-label" id="roll-label"></div>
+    <div class="roll-name" id="roll-name">???</div>
+    <div class="roll-sub" id="roll-sub"></div>
+  </div>
+</div>
+
+<!-- ============ CHAMPION CEREMONY ============ -->
+<div id="ceremony" class="screen hidden">
+  <div class="cer-cup" id="cer-cup">BRONZE CHAMPION</div>
+  <div class="cer-name" id="cer-name">JOE AVERAGE</div>
+  <div class="cer-sub" id="cer-sub">The belt goes home with you.</div>
+  <div class="cut-skip">CLICK TO CONTINUE</div>
+</div>
+
+<!-- ============ OPPONENT CUTSCENE ============ -->
+<div id="cutscene" class="screen hidden">
+  <div class="cut-lower">
+    <div class="cut-eyebrow" id="cut-eyebrow">NEXT OPPONENT</div>
+    <div class="cut-name" id="cut-name">???</div>
+    <div class="cut-tag" id="cut-tag"></div>
+    <div class="cut-stats" id="cut-stats"></div>
+    <div class="cut-special" id="cut-special"></div>
+    <div class="cut-skip">CLICK TO CONTINUE</div>
+  </div>
+</div>
+
+<!-- ============ VERSUS SPLASH ============ -->
+<div id="versus" class="screen hidden">
+  <div class="tourney-label" id="tourney-label">🥉 BRONZE TOURNAMENT</div>
+  <div id="ladder"></div>
+  <div class="vs-row">
+    <div class="vs-name" id="vs-left">JOE AVERAGE</div>
+    <div class="vs-badge">VS</div>
+    <div class="vs-name" id="vs-right">KING BEAN</div>
+  </div>
+  <div class="vs-go" id="vs-go">CLICK TO START</div>
+</div>
+
+<!-- ============ HUD ============ -->
+<div id="hud" class="hidden">
+  <div class="hp-wrap left">
+    <div class="hp-name" id="hp-name-p">JOE AVERAGE</div>
+    <div class="hp-bar"><div class="hp-ghost" id="hp-ghost-p"></div><div class="hp-fill" id="hp-fill-p"></div></div>
+    <div class="special-box">
+      <div class="special-key">Q</div>
+      <div class="special-meter"><div class="special-fill" id="special-fill"></div></div>
+      <div class="special-name" id="special-name">SPECIAL</div>
+    </div>
+  </div>
+  <div class="hp-wrap right">
+    <div class="hp-name" id="hp-name-e">KING BEAN</div>
+    <div class="hp-bar flip"><div class="hp-ghost" id="hp-ghost-e"></div><div class="hp-fill enemy" id="hp-fill-e"></div></div>
+  </div>
+  <div id="round-hud">
+    <div class="pips" id="pips-p"></div>
+    <div class="round-label" id="round-label">ROUND 1</div>
+    <div class="pips" id="pips-e"></div>
+  </div>
+
+  <div id="crosshair"><div class="ch-dot"></div></div>
+  <div id="announce"></div>
+  <div id="subhint"></div>
+</div>
+
+<!-- ============ KO OVERLAY ============ -->
+<div id="ko-overlay" class="hidden">
+  <div class="ko-text">KNOCKED OUT</div>
+  <div class="ko-count" id="ko-count">10</div>
+  <div class="ko-sub">don't get thrown out of the ring...</div>
+</div>
+
+<!-- ============ PAUSE ============ -->
+<div id="pause-overlay" class="hidden">
+  <div class="pause-box">
+    <div class="pause-title">PAUSED</div>
+    <div class="pause-sub">Click to return to the fight</div>
+  </div>
+</div>
+
+<!-- ============ CRATE REWARDS ============ -->
+<div id="crate-screen" class="screen hidden">
+  <div class="crate-title" id="crate-title">SUPPLY CRATES</div>
+  <div class="crate-rarity" id="crate-rarity">COMMON</div>
+  <div class="crate-sub" id="crate-sub">1 crate remaining</div>
+  <div class="crate-box" id="crate-box">
+    <div class="crate-lid"></div>
+    <div class="crate-face">?</div>
+  </div>
+  <div class="crate-result" id="crate-result"></div>
+  <button class="big-btn" id="btn-crate">OPEN CRATE</button>
+</div>
+
+<!-- ============ SETTINGS ============ -->
+<div id="settings" class="screen hidden">
+  <div class="settings-box">
+    <div class="settings-title">SETTINGS</div>
+
+    <div class="set-row">
+      <label for="set-music">MUSIC</label>
+      <input id="set-music" type="range" min="0" max="100" step="5" value="100">
+      <span class="set-val" id="set-music-val">100%</span>
+    </div>
+
+    <div class="set-row">
+      <label for="set-sfx">SOUND EFFECTS</label>
+      <input id="set-sfx" type="range" min="0" max="100" step="5" value="100">
+      <span class="set-val" id="set-sfx-val">100%</span>
+    </div>
+
+    <div class="set-divider"></div>
+
+    <div class="set-row">
+      <label>INVERT LOOK &mdash; UP / DOWN</label>
+      <button class="toggle" id="set-invert-y">OFF</button>
+    </div>
+
+    <div class="set-row">
+      <label>INVERT LOOK &mdash; LEFT / RIGHT</label>
+      <button class="toggle" id="set-invert-x">OFF</button>
+    </div>
+
+    <div class="set-row">
+      <label>DIFFICULTY <em id="set-difficulty-note">The fight as it was tuned</em></label>
+      <button class="toggle" id="set-difficulty">NORMAL</button>
+    </div>
+
+    <div class="set-divider"></div>
+
+    <div class="set-row">
+      <label>PROGRESS <em id="set-progress-count">1 of 15 wrestlers</em></label>
+      <button class="danger-btn" id="btn-reset">RESET PROGRESS</button>
+    </div>
+
+    <div class="set-row">
+      <label>CHEAT CODE <em>Every wrestler, every tournament</em></label>
+      <input id="set-cheat" type="text" placeholder="PASSWORD" autocomplete="off" spellcheck="false" maxlength="32">
+      <button class="cheat-btn" id="btn-cheat">GO</button>
+    </div>
+
+    <button class="big-btn" id="btn-settings-close">DONE</button>
+  </div>
+</div>
+
+<!-- ============ END SCREEN ============ -->
+<div id="end-screen" class="screen hidden">
+  <div class="end-medal" id="end-medal">🏆</div>
+  <div class="end-title" id="end-title">CHAMPION!</div>
+  <div class="end-sub" id="end-sub">You won the Bronze Tournament!</div>
+  <div class="menu-buttons">
+    <button class="big-btn" id="btn-rematch">REMATCH</button>
+    <button class="big-btn secondary" id="btn-reselect">CHANGE WRESTLER</button>
+    <button class="big-btn secondary" id="btn-menu">MAIN MENU</button>
+  </div>
+</div>
+
+<script src="js/three.min.js"></script>
+<script src="js/arena.js"></script>
+<script src="js/boxer.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
