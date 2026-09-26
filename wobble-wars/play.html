@@ -496,8 +496,8 @@ const EVO = {
           note:'+20% HP and +20% speed', c:['#dcefff','#64c0ff','#346ea0']},
   golden:{nm:'GLASSES GOLDEN BLOB', cost:6000, hpMul:1, spdMul:1.20,
           note:'+20% speed', c:['#fffac9','#ffcc4a','#a87e1b']},
-  doctor:{nm:'PLAGUE DOCTOR SLIME', cost:7000, hpMul:1.35, dmgMul:1.35, spdMul:1,
-          note:'+35% HP and damage, and the beaked mask', c:['#dfe8d8','#6f8466','#2c3a28']},
+  doctor:{nm:'PLAGUE DOCTOR SLIME', cost:7000, hpMul:1.35, dmgMul:1.35, spdMul:1, poison:{mul:0.30, t:3},
+          note:'+35% HP/dmg, and poison: +30% over 3s', c:['#dfe8d8','#6f8466','#2c3a28']},
   baby:  {nm:'BALLOON BLOB', cost:6500, hpMul:1.30, dmgMul:1.30, spdMul:1, art:'balloon',
           swT:0.50, hitP:0.60,                       // a real pendulum needs room to wind up
           note:'+30% HP and +30% damage', c:['#effcff','#8ce4f7','#3f8ba3']},
@@ -4312,7 +4312,7 @@ const ABIL_NAMES = { massive:'MASSIVE DMG', extra:'EXTRA DMG', massdef:'RESISTAN
 // POISON: a toxic hitter's poison{mul,t} adds mul x the hit as damage spread over t seconds
 function immuneTo(tgt, src){ return abilsOf(tgt).some(ab => ab.t==='immune' && abilHits(ab, src)); }
 function applyPoison(src, tgt, hit){
-  const P = U[src.k] && U[src.k].poison;
+  const P = (src.evo && EVO[src.k] && EVO[src.k].poison) || (U[src.k] && U[src.k].poison);   // an evolution can bring its own
   if(!P || tgt.dead || tgt.dying || immuneTo(tgt, src)) return;
   const total = hit * (P.mul||1) + (tgt.poisonT>0 ? tgt.poisonDps*tgt.poisonT : 0);   // a fresh dose tops up what's left
   tgt.poisonT = P.t || 3; tgt.poisonDps = total / tgt.poisonT; tgt.poisonFrom = src.team;
@@ -6704,15 +6704,17 @@ function labCard(k, cx, f){
   }
   if(focus){
     const st = labStats(k);
-    X.fillStyle='#dff2ff'; X.font='800 15px ui-rounded, Trebuchet MS, sans-serif';
-    X.fillText(st.now, cx, y+218*sc);
+    // every line shrinks until it fits inside the card
+    const fit = (txt, ty, wt, fs)=>{ const mw = w-28;
+      X.font=wt+' '+fs+'px ui-rounded, Trebuchet MS, sans-serif';
+      while(fs>8 && X.measureText(txt).width > mw){ fs-=0.5; X.font=wt+' '+fs+'px ui-rounded, Trebuchet MS, sans-serif'; }
+      X.fillText(txt, cx, ty); };
+    X.fillStyle='#dff2ff'; fit(st.now, y+218*sc, 800, 15);
     if(!(lv>=U_.max && !canEvo) && !locked){
       X.fillStyle= canEvo? '#ffd86a' : '#8ce03e';
-      X.font='800 '+(canEvo?13:14)+'px ui-rounded, Trebuchet MS, sans-serif';
-      X.fillText((canEvo?'':'▶  ')+st.next, cx, y+244*sc);
+      fit((canEvo?'':'▶  ')+st.next, y+244*sc, 800, canEvo?13:14);
     } else if(locked && !gated){
-      X.fillStyle='#ffd86a'; X.font='700 13px ui-rounded, Trebuchet MS, sans-serif';
-      X.fillText(UNIT_BLURB[k]||'', cx, y+244*sc);
+      X.fillStyle='#ffd86a'; fit(UNIT_BLURB[k]||'', y+244*sc, 700, 13);
     }
   }
   X.textAlign='left'; X.restore();
