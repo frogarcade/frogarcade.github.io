@@ -3271,75 +3271,111 @@ function drawFrog(u, cx, cy, rx, ry, dir, flash){
     gooPath(cx, by, rx, bry, 0.03, 3, T, seed, true); X.fillStyle='#ffffff'; X.fill(); X.restore(); }
   if(u.shield>0 && u.shieldMax && !u.mini) hpBarSmall(cx, cy - ry*1.30, 40, u.shield/u.shieldMax, '#9fd4ff');
 }
-/* ---- THE TOAD KING: a fat purple-green toad, tiny crown, huge cheeks; the tongue does the work ---- */
+/* ---- THE TOAD KING: a fat green toad with a lavender throat pouch, purple spots, big grumpy eyes
+   and a proper crown. Drawn facing +x in local space, then flipped by dir; the tongue does the work ---- */
+function toadPath(R, H, gy){
+  X.beginPath();
+  X.moveTo(-1.08*R, gy);
+  X.bezierCurveTo(-1.22*R, gy-0.55*H, -0.98*R, gy-1.08*H, -0.45*R, gy-1.22*H);     // the back hump
+  X.bezierCurveTo( 0.05*R, gy-1.40*H,  0.72*R, gy-1.30*H,  0.98*R, gy-0.86*H);     // over the head to the snout
+  X.bezierCurveTo( 1.14*R, gy-0.56*H,  1.06*R, gy-0.14*H,  0.88*R, gy);            // chin down to the ground
+  X.closePath();
+}
 function drawToad(u, cx, cy, rx, ry, dir, flash){
   const c = U[u.k].c, seed=u.seed||1;
   const pr = u.sw>0 ? 1-u.sw/u.swT : -1, g = U.toad.tongue;
-  const mouthOpen = pr<0 ? 0 : (pr < g.out ? Math.min(1, pr/0.08) : (pr < 0.95 ? 1 : (1-pr)/0.05));
-  const by = cy + ry*0.22, bry = ry*0.78;
-  // the tongue first, from the mouth to wherever it has got to
+  const open = pr<0 ? 0 : (pr < g.out ? Math.min(1, pr/0.08) : (pr < 0.95 ? 1 : (1-pr)/0.05));
+  const R = rx*0.92, H = ry, gy = u.mini ? ry*0.96 : GY - cy;   // local units; gy = the ground (a portrait has its own)
+  const mouthF = {x: 1.02*R, y: gy-0.70*H};                    // front corner of the mouth (local)
+  // the tongue, behind everything: from the mouth to wherever it has got to (world space)
   if(u.sw>0 && u.tongueX!=null && !u.mini){
-    const mx = cx + dir*rx*0.80, my = by - bry*0.15;
+    const mx = cx + dir*mouthF.x, my = cy + mouthF.y, midY = Math.min(my, u.tongueY) - 36;
     X.save(); X.lineCap='round';
-    X.strokeStyle='#b8386a'; X.lineWidth=Math.max(4, rx*0.20);
-    X.beginPath(); X.moveTo(mx, my); X.quadraticCurveTo((mx+u.tongueX)/2, Math.min(my, u.tongueY) - 40, u.tongueX, u.tongueY); X.stroke();
-    X.strokeStyle='#ff7fae'; X.lineWidth=Math.max(3, rx*0.13);
-    X.beginPath(); X.moveTo(mx, my); X.quadraticCurveTo((mx+u.tongueX)/2, Math.min(my, u.tongueY) - 40, u.tongueX, u.tongueY); X.stroke();
-    X.fillStyle='#ff7fae'; X.beginPath(); X.arc(u.tongueX, u.tongueY, rx*0.18, 0, 7); X.fill();
-    X.strokeStyle='#b8386a'; X.lineWidth=Math.max(2, rx*0.05); X.stroke();
+    X.strokeStyle='#a8325f'; X.lineWidth=Math.max(5, rx*0.20);
+    X.beginPath(); X.moveTo(mx, my); X.quadraticCurveTo((mx+u.tongueX)/2, midY, u.tongueX, u.tongueY); X.stroke();
+    X.strokeStyle='#ff86b2'; X.lineWidth=Math.max(3, rx*0.13);
+    X.beginPath(); X.moveTo(mx, my); X.quadraticCurveTo((mx+u.tongueX)/2, midY, u.tongueX, u.tongueY); X.stroke();
+    X.fillStyle='#ff86b2'; X.beginPath(); X.arc(u.tongueX, u.tongueY, rx*0.17, 0, 7); X.fill();
+    X.strokeStyle='#a8325f'; X.lineWidth=Math.max(2, rx*0.05); X.stroke();
     X.restore();
   }
-  shadow(cx, rx*1.25, 0.32);
-  // haunches and feet
-  X.fillStyle=shade(c[1],-14);
-  X.beginPath(); X.ellipse(cx-dir*rx*0.70, GY-ry*0.22, rx*0.55, ry*0.30, 0, 0, 7); X.fill();
-  X.fillStyle=shade(c[1],-4);
-  for(const k of [0.35, 0.75]){ X.beginPath(); X.ellipse(cx+dir*rx*k, GY-ry*0.06, rx*0.22, ry*0.08, 0, 0, 7); X.fill(); }
-  // the body
-  gooPath(cx, by, rx*1.08, bry, 0.025, 3, T*0.8, seed, true);
-  let gr = X.createRadialGradient(cx-rx*0.3, by-bry*0.55, rx*0.12, cx, by, rx*1.35);
-  gr.addColorStop(0, c[0]); gr.addColorStop(0.5, c[1]); gr.addColorStop(1, shade(c[1],-20));
-  X.fillStyle=gr; X.fill(); X.lineWidth=Math.max(2, rx*0.07); X.strokeStyle=c[2]; X.stroke();
+  shadow(cx, rx*1.15, 0.30);
+  X.save(); X.translate(cx, cy); X.scale(dir, 1);
+  X.lineJoin='round'; X.lineCap='round';
+  const ink = c[2], lw = Math.max(2, rx*0.065);
+  // back foot peeking out behind
+  X.fillStyle=shade(c[1],-18);
+  X.beginPath(); X.ellipse(-0.92*R, gy-0.06*H, 0.30*R, 0.10*H, 0, 0, 7); X.fill();
+  // body
+  toadPath(R, H, gy);
+  const bg = X.createLinearGradient(0, gy-1.35*H, 0, gy);
+  bg.addColorStop(0, shade(c[1],18)); bg.addColorStop(0.55, c[1]); bg.addColorStop(1, shade(c[1],-16));
+  X.fillStyle=bg; X.fill();
   X.save(); X.clip();
-  X.fillStyle='rgba(176,122,214,.55)';                                          // purple warts and a purple belly
-  X.beginPath(); X.ellipse(cx+dir*rx*0.20, by+bry*0.55, rx*0.75, bry*0.45, 0, 0, 7); X.fill();
-  X.fillStyle='rgba(120,70,160,.55)';
-  for(let i=0;i<7;i++){ const a=i*2.3+seed, rr2=0.35+((i*37)%10)/22;
-    X.beginPath(); X.arc(cx+Math.cos(a)*rx*rr2, by-bry*0.35+Math.sin(a)*bry*0.28, rx*(0.06+(i%3)*0.03), 0, 7); X.fill(); }
+  X.fillStyle='#d9c6f0';                                         // pale lavender belly
+  X.beginPath(); X.ellipse(0.38*R, gy-0.12*H, 0.80*R, 0.46*H, 0, 0, 7); X.fill();
+  X.fillStyle='rgba(122,76,170,.55)';                            // a few purple spots on the back
+  for(const [sx,sy,sr] of [[-0.62,-0.95,0.12],[-0.30,-1.08,0.09],[-0.78,-0.62,0.08],[-0.12,-0.86,0.07]]){
+    X.beginPath(); X.ellipse(sx*R, gy+sy*H, sr*R*1.2, sr*R, -0.3, 0, 7); X.fill(); }
+  X.strokeStyle='rgba(40,60,20,.35)'; X.lineWidth=lw;             // the haunch
+  X.beginPath(); X.moveTo(-0.95*R, gy-0.08*H); X.quadraticCurveTo(-0.95*R, gy-0.62*H, -0.38*R, gy-0.52*H); X.stroke();
+  X.fillStyle='rgba(255,255,255,.28)';                           // a shine across the top
+  X.beginPath(); X.ellipse(-0.25*R, gy-1.10*H, 0.42*R, 0.10*H, -0.12, 0, 7); X.fill();
   X.restore();
-  // huge cheeks, puffing as he breathes
-  const puff = 1 + 0.06*Math.sin(T*2.2+seed) + mouthOpen*0.05;
-  for(const [sx, sc] of [[-0.62, 0.78], [0.62, 1]]){
-    const chx = cx + dir*rx*sx, chy = by - bry*0.05, cr = rx*0.36*sc*puff;
-    X.fillStyle= sx*1>0 ? '#b98ad8' : '#a97ac8';
-    X.beginPath(); X.arc(chx, chy, cr, 0, 7); X.fill();
-    X.strokeStyle=c[2]; X.lineWidth=Math.max(1.5, rx*0.05); X.stroke();
-    X.fillStyle='rgba(255,255,255,.35)'; X.beginPath(); X.ellipse(chx-cr*0.3, chy-cr*0.35, cr*0.35, cr*0.18, -0.5, 0, 7); X.fill();
+  toadPath(R, H, gy); X.strokeStyle=ink; X.lineWidth=lw; X.stroke();
+  // the throat pouch: puffs while he breathes, empties when the tongue goes
+  const puff = (1 + 0.10*Math.sin(T*2.4+seed)) * (1 - open*0.35);
+  X.fillStyle='#c8a6ea'; X.strokeStyle='#7c5aa6'; X.lineWidth=Math.max(1.5, rx*0.045);
+  X.beginPath(); X.ellipse(0.55*R, gy-0.40*H, 0.40*R*puff, 0.20*H*puff, 0, 0, 7); X.fill(); X.stroke();
+  X.fillStyle='rgba(255,255,255,.45)'; X.beginPath(); X.ellipse(0.45*R, gy-0.47*H, 0.14*R*puff, 0.05*H*puff, -0.2, 0, 7); X.fill();
+  // mouth: one clean wide line; it drops open when the tongue shoots
+  const m0 = {x: 0.02*R, y: gy-0.64*H};
+  if(open>0.02){
+    X.fillStyle='#3e0f2a';
+    X.beginPath(); X.moveTo(m0.x, m0.y);
+    X.quadraticCurveTo(0.55*R, gy-0.62*H, mouthF.x, mouthF.y);
+    X.quadraticCurveTo(0.60*R, gy-(0.62-0.30*open)*H, m0.x, m0.y); X.fill();
+    X.fillStyle='#ff86b2'; X.beginPath(); X.ellipse(0.62*R, gy-(0.64-0.14*open)*H, 0.22*R, 0.06*H*open+1, 0, 0, 7); X.fill();
   }
-  // the mouth: a long line that drops open when the tongue goes
-  const mx0 = cx - dir*rx*0.45, mx1 = cx + dir*rx*0.95, my = by - bry*0.18;
-  if(mouthOpen>0.02){
-    X.fillStyle='#4a1030';
-    X.beginPath(); X.moveTo(mx0, my); X.quadraticCurveTo((mx0+mx1)/2, my + bry*0.55*mouthOpen, mx1, my - bry*0.05); X.quadraticCurveTo((mx0+mx1)/2, my - bry*0.05, mx0, my); X.fill();
+  X.strokeStyle=ink; X.lineWidth=Math.max(2.5, rx*0.075);
+  X.beginPath(); X.moveTo(m0.x, m0.y); X.quadraticCurveTo(0.55*R, gy-0.60*H, mouthF.x, mouthF.y); X.stroke();
+  X.beginPath(); X.moveTo(m0.x, m0.y); X.quadraticCurveTo(-0.05*R, gy-0.60*H, -0.02*R, gy-0.55*H); X.stroke();   // the corner curl
+  // nostrils
+  X.fillStyle=ink; for(const k of [0,1]){ X.beginPath(); X.arc((0.86+k*0.07)*R, gy-0.98*H+k*0.03*H, rx*0.025, 0, 7); X.fill(); }
+  // front feet
+  X.fillStyle=shade(c[1],-6); X.strokeStyle=ink; X.lineWidth=Math.max(1.5, rx*0.045);
+  for(const fx of [0.30, 0.68]){
+    X.beginPath(); X.ellipse(fx*R, gy-0.04*H, 0.17*R, 0.08*H, 0, 0, 7); X.fill(); X.stroke();
+    for(let t2=-1;t2<=1;t2++){ X.beginPath(); X.arc(fx*R+0.10*R+t2*0.05*R, gy-0.02*H, rx*0.03, 0, 7); X.fill(); }
   }
-  X.strokeStyle=INK; X.lineWidth=Math.max(2.5, rx*0.07); X.lineCap='round';
-  X.beginPath(); X.moveTo(mx0, my); X.quadraticCurveTo((mx0+mx1)/2, my - bry*0.05, mx1, my - bry*0.05); X.stroke();
-  // bulging eyes
-  for(const sgn of [-1,1]){
-    const ex = cx + dir*rx*0.22 + sgn*rx*0.40, ey = by - bry*0.88;
-    X.fillStyle=c[1]; X.beginPath(); X.arc(ex, ey, rx*0.27, 0, 7); X.fill(); X.lineWidth=Math.max(1.5, rx*0.05); X.strokeStyle=c[2]; X.stroke();
-    X.fillStyle='#ffe98a'; X.beginPath(); X.arc(ex, ey-rx*0.02, rx*0.19, 0, 7); X.fill();
-    X.fillStyle='#1d1a10'; X.beginPath(); X.ellipse(ex+dir*rx*0.05, ey, rx*0.13, rx*(u.blink>0?0.02:0.07), 0, 0, 7); X.fill();
-    X.fillStyle=shade(c[1],-10); X.beginPath(); X.ellipse(ex, ey-rx*0.14, rx*0.28, rx*0.12, 0, Math.PI, 0); X.fill();   // heavy lids
-  }
-  // the tiny crown
-  const kx = cx + dir*rx*0.22, ky = by - bry*1.08;
-  X.fillStyle='#ffd23a'; X.strokeStyle='#8a5c04'; X.lineWidth=Math.max(1.5, rx*0.04);
-  X.beginPath(); X.moveTo(kx-rx*0.20, ky); X.lineTo(kx-rx*0.20, ky-rx*0.16); X.lineTo(kx-rx*0.10, ky-rx*0.07);
-  X.lineTo(kx, ky-rx*0.20); X.lineTo(kx+rx*0.10, ky-rx*0.07); X.lineTo(kx+rx*0.20, ky-rx*0.16); X.lineTo(kx+rx*0.20, ky); X.closePath(); X.fill(); X.stroke();
-  X.fillStyle='#e0413a'; X.beginPath(); X.arc(kx, ky-rx*0.05, rx*0.035, 0, 7); X.fill();
+  // the eyes: big, sat on top, half-lidded — royally unimpressed
+  const eye = (ex, ey, er, back)=>{
+    X.fillStyle= back? shade(c[1],-8) : c[1]; X.strokeStyle=ink; X.lineWidth=lw;
+    X.beginPath(); X.arc(ex, ey, er, 0, 7); X.fill(); X.stroke();
+    X.fillStyle='#ffd65a'; X.beginPath(); X.arc(ex+er*0.08, ey+er*0.06, er*0.72, 0, 7); X.fill();
+    X.fillStyle='#1c1a10'; X.beginPath(); X.ellipse(ex+er*0.14, ey+er*0.10, er*0.42, er*(u.blink>0? 0.05 : 0.20), 0, 0, 7); X.fill();
+    X.fillStyle='rgba(255,255,255,.85)'; X.beginPath(); X.arc(ex-er*0.12, ey-er*0.02, er*0.12, 0, 7); X.fill();
+    X.fillStyle= back? shade(c[1],-8) : c[1];                     // the heavy upper lid
+    X.beginPath(); X.arc(ex, ey, er*1.0, Math.PI*1.02, Math.PI*1.98); X.lineTo(ex+er*0.98, ey-er*0.12);
+    X.quadraticCurveTo(ex, ey+er*0.10, ex-er*0.98, ey-er*0.12); X.closePath(); X.fill();
+    X.strokeStyle=ink; X.lineWidth=Math.max(1.5, rx*0.05);
+    X.beginPath(); X.moveTo(ex-er*0.98, ey-er*0.12); X.quadraticCurveTo(ex, ey+er*0.10, ex+er*0.98, ey-er*0.12); X.stroke();
+  };
+  eye(-0.08*R, gy-1.30*H, 0.24*R, true);
+  eye( 0.46*R, gy-1.22*H, 0.27*R, false);
+  // the crown, sat between them
+  X.save(); X.translate(0.18*R, gy-1.46*H); X.rotate(-0.10);
+  const cw=0.46*R, ch=0.30*R;
+  X.fillStyle='#ffd23a'; X.strokeStyle='#8a5c04'; X.lineWidth=Math.max(1.5, rx*0.045);
+  X.beginPath(); X.moveTo(-cw/2, 0); X.lineTo(-cw/2, -ch*0.75); X.lineTo(-cw*0.25, -ch*0.35); X.lineTo(0, -ch);
+  X.lineTo(cw*0.25, -ch*0.35); X.lineTo(cw/2, -ch*0.75); X.lineTo(cw/2, 0); X.closePath(); X.fill(); X.stroke();
+  X.fillStyle='#e0413a'; X.beginPath(); X.arc(0, -ch*0.30, rx*0.04, 0, 7); X.fill();
+  X.fillStyle='#4fb3ff'; for(const k of [-1,1]){ X.beginPath(); X.arc(k*cw*0.30, -ch*0.18, rx*0.025, 0, 7); X.fill(); }
+  X.fillStyle='rgba(255,255,255,.55)'; X.fillRect(-cw/2+2, -ch*0.12, cw-4, Math.max(1.5, ch*0.10));
+  X.restore();
   if(flash>0){ X.save(); X.globalCompositeOperation='lighter'; X.globalAlpha=flash*0.7;
-    gooPath(cx, by, rx*1.08, bry, 0.025, 3, T*0.8, seed, true); X.fillStyle='#ffffff'; X.fill(); X.restore(); }
+    toadPath(R, H, gy); X.fillStyle='#ffffff'; X.fill(); X.restore(); }
+  X.restore();
 }
 
 /* ---- SLIME BRUTE: a muscle-bound slime — torso, pecs, abs, arms, legs, head ---- */
