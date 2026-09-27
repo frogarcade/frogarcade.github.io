@@ -458,23 +458,47 @@ const Music = {
     this.bus.connect(this.filter).connect(AudioFX.sfxBus);
     this.timer = setInterval(() => this.tick(), 80);
   },
-  play(mode) {
-    this.ensure();
-    if (!AudioFX.ac) return;
-    if (AudioFX.ac.state === 'suspended') AudioFX.ac.resume();
-    if (this.current === mode) return;
-    this.current = mode; this.step = 0;
-    this.nextT = AudioFX.ac.currentTime + 0.08;
+  // real recorded tracks for some modes; the rest stay procedural
+  TRACKS: { menu: 'menu.mp3',              // "Steel Grit" (sports rock) by alexgrohl, via Pixabay
+            fight: 'fight.mp3',             // "Wrestling" by muzaproduction, via Pixabay
+            final: 'final.mp3' },           // "Epic Sport Rock Trailer" by bfcmusic: the title fight, every round
+  muffled: false,
+  el: null, elMode: null, elFailed: {},
+  trackVol() { return Math.max(0, Math.min(1, 0.5 * settingsValue('music') * (this.muffled ? 0.35 : 1))); },
+  playTrack(mode) {
+    const src = this.TRACKS[mode];
+    if (!src || this.elFailed[mode]) return false;
+    if (!this.el || this.elMode !== mode) {
+      if (this.el) this.el.pause();
+      this.el = new Audio(src); this.el.loop = true; this.el.preload = 'auto'; this.elMode = mode;
+      this.el.addEventListener('error', () => { this.elFailed[mode] = true; });
+    }
+    this.el.volume = this.trackVol();
+    const p = this.el.play();                  // may be refused until the first click; play() is retried on the next call
+    if (p && p.catch) p.catch(() => {});
+    return true;
   },
-  stop() { this.current = null; },
+  stopTrack() { if (this.el) { this.el.pause(); this.el.currentTime = 0; } },
+  play(mode) {
+    try { this.ensure(); } catch (e) {}
+    const ac = AudioFX.ac;                        // a recorded track doesn't need the synth to be up
+    if (ac && ac.state === 'suspended') ac.resume();
+    if (this.current === mode) { if (this.TRACKS[mode]) this.playTrack(mode); return; }
+    this.current = mode; this.step = 0;
+    if (ac) this.nextT = ac.currentTime + 0.08;
+    if (!this.playTrack(mode)) this.stopTrack();
+  },
+  stop() { this.current = null; this.stopTrack(); },
   muffle(on) {
+    this.muffled = !!on; if (this.el) this.el.volume = this.trackVol();   // knocked out: the song sinks away too
     if (!this.filter) return;
     this.filter.frequency.setTargetAtTime(on ? 420 : 16000, AudioFX.ac.currentTime, 0.15);
   },
   tick() {
     const ac = AudioFX.ac;
     if (!ac || !this.current || ac.state !== 'running') return;
-    const bpm = this.current === 'fight' ? 138 : 92;
+    if (this.TRACKS[this.current] && !this.elFailed[this.current]) return;   // a real song has this one
+    const bpm = (this.current === 'fight' || this.current === 'final') ? 138 : 92;
     const spb = 60 / bpm / 4; // 16th note
     while (this.nextT < ac.currentTime + 0.22) {
       this.schedule(this.step, this.nextT);
@@ -517,7 +541,7 @@ const Music = {
   },
   schedule(s, t) {
     const A1 = 55, C2 = 65.41, D2 = 73.42, E2 = 82.41, G1 = 49, F1 = 43.65;
-    if (this.current === 'fight') {
+    if (this.current === 'fight' || this.current === 'final') {
       if (s % 8 === 0 || s === 14 || s === 30) this.kick(t);
       if (s % 8 === 4) this.noiseHit(t, 1400, 0.08, 0.3);         // snare
       if (s % 4 === 2) this.noiseHit(t, 7000, 0.02, 0.05, 'highpass'); // hats
@@ -738,7 +762,14 @@ function settingsValue(k) { return save.settings ? save.settings[k] : DEFAULT_SE
 function applyAudioSettings() {
   if (AudioFX.sfxBus) AudioFX.sfxBus.gain.value = settingsValue('sfx');
   if (Music.bus) Music.bus.gain.value = 0.14 * settingsValue('music');
+  if (Music.el) Music.el.volume = Music.trackVol();
 }
+// the menu song starts on the very first click or key (browsers keep a page silent until then)
+function kickMenuMusic() {
+  if (game.state === 'menu' || game.state === 'select') Music.play('menu');
+  document.removeEventListener('pointerdown', kickMenuMusic); document.removeEventListener('keydown', kickMenuMusic);
+}
+document.addEventListener('pointerdown', kickMenuMusic); document.addEventListener('keydown', kickMenuMusic);
 
 let settingsReturn = null;
 function syncSettingsUI() {
@@ -1771,7 +1802,7 @@ function startRound() {
   game.fightIntro = 1.2;
   AudioFX.bell(3);   // seconds out — the classic three
   AudioFX.horn();
-  Music.play('fight');
+  Music.play(game.isTitleFight ? 'final' : 'fight');   // the champion gets the big song
   announce(game.round === 1 ? 'FIGHT!' : 'ROUND ' + game.round + '!');
   updatePauseOverlay();
 }
