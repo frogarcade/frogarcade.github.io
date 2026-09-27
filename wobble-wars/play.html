@@ -387,8 +387,8 @@ const U = {
           swT:0.40, hitP:0.50, goop:1, kbStep:0.5,
           c:['#d4ff6a','#4fc21c','#1f5c0c']},          // a puddle with ideas: weak hit, nasty poison
   sludge:{nm:'THE PURPLE SLUDGE', traits:['toxic'], team:-1, hp:4500, dmg:200, rate:0.01, spd:12, rng:50, r:64, wide:1.25,
-          swT:2.0, hitP:0.88, sludge:1, boss:1, noKB:1,
-          c:['#e2c2f6','#9a5cc6','#4a2268']},          // the jaw opens far too high, then slams: every 2s, no knockback ever
+          swT:1.0, hitP:0.88, sludge:1, boss:1, noKB:1,
+          c:['#e2c2f6','#9a5cc6','#4a2268']},          // the jaw opens far too high, then slams: every 1s, no knockback ever
   // ELITES — existing slimes cranked up, drawn by their normal renderers
   hulk:  {nm:'HULK SLIME', traits:['normal'], team:-1, hp:175, dmg:70, rate:1.4, spd:24, rng:62, r:50, wide:1,
           swT:0.42, hitP:0.50, elite:1, splitInto:{k:'slime', n:2}, kbStep:0.5,
@@ -427,7 +427,7 @@ const U = {
    Left out: workers/barricades (their barricades land on the slime side). Things that only make
    sense for the slimes are stripped: bosses don't announce themselves, the Devil doesn't call
    assassins, Scrapjaw doesn't burst into slime-side scrap. */
-const SHADOW_OF = ['angel','brute','phoenix','blue','magma'];   // the user's picks
+const SHADOW_OF = ['angel','phoenix','magma','sludge','assassin'];   // the user's picks
 const SHADOW_KEYS = SHADOW_OF.map(k => {
   const key = 'sh_'+k, b = U[k];
   U[key] = Object.assign({}, b, { nm:'SHADOW '+b.nm.replace(/^THE /,''), team:1, cost:0, cd:0,
@@ -5138,7 +5138,7 @@ function fireCannon(){
 // reaped units are drawn into this small buffer, tinted there (only their own pixels), and stamped back.
 // Far cheaper than a canvas filter, which re-processes the whole screen for every unit.
 const SHADE_CV = document.createElement('canvas'), SHADE = SHADE_CV.getContext('2d');
-const SHADE_BOX = 190;                                   // half-width of the buffer, in world px
+const SHADE_BOX = 230;                                   // half-width of the buffer, in world px
 function drawUnit(u){
   const d=U[u.k], dir=u.team;
   const wf=(d.wide||1)*(u.rs||1), vf=(u.rs||1);
@@ -5422,8 +5422,11 @@ function drawUnit(u){
       X.beginPath(); X.arc(wx, wy, rx*(0.16+0.18*ph), 0, 7); X.fill();
     }
     X.globalCompositeOperation='lighter';                // two cold violet eyes where its eyes were
+    // the sludge's eyes ride up with its head
+    const sop = d.sludge ? sludgeOpen(u) : 0, shy = d.sludge ? (cy + ry*0.02) - ry*0.34 - sop*ry*2.1 - ry*0.22 : 0;
     for(const sgn of [-1,1]){
-      const ex = cx + dir*rx*0.10 + sgn*rx*0.26, eyy = cy - ry*0.16;
+      const ex = d.sludge ? cx + dir*rx*0.24 + sgn*rx*0.25 : cx + dir*rx*0.10 + sgn*rx*0.26,
+            eyy = d.sludge ? shy : cy - ry*0.16;
       const eg=X.createRadialGradient(ex,eyy,0.5,ex,eyy,rx*0.14);
       eg.addColorStop(0,'rgba(230,200,255,1)'); eg.addColorStop(0.45,'rgba(170,110,255,.8)'); eg.addColorStop(1,'rgba(120,60,255,0)');
       X.globalAlpha=0.9; X.fillStyle=eg; X.beginPath(); X.arc(ex,eyy,rx*0.14,0,7); X.fill();
