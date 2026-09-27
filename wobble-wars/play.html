@@ -732,11 +732,19 @@ const LEVELS = [
    sky:['#6f8f7a','#d9e6c6'], hill:'#4a5a36',
    // mushrooms that burst into slowing spores, green goop at twice the goop — and the old oak, grown into a monster
    enemy:{ goop:{hp:90, dmg:10},                                        // 100% boosted
-           oak:{hp:3800, dmg:60, rs:1.35, thorns:30} },                 // the Ironwood tree, bigger and meaner
+           oak:{hp:3800, dmg:60, thorns:30} },                          // the Ironwood tree, same size, much meaner
    boss:'oak', bossAt:2000, bossPeons:0,
    list:[[2,'shroom'],[5,'goop'],[8,'shroom'],[11,'shroom'],[14,'goop'],[18,'shroom'],[21,'goop'],
          [24,'shroom'],[27,'shroom'],[30,'goop'],[34,'shroom'],[38,'goop'],[41,'shroom']],
-   loop:5, pool:['shroom','goop','shroom','goop','shroom']}
+   loop:5, pool:['shroom','goop','shroom','goop','shroom']},
+
+  {nm:'THE TANGLED BEAST', bhp:4200, xp:26000, rareTicket:1, size:'big',
+   sky:['#3d2f52','#9a86b4'], hill:'#3b3150',
+   // nothing but slime brutes, each one built like a wall — then the purple sludge crawls out of the tangle
+   enemy:{ brute:{hp:1000, dmg:120} },                    // the purple slimes, buffed: ~5.7x HP, ~3x damage
+   boss:'sludge', bossAt:2100, bossPeons:0,
+   list:[[3,'brute'],[10,'brute'],[17,'brute'],[23,'brute'],[29,'brute'],[35,'brute'],[41,'brute']],
+   loop:6, pool:['brute']}
 ];
 
 /* XP LEVELS — short farming stages with their own spawn rules, no campaign progress */
@@ -4192,15 +4200,16 @@ function aiTick(dt){
   B.aiT = 1.0;                                   // it thinks once a second
   const foes = B.units.some(o => o.team<0 && !o.dead && !o.dying);   // never waste a shot on an empty lane
   if(foes && Math.random() < 0.08 && B.cannon.ch>=100) fireCannon();
-  const squad = teamUnits().filter(k => !(U[k].once && B.used[k]));
+  // only blobs that are ready right now (off cooldown) and that the tank can actually hold
+  const squad = teamUnits().filter(k => !(U[k].once && B.used[k]) && B.cd[k]<=0 && U[k].cost <= B.cap);
   // pick something to save up for — the wealthy blob more often than any one blob
   if(!B.aiPick || (B.aiPick!=='wealth' && squad.indexOf(B.aiPick)<0)
      || (B.aiPick==='wealth' && WEALTH_COST[B.wealth]==null)){
+    if(!squad.length){ B.aiPick = null; return; }                    // nothing ready: wait, don't roll
     const wealthLeft = WEALTH_COST[B.wealth]!=null;
-    B.aiPick = (wealthLeft && Math.random()<0.20) || !squad.length   // one pick in five is the bank
+    B.aiPick = (wealthLeft && Math.random()<0.20)                      // one pick in five is the bank
              ? 'wealth'
              : squad[(Math.random()*squad.length)|0];
-    if(B.aiPick==='wealth' && !wealthLeft) B.aiPick = squad[(Math.random()*squad.length)|0];
   }
   if(!B.aiPick) return;
   if(B.aiPick==='wealth'){                       // save for it, then buy it and choose again
