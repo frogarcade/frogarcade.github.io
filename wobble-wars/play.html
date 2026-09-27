@@ -383,6 +383,12 @@ const U = {
   mib:   {nm:'THE MIDNIGHT MAN', traits:['dark'], team:-1, hp:1844, dmg:73.5, rate:1.48, spd:16, rng:62, r:46, wide:1,
           swT:0.45, hitP:0.72, mib:1, boss:1, kbStep:0.25, dagger:1,
           c:['#3a3f57','#20233a','#0d0f1c']},
+  goop:  {nm:'GREEN GOOP', traits:['toxic'], poison:{mul:1.2, t:3}, team:-1, hp:45, dmg:5, rate:1.2, spd:38, rng:46, r:22, wide:1.18,
+          swT:0.40, hitP:0.50, goop:1, kbStep:0.5,
+          c:['#d4ff6a','#4fc21c','#1f5c0c']},          // a puddle with ideas: weak hit, nasty poison
+  sludge:{nm:'THE PURPLE SLUDGE', traits:['toxic'], team:-1, hp:4000, dmg:200, rate:0.01, spd:12, rng:50, r:64, wide:1.25,
+          swT:2.0, hitP:0.88, sludge:1, boss:1, noKB:1,
+          c:['#e2c2f6','#9a5cc6','#4a2268']},          // the jaw opens far too high, then slams: every 2s, no knockback ever
   // ELITES — existing slimes cranked up, drawn by their normal renderers
   hulk:  {nm:'HULK SLIME', traits:['normal'], team:-1, hp:175, dmg:70, rate:1.4, spd:24, rng:62, r:50, wide:1,
           swT:0.42, hitP:0.50, elite:1, splitInto:{k:'slime', n:2}, kbStep:0.5,
@@ -681,9 +687,8 @@ const LEVELS = [
    // magma rushers by the dozen, and now and then something that should not be on their side
    enemy:{ magma:{hp:27.3, dmg:91},                        // 30% up, same size
            qb:{hp:1008, dmg:47, rs:2} },                   // twice the size, and half again the HP
-   boss:'angel', bossNeed:{kills:{k:'angel', n:3}, touched:1}, bossPeons:0,   // three demons down AND the nest bloodied
-   bossMore:{k:'angel', n:2, gap:4},                       // three of them, four seconds apart
-   bossThen:{k:'qb', t:16},                                // and then the big one walks in
+   boss:'qb', bossNeed:{kills:{k:'angel', n:3}, touched:1}, bossPeons:0,      // three demons down AND the nest bloodied:
+                                                            // then the giant quarterback is the boss, alone
    list:[[3,'magma'],[7,'magma'],[12,'angel'],[16,'magma'],[21,'magma'],[26,'angel'],
          [31,'magma'],[36,'magma'],[42,'angel'],[48,'magma']],
    loop:6, pool:['magma','magma','angel','magma','magma','magma','angel']},
@@ -695,7 +700,16 @@ const LEVELS = [
    boss:'phoenix', bossOnTouch:1, bossCrowd:5, bossPeons:0,   // touch the nest OR field five blobs
    list:[[2,'cyan'],[7,'cyan'],[12,'angel'],[17,'cyan'],[22,'cyan'],[28,'angel'],
          [34,'cyan'],[40,'cyan'],[46,'angel']],
-   loop:6, pool:['cyan','cyan','angel','cyan']}
+   loop:6, pool:['cyan','cyan','angel','cyan']},
+
+  {nm:'THE PURPLE SLUDGE', bhp:3600, xp:20000, rareTicket:1, size:'big', bossMusic:1,
+   sky:['#bba6da','#5b4474'], hill:'#55622c',
+   // a swamp of green goop, and the plain green slimes here are ten times the slime — they burst into two more
+   enemy:{ slime:{hp:175, dmg:70, rs:1.6, splitInto:{k:'slime', n:2, mul:4, rs:0.72}} },
+   boss:'sludge', bossAt:1800, bossPeons:0,                // half the nest gone: the sludge rises
+   list:[[2,'goop'],[5,'goop'],[9,'slime'],[13,'goop'],[16,'goop'],[20,'slime'],[25,'goop'],
+         [28,'goop'],[32,'slime'],[37,'goop'],[41,'goop'],[45,'slime']],
+   loop:5, pool:['goop','goop','slime','goop']}
 ];
 
 /* XP LEVELS — short farming stages with their own spawn rules, no campaign progress */
@@ -3055,6 +3069,135 @@ function drawSlime(u, cx, cy, rx, ry, dir, flash){
 }
 
 
+/* ---- GREEN GOOP: a low toxic puddle that bubbles and drips ---- */
+function drawGoop(u, cx, cy, rx, ry, dir, flash){
+  const c = U[u.k].c, seed=u.seed||1;
+  const ryy = ry*0.70, cyy = cy + ry*0.30;
+  shadow(cx, rx*1.15, 0.26);
+  X.save(); X.globalAlpha=0.55; X.fillStyle=c[2];                       // the spill under it
+  X.beginPath(); X.ellipse(cx, GY+1, rx*1.25+Math.sin(T*2.2+seed)*3, rx*0.22, 0,0,7); X.fill(); X.restore();
+  const lunge = u.sw>0 ? Math.sin(Math.min(1,(1-u.sw/u.swT)/0.6)*Math.PI) : 0;
+  const bx = cx + dir*rx*0.18*lunge;
+  gooPath(bx, cyy, rx, ryy*(1+0.12*lunge), 0.12, 6, T*1.4, seed, true);
+  const g = X.createRadialGradient(bx-rx*0.3, cyy-ryy*0.5, rx*0.1, bx, cyy, rx*1.3);
+  g.addColorStop(0, c[0]); g.addColorStop(0.45, c[1]); g.addColorStop(1, c[2]);
+  X.fillStyle=g; X.fill(); X.lineWidth=Math.max(2, rx*0.08); X.strokeStyle=c[2]; X.stroke();
+  X.save(); X.clip();                                                    // bubbles rising inside
+  for(let i=0;i<4;i++){
+    const ph=((T*0.7 + i*0.25 + seed*0.13)%1);
+    X.globalAlpha=0.55*(1-ph); X.fillStyle='#eaff9a';
+    X.beginPath(); X.arc(bx+(i-1.5)*rx*0.42, cyy+ryy*0.6-ph*ryy*1.4, rx*(0.07+0.04*(i%2)), 0, 7); X.fill();
+  }
+  X.restore();
+  for(let i=0;i<3;i++){                                                  // bubbles popping off the top
+    const ph=((T*0.9 + i*0.33 + seed*0.2)%1), px=bx+(i-1)*rx*0.45;
+    X.save(); X.globalAlpha=0.8*(1-ph); X.strokeStyle='#c8ff5a'; X.lineWidth=Math.max(1, rx*0.05);
+    X.beginPath(); X.arc(px, cyy-ryy*0.95-ph*ry*0.9, rx*(0.06+ph*0.10), 0, 7); X.stroke(); X.restore();
+  }
+  for(let i=0;i<2;i++){                                                  // drips
+    const ph=((T*0.6 + i*0.5 + seed*0.3)%1), dx=bx+(i?1:-1)*rx*0.62;
+    X.fillStyle=c[1]; X.beginPath(); X.ellipse(dx, cyy+ryy*0.2+ph*ryy*0.9, rx*0.07, rx*(0.10+ph*0.08), 0, 0, 7); X.fill();
+  }
+  X.fillStyle='rgba(255,255,255,.45)';
+  X.beginPath(); X.ellipse(bx-rx*0.40, cyy-ryy*0.45, rx*0.20, ryy*0.12, -0.5, 0,7); X.fill();
+  eyes(bx+dir*rx*0.08, cyy-ryy*0.25, rx*0.85, dir, 'slit', u.blink>0, true);
+  X.strokeStyle=INK; X.lineWidth=Math.max(2, rx*0.08); X.lineCap='round';
+  X.beginPath(); X.moveTo(bx+dir*rx*0.02-rx*0.18, cyy+ryy*0.28);
+  X.quadraticCurveTo(bx+dir*rx*0.06, cyy+ryy*(u.sw>0?0.02:0.14), bx+dir*rx*0.10+rx*0.18, cyy+ryy*0.28); X.stroke();
+  if(flash>0){ X.save(); X.globalCompositeOperation='lighter'; X.globalAlpha=flash*0.8;
+    gooPath(bx, cyy, rx, ryy, 0.12, 6, T*1.4, seed, true); X.fillStyle='#ffffff'; X.fill(); X.restore(); }
+}
+/* ---- THE PURPLE SLUDGE: a heaped purple mass, no arms, one enormous jaw and a purple tongue.
+   Its head lifts far too high, then slams shut on whatever is in front ---- */
+function sludgeOpen(u){
+  const p = u.sw>0 ? 1-u.sw/u.swT : -1, ss=x=>x*x*(3-2*x);
+  if(p<0) return 0.04 + 0.03*Math.sin(T*1.7+(u.seed||1));            // breathing, jaw just apart
+  if(p<0.78) return ss(p/0.78);                                         // up, up, far too far
+  if(p<0.88){ const q=(p-0.78)/0.10; return 1 - q*q; }                  // SLAM
+  const q=(p-0.88)/0.12; return 0.10*Math.sin(q*Math.PI)*(1-q);         // a little rebound
+}
+function drawSludge(u, cx, cy, rx, ry, dir, flash){
+  const c = U[u.k].c, seed=u.seed||1, op = sludgeOpen(u);
+  const dark = 'rgba(58,18,86,.58)', lipC = shade(c[1],-34);
+  const wavy = (x0,y0,x1,y1,amp,ph)=>{ X.beginPath(); for(let i=0;i<=10;i++){ const f=i/10;
+      const x=x0+(x1-x0)*f, y=y0+(y1-y0)*f + Math.sin(f*Math.PI*2+ph)*amp; if(i) X.lineTo(x,y); else X.moveTo(x,y); } X.stroke(); };
+  shadow(cx, rx*1.30, 0.32);
+  X.save(); X.globalAlpha=0.62; X.fillStyle=c[2];                                // the puddle it drags along
+  X.beginPath(); X.ellipse(cx, GY+2, rx*1.40+Math.sin(T*1.6+seed)*4, rx*0.20, 0,0,7); X.fill(); X.restore();
+  const seamY = cy + ry*0.02;                                                      // where the jaws meet
+  const lift = op*ry*2.1;                                                          // WAY too high
+  const hcx = cx + dir*rx*0.04, hcy = seamY - ry*0.34 - lift;                     // centre of the head
+  const bodyG = (y0,y1)=>{ const g=X.createRadialGradient(cx-rx*0.35, y0, rx*0.1, cx, (y0+y1)/2, rx*1.4);
+      g.addColorStop(0, c[0]); g.addColorStop(0.45, c[1]); g.addColorStop(1, shade(c[1],-24)); return g; };
+  // the gooey back of the head, stretching as it rises (so the head never floats free)
+  if(lift>2){
+    const bx = cx - dir*rx*0.46, top = hcy, bot = seamY + ry*0.2;
+    gooPath(bx, (top+bot)/2, rx*(0.46 - op*0.10), (bot-top)/2 + ry*0.10, 0.05, 4, T, seed+7, true);
+    X.fillStyle=bodyG(top, bot); X.fill(); X.lineWidth=Math.max(2, rx*0.06); X.strokeStyle=c[2]; X.stroke();
+  }
+  // inside the mouth
+  if(op>0.04){
+    const top = hcy + ry*0.46, bot = seamY + ry*0.04;
+    X.fillStyle='#240a33';
+    X.beginPath(); X.ellipse(cx+dir*rx*0.18, (top+bot)/2, rx*0.82, (bot-top)/2 + ry*0.08, 0, 0, 7); X.fill();
+    X.fillStyle='rgba(120,40,140,.35)';
+    X.beginPath(); X.ellipse(cx+dir*rx*0.05, (top+bot)/2, rx*0.40, (bot-top)*0.34, 0, 0, 7); X.fill();
+  }
+  // the heap (lower jaw and body)
+  gooPath(cx, cy+ry*0.36, rx*1.14, ry*0.64, 0.08, 6, T*0.9, seed, true);
+  X.fillStyle=bodyG(cy, GY); X.fill(); X.lineWidth=Math.max(2, rx*0.07); X.strokeStyle=c[2]; X.stroke();
+  X.save(); X.clip();
+  X.strokeStyle=dark; X.lineWidth=Math.max(2, rx*0.085); X.lineCap='round';
+  wavy(cx-rx*1.0, cy+ry*0.35, cx-rx*0.30, cy+ry*0.80, ry*0.06, T*0.8+seed);
+  wavy(cx-rx*0.15, cy+ry*0.50, cx+rx*0.65, cy+ry*0.82, ry*0.05, T*0.7+seed+2);
+  wavy(cx+rx*0.45, cy+ry*0.30, cx+rx*1.05, cy+ry*0.62, ry*0.05, T*0.9+seed+4);
+  X.strokeStyle=lipC; X.lineWidth=Math.max(2, rx*0.13);                           // the lower lip
+  X.beginPath(); X.ellipse(cx+dir*rx*0.18, seamY+ry*0.02, rx*0.80, ry*0.12, 0, Math.PI*1.05, Math.PI*1.95); X.stroke();
+  X.restore();
+  // drips off the heap
+  for(let i=0;i<3;i++){ const ph=((T*0.45 + i*0.33 + seed*0.1)%1), dx=cx+(i-1)*rx*0.8;
+    X.fillStyle=c[1]; X.beginPath(); X.ellipse(dx, cy+ry*0.72+ph*ry*0.22, rx*0.06, ry*(0.06+ph*0.08), 0, 0, 7); X.fill(); }
+  // the tongue: big, purple, lolling over the lower lip
+  X.save(); X.fillStyle='#c257d6'; X.strokeStyle='#6f2386'; X.lineWidth=Math.max(1.5, rx*0.045);
+  const tip = cx + dir*rx*(0.62 + op*0.25), tipY = seamY + ry*(0.22 + op*0.08);
+  X.beginPath(); X.moveTo(cx-dir*rx*0.30, seamY-ry*0.02);
+  X.quadraticCurveTo(cx+dir*rx*0.25, seamY - ry*(0.16+op*0.30), tip, tipY);
+  X.quadraticCurveTo(cx+dir*rx*0.40, seamY + ry*0.30, cx-dir*rx*0.10, seamY + ry*0.10);
+  X.closePath(); X.fill(); X.stroke();
+  X.strokeStyle='rgba(111,35,134,.75)';
+  X.beginPath(); X.moveTo(cx-dir*rx*0.05, seamY+ry*0.02); X.quadraticCurveTo(cx+dir*rx*0.30, seamY-ry*(0.04+op*0.16), tip-dir*rx*0.08, tipY-ry*0.03); X.stroke();
+  X.restore();
+  // goo strings from the roof of the mouth
+  if(op>0.10){
+    X.save(); X.strokeStyle=c[1]; X.lineCap='round';
+    for(let i=0;i<4;i++){ const sx = cx + dir*rx*(-0.10+i*0.26), len = Math.min(1, op*1.4)*(seamY-hcy-ry*0.36)*(0.35+0.2*(i%2));
+      X.globalAlpha=0.85; X.lineWidth=Math.max(1, rx*(0.05-i*0.008));
+      X.beginPath(); X.moveTo(sx, hcy+ry*0.50); X.lineTo(sx, hcy+ry*0.50+len); X.stroke();
+      X.fillStyle=c[1]; X.beginPath(); X.arc(sx, hcy+ry*0.50+len, rx*0.035, 0, 7); X.fill(); }
+    X.restore();
+  }
+  // the head / upper jaw
+  X.save();
+  const tilt = -dir*op*0.22;
+  X.translate(hcx - dir*rx*0.4, hcy); X.rotate(tilt); X.translate(-(hcx - dir*rx*0.4), -hcy);
+  gooPath(hcx, hcy, rx*0.94, ry*0.70, 0.06, 5, T*0.8, seed+3, true);
+  X.fillStyle=bodyG(hcy-ry*0.5, hcy+ry*0.5); X.fill(); X.lineWidth=Math.max(2, rx*0.07); X.strokeStyle=c[2]; X.stroke();
+  X.save(); X.clip();
+  X.strokeStyle=dark; X.lineWidth=Math.max(2, rx*0.08); X.lineCap='round';
+  wavy(hcx-dir*rx*0.95, hcy-ry*0.05, hcx-dir*rx*0.35, hcy-ry*0.45, ry*0.05, T*0.6+seed);
+  wavy(hcx-dir*rx*0.80, hcy+ry*0.25, hcx-dir*rx*0.15, hcy-ry*0.05, ry*0.04, T*0.7+seed+3);
+  X.strokeStyle=lipC; X.lineWidth=Math.max(2, rx*0.14);                             // the thick upper lip
+  X.beginPath(); X.ellipse(hcx+dir*rx*0.14, hcy+ry*0.62, rx*0.84, ry*0.18, 0, Math.PI*0.02, Math.PI*0.98); X.stroke();
+  X.restore();
+  X.fillStyle='rgba(255,255,255,.45)';
+  X.beginPath(); X.ellipse(hcx-rx*0.40, hcy-ry*0.28, rx*0.22, ry*0.09, -0.4, 0,7); X.fill();
+  eyes(hcx+dir*rx*0.20, hcy-ry*0.22, rx*0.74, dir, 'slit', u.blink>0, true);
+  X.restore();
+  if(flash>0){ X.save(); X.globalCompositeOperation='lighter'; X.globalAlpha=flash*0.7;
+    gooPath(cx, cy+ry*0.36, rx*1.14, ry*0.64, 0.08, 6, T*0.9, seed, true); X.fillStyle='#ffffff'; X.fill();
+    gooPath(hcx, hcy, rx*0.94, ry*0.70, 0.06, 5, T*0.8, seed+3, true); X.fill(); X.restore(); }
+}
+
 /* ---- SLIME BRUTE: a muscle-bound slime — torso, pecs, abs, arms, legs, head ---- */
 function limb(x1,y1,x2,y2,w,fill,line){
   X.lineCap='round';
@@ -3860,9 +4003,8 @@ function bossBars(dt){
     else u.barGhost += (p - u.barGhost) * Math.min(1, dt*3.4);
     if(p > u.barGhost) u.barGhost = p;                       // healed: no ghost hanging behind
     u.barKick = Math.max(0, (u.barKick||0) - dt*3.2);
-    const kick = u.barKick, x = x0 + Math.sin(T*70)*kick*3.5;
+    const kick = u.barKick, x = x0;                          // it glows and sparks on a hit, but never shakes
     X.save();
-    X.translate(0, Math.sin(T*54)*kick*1.5);
     X.fillStyle='rgba(6,14,24,.78)'; rr(x-4, y-4, w+8, h+8, 12); X.fill();
     X.strokeStyle= kick>0.05? 'rgba(255,220,150,'+(0.55+0.4*kick)+')' : 'rgba(255,140,120,.55)';
     X.lineWidth= 2+kick*1.6; X.stroke();
@@ -4277,12 +4419,16 @@ function endAir(u){
   if(u.dying){
     u.dead=true; u.dt=0.45; if(u.team<0) B.kills++;
     if(u.team<0) B.killed[u.k] = (B.killed[u.k]||0) + 1;
-    const sp = U[u.k].splitInto;
+    const sp = u.team<0 ? espec(u.k,'splitInto') : U[u.k].splitInto;   // a level can make anything split
     if(sp && !u.noSplit){                             // scrap slimes come apart
       for(let i=0;i<sp.n;i++){
         const h = spawnUnit(sp.k);
         h.x = u.x + (i - (sp.n-1)/2) * 34;
         h.noSplit = true; h.spawnA = 0;
+        if(sp.mul){                                   // the pieces carry their own boost and size
+          h.hp = h.max = Math.round(U[sp.k].hp*sp.mul*10)/10;
+          h.dmgFix = U[sp.k].dmg*sp.mul; h.rs = sp.rs||1;
+        }
       }
       ring(u.x, GY-U[u.k].r*0.8, '#ffc89a', 8, 92, 0.42, 6);
       for(let q=0;q<14;q++) puff(u.x+(Math.random()-0.5)*30, GY-14, '#e8a76a', -120);
@@ -4333,7 +4479,7 @@ function dmgMultiplier(src, tgt){
 function applyProcs(src, tgt){
   for(const ab of abilsOf(src)){
     if(ab.chance==null || !abilHits(ab, tgt) || Math.random() >= ab.chance) continue;
-    if(ab.t==='kb'){ tgt.push = Math.min(110, (tgt.push||0) + (ab.dist||44)); }
+    if(ab.t==='kb'){ if(!U[tgt.k].noKB) tgt.push = Math.min(110, (tgt.push||0) + (ab.dist||44)); }
     else if(ab.t==='freeze'){ tgt.freezeT = Math.max(tgt.freezeT||0, ab.time||1); tgt.sw=0; }
     else if(ab.t==='slow'){ tgt.slowT = Math.max(tgt.slowT||0, ab.time||2); }
   }
@@ -4759,6 +4905,13 @@ function updateBattle(dt){
             for(let q=0;q<16;q++) B.parts.push({x:ix+(Math.random()-0.5)*d.aoe*1.4, y:GY-4,
               vx:(Math.random()-0.5)*300, vy:-70-Math.random()*190, r:2.5+Math.random()*5,
               life:0.35+Math.random()*0.4, t:0, col: Math.random()<0.5?'#ffffff':'#ffb2d8', g:470});
+          } else if(U[u.k].sludge){                    // the jaw comes down: purple splash, the ground jumps
+            SFX.slam(); tone(70,0.35,'square',0.18,34); noise(0.35,0.24,700,120,0.8);
+            shake=Math.max(shake,16); hitStop=Math.max(hitStop,0.05);
+            ring(ix, GY-8, '#c58ae6', 14, 120, 0.42, 9);
+            for(let q=0;q<22;q++) B.parts.push({x:ix+(Math.random()-0.5)*50, y:GY-10-Math.random()*30,
+              vx:(Math.random()-0.5)*320, vy:-80-Math.random()*240, r:3+Math.random()*6,
+              life:0.45+Math.random()*0.4, t:0, col: Math.random()<0.5?'#b879e0':'#6b3496', g:520});
           } else if(U[u.k].ram){
             SFX.slam();
             ring(ix, GY-10, '#bfe4ff', 10, d.aoe*1.9, 0.36, 6);
@@ -4805,7 +4958,13 @@ function updateBattle(dt){
           const vt = first.team>0 ? uspd(first.k) : (U[first.k].spd||0);
           const sp = J.run ? (J.speed||700) : 1e9;
           const meet = fd * sp/(sp+vt);
-          hop = Math.min(hop, Math.max(26, meet - U[first.k].r*0.6*(first.rs||1)));
+          if(J.run){
+            // a runner (the quarterback) stops where the bodies touch; already touching = tackle on the spot
+            const touch = d.r*0.5*(u.rs||1) + U[first.k].r*0.6*(first.rs||1);
+            hop = Math.min(hop, Math.max(0, meet - touch));
+          } else {
+            hop = Math.min(hop, Math.max(26, meet - U[first.k].r*0.6*(first.rs||1)));   // a hopper always hops — the pogo can bounce right past (on purpose)
+          }
         }
         if(tgt==='base') hop = 0;                  // already at the wall: swing on the spot
         u.jx0 = u.x;
@@ -5222,6 +5381,8 @@ function drawUnit(u){
   else if(d.jump) drawJumper(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.jaw) drawScrapjaw(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.oak) drawOak(u,cx,cy,rx,ry,dir,u.flash);   // before d.thorns — the oak has thorns too
+  else if(d.sludge) drawSludge(u,cx,cy,rx,ry,dir,u.flash);
+  else if(d.goop) drawGoop(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.knife) drawAssassin(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.coin) drawBoomerang(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.elderCane) drawElder(u,cx,cy,rx,ry,dir,u.flash);
@@ -5647,6 +5808,8 @@ function drawMini(k, cx, cy, r, dir, seed){
                      [ 'golem', drawGolem, 0.92, 0.94],
                      [ 'jaw',   drawScrapjaw, 0.92, 0.90],
                      [ 'oak',   drawOak,   0.86, 0.86],
+                     [ 'sludge',drawSludge,0.80, 0.80],
+                     [ 'goop',  drawGoop,  0.92, 0.92],
                      [ 'mib',   drawMIB,   0.86, 0.90],
                      [ 'devil', drawDevil, 0.80, 0.80],
                      [ 'worker',drawWorker,0.92, 0.92],
