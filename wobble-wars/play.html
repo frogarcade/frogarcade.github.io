@@ -225,8 +225,8 @@ const HOOK =[
 ];
 /* Real tracks live next to the page. A kind with no file here — or a file that
    fails to load — falls back to the chiptune generator below. */
-const MUSIC_FILES = { menu:'menu.mp3', battle:'battle.mp3', boss:'boss.mp3', victory:'victory.mp3', defeat:'defeat.mp3', casino:'casino.mp3' };
-const MUSIC_GAIN  = { menu:0.5, battle:0.42, boss:1, victory:0.75, defeat:0.8, casino:0.6 };   // per-track trim: tracks are not mastered alike
+const MUSIC_FILES = { menu:'menu.mp3', battle:'battle.mp3', boss:'boss.mp3', miniboss:'miniboss.mp3', victory:'victory.mp3', defeat:'defeat.mp3', casino:'casino.mp3' };
+const MUSIC_GAIN  = { menu:0.5, battle:0.42, boss:1, miniboss:0.85, victory:0.75, defeat:0.8, casino:0.6 };   // per-track trim: tracks are not mastered alike
 const MUSIC_ONCE  = { victory:1, defeat:1 };      // a sting plays once; everything else loops
 function musElVol(){ return Math.max(0, Math.min(1, 0.55 * musVol() * (MUSIC_GAIN[musElKind] || 1))); }
 const musFail = {};
@@ -339,9 +339,9 @@ const U = {
   elder: {nm:'ELDERLY BLOB', abil:[{t:'kb', chance:0.80, vs:['normal']}], team:1, hp:600, dmg:320, rate:1.6, spd:14, rng:270, r:40, cost:1250, cd:40,
           hpUp:120, dmgUp:64, wide:1.18, swT:2.0, hitP:0.72, elderCane:1, kbStep:0.34, aoe:110, aoeOff:170,   // the cane's shockwave rolls out to 280
           tier:'godly', c:['#eef0f6','#a9b1c6','#5b6378']},   // slow, old, and the cane comes down hard
-  reaper:{nm:'REAPER BLOB', abil:[{t:'massive', vs:['normal']}], team:1, hp:1100, dmg:360, rate:1.6, spd:20, rng:180, r:40, cost:1400, cd:40,
-          hpUp:220, dmgUp:72, wide:1.10, swT:1.4, hitP:0.62, reap:{chance:0.45, mul:0.40}, kbStep:0.34,
-          aoe:90, aoeOff:110, tier:'godly', c:['#8a86a0','#3d3950','#16141e']},   // what it kills may get back up — for you
+  reaper:{nm:'REAPER BLOB', abil:[{t:'massive', vs:['normal']}], team:1, hp:1250, dmg:500, rate:1.6, spd:20, rng:180, r:40, cost:1400, cd:40,
+          hpUp:250, dmgUp:100, wide:1.10, swT:1.4, hitP:0.62, reap:{chance:0.45, mul:0.40}, kbStep:0.34,
+          tier:'godly', c:['#8a86a0','#3d3950','#16141e']},   // what it kills may get back up — for you
   fierce:{nm:'DEMIGOD BLOB', team:1, hp:875, dmg:65, rate:2.2, spd:20, rng:460, r:70, cost:1000, cd:60,
           hpUp:175, dmgUp:13, wide:1.10, swT:1.30, hitP:0.50, kbStep:0.34,
           storm:1, bolts:{n:3, gap:1.0, aoe:88, spread:30},
@@ -386,7 +386,7 @@ const U = {
   goop:  {nm:'GREEN GOOP', traits:['toxic'], poison:{mul:1.2, t:3}, team:-1, hp:45, dmg:5, rate:1.2, spd:38, rng:46, r:22, wide:1.18,
           swT:0.40, hitP:0.50, goop:1, kbStep:0.5,
           c:['#d4ff6a','#4fc21c','#1f5c0c']},          // a puddle with ideas: weak hit, nasty poison
-  sludge:{nm:'THE PURPLE SLUDGE', traits:['toxic'], team:-1, hp:4000, dmg:200, rate:0.01, spd:12, rng:50, r:64, wide:1.25,
+  sludge:{nm:'THE PURPLE SLUDGE', traits:['toxic'], team:-1, hp:4500, dmg:200, rate:0.01, spd:12, rng:50, r:64, wide:1.25,
           swT:2.0, hitP:0.88, sludge:1, boss:1, noKB:1,
           c:['#e2c2f6','#9a5cc6','#4a2268']},          // the jaw opens far too high, then slams: every 2s, no knockback ever
   // ELITES — existing slimes cranked up, drawn by their normal renderers
@@ -502,8 +502,8 @@ const EVO = {
           note:'+20% HP and +20% speed', c:['#dcefff','#64c0ff','#346ea0']},
   golden:{nm:'GLASSES GOLDEN BLOB', cost:6000, hpMul:1, spdMul:1.20,
           note:'+20% speed', c:['#fffac9','#ffcc4a','#a87e1b']},
-  doctor:{nm:'PLAGUE DOCTOR SLIME', cost:7000, hpMul:1.35, dmgMul:1.35, spdMul:1, poison:{mul:0.30, t:3},
-          note:'+35% HP/dmg, and poison: +30% over 3s', c:['#dfe8d8','#6f8466','#2c3a28']},
+  doctor:{nm:'PLAGUE DOCTOR SLIME', cost:7000, hpMul:1.15, dmgMul:1.15, spdMul:1, poison:{mul:0.30, t:3},
+          note:'+15% HP/dmg, and poison: +30% over 3s', c:['#dfe8d8','#6f8466','#2c3a28']},
   baby:  {nm:'BALLOON BLOB', cost:6500, hpMul:1.30, dmgMul:1.30, spdMul:1, art:'balloon',
           swT:0.50, hitP:0.60,                       // a real pendulum needs room to wind up
           note:'+30% HP and +30% damage', c:['#effcff','#8ce4f7','#3f8ba3']},
@@ -702,7 +702,7 @@ const LEVELS = [
          [34,'cyan'],[40,'cyan'],[46,'angel']],
    loop:6, pool:['cyan','cyan','angel','cyan']},
 
-  {nm:'THE PURPLE SLUDGE', bhp:3600, xp:20000, rareTicket:1, size:'big', bossMusic:1,
+  {nm:'THE PURPLE SLUDGE', bhp:3600, xp:20000, rareTicket:1, size:'big',
    sky:['#bba6da','#5b4474'], hill:'#55622c',
    // a swamp of green goop, and the plain green slimes here are ten times the slime — they burst into two more
    enemy:{ slime:{hp:175, dmg:70, rs:1.6, splitInto:{k:'slime', n:2, mul:4, rs:0.72}} },
@@ -4164,7 +4164,7 @@ function newBattle(li, isXp){
   for(const k of teamUnits()) if(B.cd[k]==null) B.cd[k]=0;
   if(!isXp && li===0 && !save.tut) B.tut = {step:0, t:0};   // first time on level 1: show them the ropes
   startMusic('battle');
-  if(L.bossMusic) musPreload('boss');
+  if(L.bossMusic) musPreload('boss'); else if(L.boss || L.bossWaves) musPreload('miniboss');
 }
 function espec(k, field){
   const o = B && B.L.enemy && B.L.enemy[k];
@@ -4698,9 +4698,10 @@ function updateBattle(dt){
   }
 
   if(aiMode) aiTick(dt);
-  if(musOn && !B.over){                        // the headline bosses get their own track —
-    if(B.L.bossMusic && B.units.some(u=>u.isBoss && !u.dead)) B.bossMus = 1;   // and it plays out
-    const want = B.bossMus ? 'boss' : 'battle';                                // to the end of the fight
+  if(musOn && !B.over){                        // the headline bosses (5, 10, 13, 15) get the big track, every
+    if(B.units.some(u=>u.isBoss && !u.dead))   // other boss the mini-boss one — and it plays out to the end
+      B.bossMus = B.L.bossMusic ? 'boss' : (B.bossMus || 'miniboss');
+    const want = B.bossMus || 'battle';
     if(musKind!==want){ stopMusic(); startMusic(want); }
   }
 
