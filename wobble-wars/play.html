@@ -389,6 +389,9 @@ const U = {
   sludge:{nm:'THE PURPLE SLUDGE', traits:['toxic'], team:-1, hp:4500, dmg:200, rate:0.01, spd:12, rng:50, r:64, wide:1.25,
           swT:1.0, hitP:0.88, sludge:1, boss:1, noKB:1,
           c:['#e2c2f6','#9a5cc6','#4a2268']},          // the jaw opens far too high, then slams: every 1s, no knockback ever
+  shroom:{nm:'MUSHROOM SLIME', traits:['toxic'], team:-1, hp:60, dmg:14, rate:1.2, spd:30, rng:50, r:26, wide:1.05,
+          swT:0.45, hitP:0.55, shroom:1, kbStep:0.5, spores:{r:72, t:4},
+          c:['#fbf1dc','#e8d3ad','#8a6a44']},           // pops into a spore cloud when it dies: blobs inside are slowed
   frog:  {nm:'FROG ELITE', traits:['normal'], team:-1, hp:1, shield:250, dmg:28, rate:1.0, spd:34, rng:90, r:28, wide:1.15,
           swT:0.50, hitP:0.55, spear:1, kbStep:0.5,
           c:['#caf2a2','#5cb84a','#2b6a2a']},           // 1 HP behind a 250 HP shield; pokes with a spear
@@ -723,7 +726,17 @@ const LEVELS = [
    boss:'toad', bossAt:1900, bossPeons:0,
    list:[[2,'goop'],[5,'goop'],[8,'frog'],[12,'goop'],[15,'goop'],[18,'frog'],[22,'goop'],
          [25,'frog'],[28,'goop'],[32,'goop'],[35,'frog'],[39,'goop'],[42,'frog']],
-   loop:6, pool:['goop','goop','frog','goop','frog']}
+   loop:6, pool:['goop','goop','frog','goop','frog']},
+
+  {nm:'SPORE HOLLOW', bhp:4000, xp:24000, rareTicket:1, size:'big',
+   sky:['#6f8f7a','#d9e6c6'], hill:'#4a5a36',
+   // mushrooms that burst into slowing spores, green goop at twice the goop — and the old oak, grown into a monster
+   enemy:{ goop:{hp:90, dmg:10},                                        // 100% boosted
+           oak:{hp:3800, dmg:60, rs:1.35, thorns:30} },                 // the Ironwood tree, bigger and meaner
+   boss:'oak', bossAt:2000, bossPeons:0,
+   list:[[2,'shroom'],[5,'goop'],[8,'shroom'],[11,'shroom'],[14,'goop'],[18,'shroom'],[21,'goop'],
+         [24,'shroom'],[27,'shroom'],[30,'goop'],[34,'shroom'],[38,'goop'],[41,'shroom']],
+   loop:5, pool:['shroom','goop','shroom','goop','shroom']}
 ];
 
 /* XP LEVELS — short farming stages with their own spawn rules, no campaign progress */
@@ -3269,7 +3282,41 @@ function drawFrog(u, cx, cy, rx, ry, dir, flash){
   }
   if(flash>0){ X.save(); X.globalCompositeOperation='lighter'; X.globalAlpha=flash*0.7;
     gooPath(cx, by, rx, bry, 0.03, 3, T, seed, true); X.fillStyle='#ffffff'; X.fill(); X.restore(); }
-  if(u.shield>0 && u.shieldMax && !u.mini) hpBarSmall(cx, cy - ry*1.30, 40, u.shield/u.shieldMax, '#9fd4ff');
+}
+/* ---- MUSHROOM SLIME: a pale stalky slime under a big spotted cap ---- */
+function drawShroom(u, cx, cy, rx, ry, dir, flash){
+  const c = U[u.k].c, seed=u.seed||1;
+  const lunge = u.sw>0 ? Math.sin(Math.min(1,(1-u.sw/u.swT)/0.7)*Math.PI) : 0;
+  shadow(cx, rx*1.0, 0.26);
+  // stalk body
+  const bx = cx + dir*rx*0.10*lunge, by = cy + ry*0.30;
+  gooPath(bx, by, rx*0.70, ry*0.62, 0.04, 3, T, seed, true);
+  const g = X.createRadialGradient(bx-rx*0.2, by-ry*0.3, rx*0.1, bx, by, rx*0.9);
+  g.addColorStop(0, c[0]); g.addColorStop(0.6, c[1]); g.addColorStop(1, shade(c[1],-18));
+  X.fillStyle=g; X.fill(); X.lineWidth=Math.max(2, rx*0.07); X.strokeStyle=c[2]; X.stroke();
+  eyes(bx+dir*rx*0.08, by-ry*0.10, rx*0.70, dir, 'slit', u.blink>0, true);
+  X.strokeStyle=INK; X.lineWidth=Math.max(2, rx*0.07); X.lineCap='round';
+  X.beginPath(); X.moveTo(bx+dir*rx*0.08-rx*0.14, by+ry*0.24); X.quadraticCurveTo(bx+dir*rx*0.08, by+ry*(u.sw>0?0.12:0.18), bx+dir*rx*0.08+rx*0.14, by+ry*0.24); X.stroke();
+  // the cap, tipping forward on a headbutt
+  const kx = cx + dir*rx*0.18*lunge, ky = cy - ry*0.30;
+  X.save(); X.translate(kx, ky); X.rotate(dir*0.35*lunge + Math.sin(T*2+seed)*0.03);
+  X.fillStyle='#f0e2c4';                                              // gills underneath
+  X.beginPath(); X.ellipse(0, ry*0.02, rx*1.02, ry*0.16, 0, 0, Math.PI); X.fill();
+  X.strokeStyle='rgba(138,106,68,.55)'; X.lineWidth=Math.max(1, rx*0.03);
+  for(let i=-4;i<=4;i++){ X.beginPath(); X.moveTo(i*rx*0.2, ry*0.02); X.lineTo(i*rx*0.12, ry*0.15); X.stroke(); }
+  const cg = X.createRadialGradient(-rx*0.3, -ry*0.5, rx*0.1, 0, -ry*0.1, rx*1.2);
+  cg.addColorStop(0,'#e0764a'); cg.addColorStop(0.6,'#b8492a'); cg.addColorStop(1,'#7a2c18');
+  X.fillStyle=cg; X.beginPath(); X.moveTo(-rx*1.08, ry*0.04);
+  X.bezierCurveTo(-rx*1.05, -ry*0.95, rx*1.05, -ry*0.95, rx*1.08, ry*0.04);
+  X.quadraticCurveTo(0, ry*0.14, -rx*1.08, ry*0.04); X.closePath(); X.fill();
+  X.strokeStyle='#5a1e10'; X.lineWidth=Math.max(2, rx*0.07); X.stroke();
+  X.fillStyle='#fbf1dc';                                                // the spots
+  for(const [sx,sy,sr] of [[-0.55,-0.30,0.17],[0.05,-0.58,0.20],[0.58,-0.28,0.15],[-0.15,-0.20,0.10],[0.32,-0.62,0.09]]){
+    X.beginPath(); X.ellipse(sx*rx, sy*ry, sr*rx, sr*rx*0.8, 0, 0, 7); X.fill(); }
+  X.fillStyle='rgba(255,255,255,.35)'; X.beginPath(); X.ellipse(-rx*0.40, -ry*0.52, rx*0.28, ry*0.08, -0.4, 0, 7); X.fill();
+  X.restore();
+  if(flash>0){ X.save(); X.globalCompositeOperation='lighter'; X.globalAlpha=flash*0.7;
+    gooPath(bx, by, rx*0.70, ry*0.62, 0.04, 3, T, seed, true); X.fillStyle='#ffffff'; X.fill(); X.restore(); }
 }
 /* ---- THE TOAD KING: a fat green toad with a lavender throat pouch, purple spots, big grumpy eyes
    and a proper crown. Drawn facing +x in local space, then flipped by dir; the tongue does the work ---- */
@@ -4337,7 +4384,7 @@ function newBattle(li, isXp){
     cannon:{ch:55, rate:5.5, ready:false, recoil:0},
     isXp:!!isXp, xpT:(L.xpMode && L.xpMode.first) || 0, xpWaveAt:0, xpBonus:0, xpWave:0, pendingXp:[],
     time:0, si:0, loopT:0, poolI:0, bossFired:false, bossWave:0, bossUnits:[], pendingPeons:[], killed:{}, hits:{}, waveGap:WAVE_GAP,
-    throws:[], spits:[], coins:[], pendingRise:[], bossMus:0, aiT:0, aiPick:null, qbOn:false, qbT:0, hurt:{}, shock:[], strikes:[], pendingK:[], finaleDone:0, ekT:((L.everyK && !L.everyK.after)? L.everyK.t : 0),
+    throws:[], spits:[], coins:[], pendingRise:[], spores:[], bossMus:0, aiT:0, aiPick:null, qbOn:false, qbT:0, hurt:{}, shock:[], strikes:[], pendingK:[], finaleDone:0, ekT:((L.everyK && !L.everyK.after)? L.everyK.t : 0),
     camX:0, camT:0, camManual:0, field:FIELD,
     over:null, overT:0, paused:false, kills:0
   };
@@ -4615,6 +4662,11 @@ function endAir(u){
       ring(u.x, GY-U[u.k].r*0.8, '#ffc89a', 8, 92, 0.42, 6);
       for(let q=0;q<14;q++) puff(u.x+(Math.random()-0.5)*30, GY-14, '#e8a76a', -120);
     }
+    if(U[u.k].spores){                                // a mushroom goes up in a cloud
+      const sp2 = U[u.k].spores;
+      B.spores.push({x:u.x, r:sp2.r, t:0, life:sp2.t, team:u.team, seed:Math.random()*10});
+      noise(0.5,0.14,700,200,0.7); for(let q=0;q<12;q++) puff(u.x+(Math.random()-0.5)*40, GY-20, '#d8c98a', -60);
+    }
     splat(u.x, GY-U[u.k].r*0.7, U[u.k].c[1], 18, 210);
     SFX.splat();
   } else {
@@ -4754,8 +4806,9 @@ function dmgUnit(u, amount, from, src){
     if(u.shield<=0){ u.shield = 0; shieldBreak(u); }
     return;
   }
-  if(d.thorns && src && src.team>0 && !src.dead && !src.dying){
-    dmgUnit(src, d.thorns, u.team);                   // and gives some straight back (never chains)
+  const thorns = u.team<0 ? espec(u.k,'thorns') : d.thorns;
+  if(thorns && src && src.team>0 && !src.dead && !src.dying){
+    dmgUnit(src, thorns, u.team);                   // and gives some straight back (never chains)
     ring(src.x, GY-U[src.k].r, '#c8a86a', 5, 44, 0.3, 4);
   }
   u.hp -= amount; u.flash = 1;
@@ -4795,6 +4848,14 @@ function frontTarget(u){
 }
 
 function updateFX(dt){
+  for(const sc of (B.spores||[])){                   // spore clouds: anything of the other side inside is slowed
+    sc.t += dt;
+    for(const o of B.units){
+      if(o.team===sc.team || o.dead || o.dying || o.air) continue;
+      if(Math.abs(o.x - sc.x) <= sc.r + U[o.k].r*0.4) o.slowT = Math.max(o.slowT||0, 0.35);
+    }
+  }
+  if(B.spores) B.spores = B.spores.filter(sc => sc.t < sc.life);
   for(const p of B.parts){ p.t+=dt; p.vy+=p.g*dt; p.x+=p.vx*dt; p.y+=p.vy*dt;
     if(p.y>GY){ p.y=GY; p.vy*=-0.34; p.vx*=0.6; } }
   B.parts=B.parts.filter(p=>p.t<p.life);
@@ -5630,6 +5691,7 @@ function drawUnit(u){
   else if(d.oak) drawOak(u,cx,cy,rx,ry,dir,u.flash);   // before d.thorns — the oak has thorns too
   else if(d.sludge) drawSludge(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.toad) drawToad(u,cx,cy,rx,ry,dir,u.flash);
+  else if(d.shroom) drawShroom(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.spear) drawFrog(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.goop) drawGoop(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.knife) drawAssassin(u,cx,cy,rx,ry,dir,u.flash);
@@ -5773,6 +5835,20 @@ function drawShot(s){
 }
 
 function drawFX(){
+  for(const sc of (B.spores||[])){
+    const a = Math.min(1, sc.t/0.3) * Math.min(1, (sc.life-sc.t)/0.8);
+    X.save();
+    for(let i=0;i<7;i++){
+      const ang = i*0.9 + sc.seed, dr = sc.r*(0.35+0.25*Math.sin(sc.t*0.8+i));
+      const px = sc.x + Math.cos(ang)*dr, py = GY - 34 - Math.abs(Math.sin(ang))*26 + Math.sin(sc.t*1.3+i)*5;
+      X.globalAlpha = 0.20*a; X.fillStyle = i%2? '#cbbd7a' : '#a8b86a';
+      X.beginPath(); X.arc(px, py, sc.r*(0.42+0.08*(i%3)), 0, 7); X.fill();
+    }
+    X.globalAlpha = 0.75*a; X.fillStyle='#f3e8b0';                    // drifting specks
+    for(let i=0;i<14;i++){ const ph=((sc.t*0.35 + i*0.071 + sc.seed)%1);
+      X.beginPath(); X.arc(sc.x + Math.sin(i*2.7+sc.seed)*sc.r*0.9, GY - 8 - ph*90, 1.6+ (i%3), 0, 7); X.fill(); }
+    X.restore();
+  }
   for(const st of B.strikes){
     if(!st.fired){                              // the ground lights up shortly before it lands
       const LEAD = 0.45;                        // a beat after he rears back, not the instant he does
@@ -6062,6 +6138,7 @@ function drawMini(k, cx, cy, r, dir, seed){
                      [ 'oak',   drawOak,   0.86, 0.86],
                      [ 'sludge',drawSludge,0.80, 0.80],
                      [ 'toad',  drawToad,  0.78, 0.80],
+                     [ 'shroom',drawShroom,0.92, 0.92],
                      [ 'spear', drawFrog,  0.92, 0.92],
                      [ 'goop',  drawGoop,  0.92, 0.92],
                      [ 'mib',   drawMIB,   0.86, 0.90],
