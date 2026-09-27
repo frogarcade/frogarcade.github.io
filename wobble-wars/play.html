@@ -226,7 +226,7 @@ const HOOK =[
 /* Real tracks live next to the page. A kind with no file here — or a file that
    fails to load — falls back to the chiptune generator below. */
 const MUSIC_FILES = { menu:'menu.mp3', battle:'battle.mp3', boss:'boss.mp3', miniboss:'miniboss.mp3', victory:'victory.mp3', defeat:'defeat.mp3', casino:'casino.mp3' };
-const MUSIC_GAIN  = { menu:0.5, battle:0.42, boss:1, miniboss:0.85, victory:0.75, defeat:0.8, casino:0.6 };   // per-track trim: tracks are not mastered alike
+const MUSIC_GAIN  = { menu:0.5, battle:0.42, boss:1, miniboss:1.1, victory:0.75, defeat:0.8, casino:0.6 };   // per-track trim: tracks are not mastered alike
 const MUSIC_ONCE  = { victory:1, defeat:1 };      // a sting plays once; everything else loops
 function musElVol(){ return Math.max(0, Math.min(1, 0.55 * musVol() * (MUSIC_GAIN[musElKind] || 1))); }
 const musFail = {};
@@ -389,6 +389,12 @@ const U = {
   sludge:{nm:'THE PURPLE SLUDGE', traits:['toxic'], team:-1, hp:4500, dmg:200, rate:0.01, spd:12, rng:50, r:64, wide:1.25,
           swT:1.0, hitP:0.88, sludge:1, boss:1, noKB:1,
           c:['#e2c2f6','#9a5cc6','#4a2268']},          // the jaw opens far too high, then slams: every 1s, no knockback ever
+  frog:  {nm:'FROG ELITE', traits:['normal'], team:-1, hp:1, shield:250, dmg:28, rate:1.0, spd:34, rng:90, r:28, wide:1.15,
+          swT:0.50, hitP:0.55, spear:1, kbStep:0.5,
+          c:['#caf2a2','#5cb84a','#2b6a2a']},           // 1 HP behind a 250 HP shield; pokes with a spear
+  toad:  {nm:'THE TOAD KING', traits:['normal'], team:-1, hp:5000, dmg:150, rate:2.8, spd:10, rng:650, r:62, wide:1.35,
+          swT:1.2, hitP:0.85, toad:1, boss:1, kbStep:0.25, tongue:{reach:900, out:0.30},
+          c:['#d9ecae','#7fa04a','#3d5a24']},           // every 4s: the tongue grabs your BACK-most blob and reels it in
   // ELITES — existing slimes cranked up, drawn by their normal renderers
   hulk:  {nm:'HULK SLIME', traits:['normal'], team:-1, hp:175, dmg:70, rate:1.4, spd:24, rng:62, r:50, wide:1,
           swT:0.42, hitP:0.50, elite:1, splitInto:{k:'slime', n:2}, kbStep:0.5,
@@ -653,7 +659,7 @@ const LEVELS = [
   {nm:'MIDNIGHT FRIGHTS', bhp:2000, xp:10000, rareTicket:1, size:'medium', night:1, bossMusic:1,
    sky:['#131a3c','#3d4272'], hill:'#3a3f63',
    // worker slimes trickle in and fence the lane off; the Midnight Man struts in at 15s
-   bossTime:15, bossWaves:[ ['mib'], ['mib','qb','qb','qb'] ],
+   bossTime:15, bossWaves:[ ['mib'], ['mib','qb','qb','qb'] ], bossOnly:['mib'],   // the two Midnight Men are the bosses; his quarterbacks are just muscle
    finale:{k:'qb', n:5, gap:1, after:'mib', deaths:2},   // the second one falls: a last shockwave, then five more bossPeons:0, qbEvery:8, waveGap:2,
    list:[[1,'qb'],[2,'worker'],[11,'worker'],[21,'worker'],[32,'worker'],[44,'worker'],[57,'worker']],
    loop:13, pool:['worker']},
@@ -709,7 +715,15 @@ const LEVELS = [
    boss:'sludge', bossAt:1800, bossPeons:0,                // half the nest gone: the sludge rises
    list:[[2,'goop'],[5,'goop'],[9,'slime'],[13,'goop'],[16,'goop'],[20,'slime'],[25,'goop'],
          [28,'goop'],[32,'slime'],[37,'goop'],[41,'goop'],[45,'slime']],
-   loop:5, pool:['goop','goop','slime','goop']}
+   loop:5, pool:['goop','goop','slime','goop']},
+
+  {nm:'FROG POND', bhp:3800, xp:22000, rareTicket:1, size:'big',
+   sky:['#7fb99a','#dcefc6'], hill:'#3f7d4a',
+   // green goop and shielded frog elites; at half the nest the Toad King starts fishing for your back line
+   boss:'toad', bossAt:1900, bossPeons:0,
+   list:[[2,'goop'],[5,'goop'],[8,'frog'],[12,'goop'],[15,'goop'],[18,'frog'],[22,'goop'],
+         [25,'frog'],[28,'goop'],[32,'goop'],[35,'frog'],[39,'goop'],[42,'frog']],
+   loop:6, pool:['goop','goop','frog','goop','frog']}
 ];
 
 /* XP LEVELS — short farming stages with their own spawn rules, no campaign progress */
@@ -3198,6 +3212,136 @@ function drawSludge(u, cx, cy, rx, ry, dir, flash){
     gooPath(hcx, hcy, rx*0.94, ry*0.70, 0.06, 5, T*0.8, seed+3, true); X.fill(); X.restore(); }
 }
 
+/* ---- FROG ELITE: a frog behind a round wooden shield, spear held over it ---- */
+function drawFrog(u, cx, cy, rx, ry, dir, flash){
+  const c = U[u.k].c, seed=u.seed||1, stab = u.sw>0 ? (u.stab||0) : 0;
+  const by = cy + ry*0.18, bry = ry*0.78;
+  shadow(cx, rx*1.0, 0.26);
+  // back leg
+  X.fillStyle=shade(c[1],-12); X.beginPath(); X.ellipse(cx-dir*rx*0.55, GY-ry*0.18, rx*0.42, ry*0.24, 0, 0, 7); X.fill();
+  // body
+  gooPath(cx, by, rx, bry, 0.03, 3, T, seed, true);
+  const g = X.createRadialGradient(cx-rx*0.3, by-bry*0.5, rx*0.1, cx, by, rx*1.2);
+  g.addColorStop(0, c[0]); g.addColorStop(0.5, c[1]); g.addColorStop(1, shade(c[1],-18));
+  X.fillStyle=g; X.fill(); X.lineWidth=Math.max(2, rx*0.08); X.strokeStyle=c[2]; X.stroke();
+  X.save(); X.clip(); X.fillStyle='rgba(255,255,220,.45)';                     // pale belly
+  X.beginPath(); X.ellipse(cx+dir*rx*0.15, by+bry*0.55, rx*0.62, bry*0.45, 0, 0, 7); X.fill(); X.restore();
+  // bulging eyes on top
+  for(const sgn of [-1,1]){
+    const ex = cx + dir*rx*0.18 + sgn*rx*0.36, ey = by - bry*0.92;
+    X.fillStyle=c[1]; X.beginPath(); X.arc(ex, ey, rx*0.30, 0, 7); X.fill(); X.lineWidth=Math.max(1.5, rx*0.06); X.strokeStyle=c[2]; X.stroke();
+    X.fillStyle='#fffbe8'; X.beginPath(); X.arc(ex, ey-rx*0.02, rx*0.21, 0, 7); X.fill();
+    X.fillStyle='#1d2a18'; X.beginPath(); X.ellipse(ex+dir*rx*0.05, ey, rx*0.07, rx*(u.blink>0?0.02:0.13), 0, 0, 7); X.fill();
+    X.strokeStyle=c[2]; X.lineWidth=Math.max(2, rx*0.07);                      // a stern brow
+    X.beginPath(); X.moveTo(ex-rx*0.22, ey-rx*0.26+sgn*dir*rx*0.04); X.lineTo(ex+rx*0.22, ey-rx*0.26-sgn*dir*rx*0.04); X.stroke();
+  }
+  // wide frog mouth
+  X.strokeStyle=INK; X.lineWidth=Math.max(2, rx*0.07); X.lineCap='round';
+  X.beginPath(); X.moveTo(cx-dir*rx*0.30, by-bry*0.30); X.quadraticCurveTo(cx+dir*rx*0.30, by-bry*0.05, cx+dir*rx*0.85, by-bry*0.38); X.stroke();
+  // the spear, held level over the shield
+  X.save();
+  const sx = cx + dir*rx*(0.10 + Math.max(-0.35, stab)*0.55), sy = by - bry*0.12, L = rx*2.4;
+  X.translate(sx, sy); X.scale(dir, 1);
+  X.strokeStyle='#7a5228'; X.lineWidth=Math.max(2, rx*0.10);
+  X.beginPath(); X.moveTo(-L*0.45, 0); X.lineTo(L*0.52, 0); X.stroke();
+  X.fillStyle='#d5dde4'; X.strokeStyle='#6b7680'; X.lineWidth=Math.max(1, rx*0.04);
+  X.beginPath(); X.moveTo(L*0.50, -rx*0.14); X.lineTo(L*0.72, 0); X.lineTo(L*0.50, rx*0.14); X.closePath(); X.fill(); X.stroke();
+  X.fillStyle='#b8412e'; X.beginPath(); X.moveTo(L*0.46, 0); X.lineTo(L*0.40, rx*0.22); X.lineTo(L*0.36, 0); X.closePath(); X.fill();   // a pennant
+  X.restore();
+  // the shield (gone once broken)
+  if(u.shield>0 || u.mini){
+    const shx = cx + dir*rx*0.62, shy = by + bry*0.15, sr = rx*0.62, crack = u.shieldMax? 1 - u.shield/u.shieldMax : 0;
+    X.save();
+    const sg = X.createRadialGradient(shx-sr*0.3, shy-sr*0.3, sr*0.1, shx, shy, sr);
+    sg.addColorStop(0,'#d9a765'); sg.addColorStop(1,'#8a5a2a');
+    X.fillStyle=sg; X.beginPath(); X.arc(shx, shy, sr, 0, 7); X.fill();
+    X.strokeStyle='#9aa4ad'; X.lineWidth=Math.max(2, rx*0.11); X.stroke();
+    X.strokeStyle='rgba(90,55,20,.6)'; X.lineWidth=Math.max(1, rx*0.04);
+    for(const k of [-0.45, 0, 0.45]){ X.beginPath(); X.moveTo(shx+k*sr, shy-sr*0.9); X.lineTo(shx+k*sr, shy+sr*0.9); X.stroke(); }
+    X.fillStyle='#c9cfd6'; X.beginPath(); X.arc(shx, shy, sr*0.22, 0, 7); X.fill();
+    if(crack>0.33){                                  // it cracks as it soaks the hits
+      X.strokeStyle='#3a2410'; X.lineWidth=Math.max(1, rx*0.05);
+      X.beginPath(); X.moveTo(shx-sr*0.1, shy-sr*0.8); X.lineTo(shx+sr*0.15, shy-sr*0.25); X.lineTo(shx-sr*0.05, shy+sr*0.1);
+      if(crack>0.66){ X.lineTo(shx+sr*0.3, shy+sr*0.6); X.moveTo(shx+sr*0.15, shy-sr*0.25); X.lineTo(shx+sr*0.6, shy-sr*0.35); }
+      X.stroke();
+    }
+    X.restore();
+  }
+  if(flash>0){ X.save(); X.globalCompositeOperation='lighter'; X.globalAlpha=flash*0.7;
+    gooPath(cx, by, rx, bry, 0.03, 3, T, seed, true); X.fillStyle='#ffffff'; X.fill(); X.restore(); }
+  if(u.shield>0 && u.shieldMax && !u.mini) hpBarSmall(cx, cy - ry*1.30, 40, u.shield/u.shieldMax, '#9fd4ff');
+}
+/* ---- THE TOAD KING: a fat purple-green toad, tiny crown, huge cheeks; the tongue does the work ---- */
+function drawToad(u, cx, cy, rx, ry, dir, flash){
+  const c = U[u.k].c, seed=u.seed||1;
+  const pr = u.sw>0 ? 1-u.sw/u.swT : -1, g = U.toad.tongue;
+  const mouthOpen = pr<0 ? 0 : (pr < g.out ? Math.min(1, pr/0.08) : (pr < 0.95 ? 1 : (1-pr)/0.05));
+  const by = cy + ry*0.22, bry = ry*0.78;
+  // the tongue first, from the mouth to wherever it has got to
+  if(u.sw>0 && u.tongueX!=null && !u.mini){
+    const mx = cx + dir*rx*0.80, my = by - bry*0.15;
+    X.save(); X.lineCap='round';
+    X.strokeStyle='#b8386a'; X.lineWidth=Math.max(4, rx*0.20);
+    X.beginPath(); X.moveTo(mx, my); X.quadraticCurveTo((mx+u.tongueX)/2, Math.min(my, u.tongueY) - 40, u.tongueX, u.tongueY); X.stroke();
+    X.strokeStyle='#ff7fae'; X.lineWidth=Math.max(3, rx*0.13);
+    X.beginPath(); X.moveTo(mx, my); X.quadraticCurveTo((mx+u.tongueX)/2, Math.min(my, u.tongueY) - 40, u.tongueX, u.tongueY); X.stroke();
+    X.fillStyle='#ff7fae'; X.beginPath(); X.arc(u.tongueX, u.tongueY, rx*0.18, 0, 7); X.fill();
+    X.strokeStyle='#b8386a'; X.lineWidth=Math.max(2, rx*0.05); X.stroke();
+    X.restore();
+  }
+  shadow(cx, rx*1.25, 0.32);
+  // haunches and feet
+  X.fillStyle=shade(c[1],-14);
+  X.beginPath(); X.ellipse(cx-dir*rx*0.70, GY-ry*0.22, rx*0.55, ry*0.30, 0, 0, 7); X.fill();
+  X.fillStyle=shade(c[1],-4);
+  for(const k of [0.35, 0.75]){ X.beginPath(); X.ellipse(cx+dir*rx*k, GY-ry*0.06, rx*0.22, ry*0.08, 0, 0, 7); X.fill(); }
+  // the body
+  gooPath(cx, by, rx*1.08, bry, 0.025, 3, T*0.8, seed, true);
+  let gr = X.createRadialGradient(cx-rx*0.3, by-bry*0.55, rx*0.12, cx, by, rx*1.35);
+  gr.addColorStop(0, c[0]); gr.addColorStop(0.5, c[1]); gr.addColorStop(1, shade(c[1],-20));
+  X.fillStyle=gr; X.fill(); X.lineWidth=Math.max(2, rx*0.07); X.strokeStyle=c[2]; X.stroke();
+  X.save(); X.clip();
+  X.fillStyle='rgba(176,122,214,.55)';                                          // purple warts and a purple belly
+  X.beginPath(); X.ellipse(cx+dir*rx*0.20, by+bry*0.55, rx*0.75, bry*0.45, 0, 0, 7); X.fill();
+  X.fillStyle='rgba(120,70,160,.55)';
+  for(let i=0;i<7;i++){ const a=i*2.3+seed, rr2=0.35+((i*37)%10)/22;
+    X.beginPath(); X.arc(cx+Math.cos(a)*rx*rr2, by-bry*0.35+Math.sin(a)*bry*0.28, rx*(0.06+(i%3)*0.03), 0, 7); X.fill(); }
+  X.restore();
+  // huge cheeks, puffing as he breathes
+  const puff = 1 + 0.06*Math.sin(T*2.2+seed) + mouthOpen*0.05;
+  for(const [sx, sc] of [[-0.62, 0.78], [0.62, 1]]){
+    const chx = cx + dir*rx*sx, chy = by - bry*0.05, cr = rx*0.36*sc*puff;
+    X.fillStyle= sx*1>0 ? '#b98ad8' : '#a97ac8';
+    X.beginPath(); X.arc(chx, chy, cr, 0, 7); X.fill();
+    X.strokeStyle=c[2]; X.lineWidth=Math.max(1.5, rx*0.05); X.stroke();
+    X.fillStyle='rgba(255,255,255,.35)'; X.beginPath(); X.ellipse(chx-cr*0.3, chy-cr*0.35, cr*0.35, cr*0.18, -0.5, 0, 7); X.fill();
+  }
+  // the mouth: a long line that drops open when the tongue goes
+  const mx0 = cx - dir*rx*0.45, mx1 = cx + dir*rx*0.95, my = by - bry*0.18;
+  if(mouthOpen>0.02){
+    X.fillStyle='#4a1030';
+    X.beginPath(); X.moveTo(mx0, my); X.quadraticCurveTo((mx0+mx1)/2, my + bry*0.55*mouthOpen, mx1, my - bry*0.05); X.quadraticCurveTo((mx0+mx1)/2, my - bry*0.05, mx0, my); X.fill();
+  }
+  X.strokeStyle=INK; X.lineWidth=Math.max(2.5, rx*0.07); X.lineCap='round';
+  X.beginPath(); X.moveTo(mx0, my); X.quadraticCurveTo((mx0+mx1)/2, my - bry*0.05, mx1, my - bry*0.05); X.stroke();
+  // bulging eyes
+  for(const sgn of [-1,1]){
+    const ex = cx + dir*rx*0.22 + sgn*rx*0.40, ey = by - bry*0.88;
+    X.fillStyle=c[1]; X.beginPath(); X.arc(ex, ey, rx*0.27, 0, 7); X.fill(); X.lineWidth=Math.max(1.5, rx*0.05); X.strokeStyle=c[2]; X.stroke();
+    X.fillStyle='#ffe98a'; X.beginPath(); X.arc(ex, ey-rx*0.02, rx*0.19, 0, 7); X.fill();
+    X.fillStyle='#1d1a10'; X.beginPath(); X.ellipse(ex+dir*rx*0.05, ey, rx*0.13, rx*(u.blink>0?0.02:0.07), 0, 0, 7); X.fill();
+    X.fillStyle=shade(c[1],-10); X.beginPath(); X.ellipse(ex, ey-rx*0.14, rx*0.28, rx*0.12, 0, Math.PI, 0); X.fill();   // heavy lids
+  }
+  // the tiny crown
+  const kx = cx + dir*rx*0.22, ky = by - bry*1.08;
+  X.fillStyle='#ffd23a'; X.strokeStyle='#8a5c04'; X.lineWidth=Math.max(1.5, rx*0.04);
+  X.beginPath(); X.moveTo(kx-rx*0.20, ky); X.lineTo(kx-rx*0.20, ky-rx*0.16); X.lineTo(kx-rx*0.10, ky-rx*0.07);
+  X.lineTo(kx, ky-rx*0.20); X.lineTo(kx+rx*0.10, ky-rx*0.07); X.lineTo(kx+rx*0.20, ky-rx*0.16); X.lineTo(kx+rx*0.20, ky); X.closePath(); X.fill(); X.stroke();
+  X.fillStyle='#e0413a'; X.beginPath(); X.arc(kx, ky-rx*0.05, rx*0.035, 0, 7); X.fill();
+  if(flash>0){ X.save(); X.globalCompositeOperation='lighter'; X.globalAlpha=flash*0.7;
+    gooPath(cx, by, rx*1.08, bry, 0.025, 3, T*0.8, seed, true); X.fillStyle='#ffffff'; X.fill(); X.restore(); }
+}
+
 /* ---- SLIME BRUTE: a muscle-bound slime — torso, pecs, abs, arms, legs, head ---- */
 function limb(x1,y1,x2,y2,w,fill,line){
   X.lineCap='round';
@@ -4215,7 +4359,7 @@ function nextBossWave(){
   const L=B.L, w=L.bossWaves[B.bossWave];
   if(!w){ B.bossUnits=[]; return; }
   B.bossWave++; B.waveGap = (L.waveGap!=null? L.waveGap : WAVE_GAP);
-  B.bossUnits = w.map(k=>spawnUnit(k, true));
+  B.bossUnits = w.map(k=>spawnUnit(k, !L.bossOnly || L.bossOnly.indexOf(k)>=0));   // bossOnly: just those wear a boss bar
   if(L.qbEvery && !B.qbOn){ B.qbOn = true; B.qbT = L.qbEvery; }
   for(let i=0;i<(L.bossPeons||0);i++) B.pendingPeons.push(0.6+i*0.9);
 }
@@ -4260,6 +4404,8 @@ function spawnUnit(k, asBoss, quiet){
     rs: (d.team<0 ? (espec(k,'rs')||1) : 1), evo: (d.team>0 && evoOn(k)),
     air:false, dying:false, z:0, vz:0, kvx:0, bounces:0, kbT:0, kbCount:0, squish:0 };
   u.isBoss = boss;                                          // whoever wears the bar at the top
+  const sh = d.team<0 ? espec(k,'shield') : d.shield;
+  if(sh){ u.shield = u.shieldMax = sh; }                    // a shield soaks every hit until it breaks
   if(d.shadowOf) u.undead = 1;                              // a dev-mode shadow: drawn like a reaped one
   B.units.push(u);
   if(u.isBoss) bossEntry(u);                                  // and makes an entrance
@@ -4509,12 +4655,69 @@ function abilText(ab){
 }
 
 /* combat */
+function shieldBreak(u){
+  SFX.slam(); tone(520,0.12,'square',0.10,180); noise(0.18,0.20,2600,600,1.4);
+  const sx = u.x + u.team*U[u.k].r*0.55, sy = GY - U[u.k].r*0.7;
+  ring(sx, sy, '#e8d2a0', 6, 60, 0.3, 5);
+  for(let q=0;q<14;q++) B.parts.push({x:sx, y:sy, vx:(Math.random()-0.5)*300 + u.team*60, vy:-80-Math.random()*220,
+    r:2.5+Math.random()*4, life:0.45+Math.random()*0.4, t:0, col: Math.random()<0.5?'#b07a3c':'#c9cfd6', g:520});
+}
+/* the Toad King's tongue: pick the blob furthest back, shoot out, grab, reel it in, bite */
+function pickBack(u, d){
+  let best=null, bd=-1;
+  for(const o of B.units){
+    if(o.team===u.team || o.dead || o.dying || o.air || o.held) continue;
+    const dd = Math.abs(o.x-u.x);
+    if(dd <= d.tongue.reach && dd > bd){ bd = dd; best = o; }
+  }
+  return best;
+}
+function tongueTick(u, d){
+  const pr = 1-u.sw/u.swT, h = d.hitP||0.85, g = d.tongue;
+  const mouthX = u.x + u.team*U[u.k].r*(d.wide||1)*0.80*(u.rs||1), mouthY = GY - U[u.k].r*0.55*(u.rs||1);
+  let t = u.grabT;
+  if(t && (t.dead || t.dying || t.air)){ if(t.held===u) t.held=null; t = u.grabT = null; }
+  const wall = u.team<0 ? P_FRONT : E_FRONT;
+  if(pr < g.out){                                   // out it goes
+    const q = pr/g.out, tx = t? t.x : wall, ty = t? GY - U[t.k].r*0.8*(t.rs||1) : GY-60;
+    u.tongueX = mouthX + (tx-mouthX)*q; u.tongueY = mouthY + (ty-mouthY)*q;
+    return;
+  }
+  if(!t){                                           // nobody to grab: it slaps the wall
+    if(!u.grabHit && Math.abs(wall-u.x) <= g.reach){ u.grabHit = true;
+      if(u.team<0) B.pbHP=Math.max(0,B.pbHP-unitDmg(u)); else B.ebHP=Math.max(0,B.ebHP-unitDmg(u));
+      SFX.baseHit(); shake=Math.max(shake,8); }
+    const q = Math.min(1, (pr-g.out)/(1-g.out));
+    u.tongueX = u.tongueX + (mouthX-u.tongueX)*Math.min(1, q*1.5); u.tongueY = mouthY;
+    return;
+  }
+  if(!u.grabbed0){ u.grabbed0 = true; t.held = u; t.sw = 0; t.moving = false; t.gx0 = t.x;
+    SFX.whoosh(0); ring(t.x, GY-U[t.k].r*0.8, '#ff9ab8', 5, 40, 0.25, 4); }
+  const front = u.x + u.team*(U[u.k].r*(d.wide||1)*0.95*(u.rs||1) + U[t.k].r*0.7*(t.rs||1));
+  if(pr < h){                                       // reel it in
+    const q = Math.min(1, (pr-g.out)/(h-g.out)), e = q*q*(3-2*q);
+    t.x = t.gx0 + (front - t.gx0)*e;
+  } else if(!u.grabHit){                            // CHOMP
+    u.grabHit = true; t.x = front; t.held = null;
+    dmgUnit(t, unitDmg(u), u.team, u);
+    SFX.slam(); shake=Math.max(shake,12);
+    ring(front, GY-U[t.k].r*0.8, '#ff9ab8', 8, 70, 0.32, 6);
+    for(let q=0;q<12;q++) puff(front, GY-20, '#ffc2d4', -120);
+  }
+  u.tongueX = t && t.held===u ? t.x : mouthX + (u.tongueX-mouthX)*0.6;
+  u.tongueY = t && t.held===u ? GY - U[t.k].r*0.8*(t.rs||1) : mouthY;
+}
 function dmgUnit(u, amount, from, src){
   if(u.dead || u.dying) return;
   const d=U[u.k];
   if(src && src!==u && src.team!==u.team) amount *= dmgMultiplier(src, u);
   if(d.hitCap) amount = d.hitCap;                     // golden blob: any hit is exactly 1 damage
   if(d.dmgTake) amount *= d.dmgTake;                  // bark slime shrugs most of it off
+  if(u.shield>0){                                     // the shield takes the whole hit; the one that breaks it too
+    u.shield -= amount; u.flash = 0.6;
+    if(u.shield<=0){ u.shield = 0; shieldBreak(u); }
+    return;
+  }
   if(d.thorns && src && src.team>0 && !src.dead && !src.dying){
     dmgUnit(src, d.thorns, u.team);                   // and gives some straight back (never chains)
     ring(src.x, GY-U[src.k].r, '#c8a86a', 5, 44, 0.3, 4);
@@ -4725,6 +4928,11 @@ function updateBattle(dt){
       const fl = u.flash; dmgUnit(u, u.poisonDps*st, u.poisonFrom); u.flash = fl;   // a slow bleed, not a hit: no white flash
       if(u.dead || u.dying) continue;
     }
+    if(u.held){                                       // on the end of a tongue: nothing to do but scream
+      const hb = u.held;
+      if(hb.dead || hb.dying || hb.air || hb.sw<=0 || hb.grabT!==u) u.held = null;
+      else { u.moving=false; u.sw=0; continue; }
+    }
     if(u.freezeT>0){ u.freezeT -= dt; u.moving=false; continue; }   // frozen solid: nothing ticks
     let udt = dt;
     if(u.slowT>0){ u.slowT -= dt; udt = dt*0.5; }                     // slowed: everything at half speed
@@ -4745,6 +4953,7 @@ function updateBattle(dt){
         const q=Math.min(1, Math.max(0, (pr-t0)/(t1-t0)));
         u.x = u.jx0 + (u.jx1-u.jx0)*q;
       }
+      if(d.tongue){ u.dealt = true; tongueTick(u, d); }
       if(d.beam){                         // the phoenix: charge, then a long beam that ticks
         u.dealt = true;                   // it never uses the one-shot hit
         const pr = 1-u.sw/u.swT;
@@ -4986,6 +5195,7 @@ function updateBattle(dt){
       if(u.atk<=0){
         u.atk=d.rate; u.sw=u.swT=swingT(u,d); u.dealt=false; u.dealt2=false;
         if(d.beam){ u.beamAcc=0; u.beamT=null; u.beamX=null; SFX.charge(); }
+        if(d.tongue){ u.dealt=true; u.grabT = pickBack(u, d); u.grabbed0=false; u.grabHit=false; u.tongueX=null; }
         if(d.aoeTarget){                              // the ground he picks now is the ground he hits
           u.lockX = (tgt && tgt!=='base') ? tgt.x : (u.team>0 ? E_FRONT-24 : P_FRONT+24);
         }
@@ -5209,7 +5419,7 @@ function drawUnit(u){
         }
         cy = GY - ry*0.98;
       }
-      else if(d.needle){
+      else if(d.needle || d.spear){
         // draw the syringe back, jab it in, pull it out
         const h = d.hitP||0.55;
         if(p < h-0.14){ const q=p/(h-0.14); u.stab = -0.35*q; cx -= dir*5*q; }
@@ -5383,6 +5593,8 @@ function drawUnit(u){
   else if(d.jaw) drawScrapjaw(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.oak) drawOak(u,cx,cy,rx,ry,dir,u.flash);   // before d.thorns — the oak has thorns too
   else if(d.sludge) drawSludge(u,cx,cy,rx,ry,dir,u.flash);
+  else if(d.toad) drawToad(u,cx,cy,rx,ry,dir,u.flash);
+  else if(d.spear) drawFrog(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.goop) drawGoop(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.knife) drawAssassin(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.coin) drawBoomerang(u,cx,cy,rx,ry,dir,u.flash);
@@ -5813,6 +6025,8 @@ function drawMini(k, cx, cy, r, dir, seed){
                      [ 'jaw',   drawScrapjaw, 0.92, 0.90],
                      [ 'oak',   drawOak,   0.86, 0.86],
                      [ 'sludge',drawSludge,0.80, 0.80],
+                     [ 'toad',  drawToad,  0.78, 0.80],
+                     [ 'spear', drawFrog,  0.92, 0.92],
                      [ 'goop',  drawGoop,  0.92, 0.92],
                      [ 'mib',   drawMIB,   0.86, 0.90],
                      [ 'devil', drawDevil, 0.80, 0.80],
