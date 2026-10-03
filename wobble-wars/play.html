@@ -310,7 +310,10 @@ const U = {
   doctor:{nm:'DOCTOR BLOB', abil:[{t:'immune', vs:['toxic']}], team:1, hp:360, dmg:55, rate:1.2, spd:44, rng:70, r:27, cost:600, cd:15,
           hpUp:72, dmgUp:11, wide:1, swT:0.50, hitP:0.55, needle:1, kbStep:0.34,
           c:['#e8ffec','#5fd47a','#2a7a44']},        // a jab with the needle; the oak's poison can't touch him
-  baby:  {nm:'BABY BLOB', abil:[{t:'weak', vs:['dark','fire']}], team:1, hp:35, dmg:7, rate:1.0, spd:84, rng:48, r:18, cost:65, cd:1.6,
+  hitman:{nm:'HIT MAN BLOB', team:1, hp:5, dmg:25, rate:0.7, spd:0, rng:9999, r:27, cost:800, cd:20,
+          hpUp:0, dmgUp:5, wide:1, swT:0.2, hitP:0.5, hitman:1, hitCap:1, kbStep:0.2,
+          c:['#e6ebf4','#8f9bb3','#3b4357']},       // dynamites himself across the map, then shoots back down the lane
+  baby:  {nm:'BABY BLOB', abil:[{t:'weak', vs:['dark','fire']}, {t:'freeze', chance:0.20, time:1}], team:1, hp:35, dmg:7, rate:1.0, spd:84, rng:48, r:18, cost:65, cd:1.6,
           hpUp:7, dmgUp:1.4, wide:1, swT:0.30, hitP:0.45, baby:1, kbStep:0.5,
           c:['#e6f9ff','#6fd8ef','#357f96']},
   mage:  {nm:'MAGICIAN BLOB', team:1, hp:70, dmg:0, rate:4.0, spd:8.4, rng:60, r:27, cost:650, cd:20,
@@ -452,6 +455,7 @@ const UPG = {
   golden: {nm:'GOLDEN BLOB', kind:'unit', min:1, max:5, costs:[600, 900, 1300, 1800], capsule:1},   // capsule prize only
   baby:   {nm:'BABY BLOB',  kind:'unit', min:1, max:5, costs:[600, 900, 1300, 1800], capsule:1},
   doctor: {nm:'DOCTOR BLOB', kind:'unit', min:1, max:5, costs:[800, 1200, 1700, 2300], capsule:1},
+  hitman: {nm:'HIT MAN BLOB', kind:'unit', min:1, max:5, costs:[800, 1200, 1700, 2300], capsule:1},
   mage:   {nm:'MAGICIAN BLOB', kind:'unit', min:1, max:5, costs:[800, 1200, 1700, 2300], capsule:1},
   elder:  {nm:'ELDERLY BLOB', kind:'unit', min:1, max:5, costs:[1800, 2600, 3500, 4600], capsule:1, godly:1},
   reaper: {nm:'REAPER BLOB',  kind:'unit', min:1, max:5, costs:[1800, 2600, 3500, 4600], capsule:1, godly:1},
@@ -511,6 +515,8 @@ const EVO = {
           note:'+20% HP and +20% speed', c:['#dcefff','#64c0ff','#346ea0']},
   golden:{nm:'GLASSES GOLDEN BLOB', cost:6000, hpMul:1, spdMul:1.20,
           note:'+20% speed', c:['#fffac9','#ffcc4a','#a87e1b']},
+  hitman:{nm:'TOP HIT MAN BLOB', cost:7000, hpMul:1, dmgMul:1.30, spdMul:1,
+          note:'+30% damage, and a gold revolver', c:['#f1f3f8','#9aa6be','#3b4357']},
   doctor:{nm:'PLAGUE DOCTOR SLIME', cost:7000, hpMul:1.15, dmgMul:1.15, spdMul:1, poison:{mul:0.30, t:3},
           note:'+15% HP/dmg, and poison: +30% over 3s', c:['#dfe8d8','#6f8466','#2c3a28']},
   baby:  {nm:'BALLOON BLOB', cost:6500, hpMul:1.30, dmgMul:1.30, spdMul:1, art:'balloon',
@@ -782,8 +788,8 @@ const XP_LEVELS = [
 
 /* save */
 const SKEY='battleblobs_v2';
-const LV0={blob:1, golden:0, baby:0, doctor:0, mage:0, elder:0, reaper:0, chonk:0, sword:0, dino:0, boom:0, jumper:0, fierce:0, flow:1, tank:1, armour:0, cannon:0};
-const EV0={blob:0, golden:0, baby:0, doctor:0, mage:0, elder:0, reaper:0, chonk:0, sword:0, dino:0, boom:0, jumper:0, fierce:0};
+const LV0={blob:1, golden:0, baby:0, doctor:0, hitman:0, mage:0, elder:0, reaper:0, chonk:0, sword:0, dino:0, boom:0, jumper:0, fierce:0, flow:1, tank:1, armour:0, cannon:0};
+const EV0={blob:0, golden:0, baby:0, doctor:0, hitman:0, mage:0, elder:0, reaper:0, chonk:0, sword:0, dino:0, boom:0, jumper:0, fierce:0};
 let save={best:0, xp:0, q:2, mus:0, vol:{sfx:1, mus:0.5}, slots:0, team:['blob'], tickets:0, rare:0, spun:0, lv:Object.assign({},LV0), evo:Object.assign({},EV0), reinf:{cannon:0, armour:0, flow:0, tank:0}, fin:{cannon:0, armour:0, flow:0, tank:0}};
 let aiMode = 0;     // AI MODE: the game plays itself. Off at launch AND at the start of every battle
 let fastMode = 0;   // 0 → 1.5x → 2x → back to 1x. NOT saved: every session starts at 1x
@@ -1548,6 +1554,54 @@ function drawSword(px, py, len, dir, ang, evo, sweep){
   X.restore();
 }
 
+/* ---- HIT MAN BLOB: dark suit, red tie, fedora, shades and a revolver. Faces HOME once he has landed ---- */
+function drawHitman(u, cx, cy, rx, ry, dir, flash){
+  const face = u.fly ? 1 : -1, fz = u.flyZ||0, by = cy - fz;
+  X.save();
+  if(u.fly){ X.translate(cx, by); X.rotate(u.spin||0); X.translate(-cx, -by); }
+  drawBlob(u, cx, by, rx, ry, face, flash);
+  drawHitmanKit(cx, by, rx, ry, face, !!u.evo, u.recoil||0, u.seed);
+  if(u.fly){                                       // the dynamite stick still fizzing under him
+    X.fillStyle='#c8372b'; rr(cx-rx*0.18, by+ry*0.55, rx*0.36, ry*0.42, rx*0.06); X.fill();
+    X.fillStyle= Math.sin(T*40)>0 ? '#ffe36a' : '#ff8a2a'; X.beginPath(); X.arc(cx, by+ry*0.50, rx*0.10, 0, 7); X.fill();
+  }
+  X.restore();
+}
+function drawHitmanKit(cx, cy, rx, ry, face, evo, recoil, seed){
+  X.save(); X.lineJoin='round'; X.lineCap='round';
+  // the suit: a dark jacket over the lower body, white shirt, red tie
+  gooPath(cx, cy, rx, ry, 0.022, 3, T, seed||1, true); X.save(); X.clip();
+  X.fillStyle='#262a35'; X.beginPath(); X.moveTo(cx-rx*1.2, cy+ry*0.22); X.lineTo(cx-rx*0.18, cy+ry*0.22);
+  X.lineTo(cx, cy+ry*0.70); X.lineTo(cx+rx*0.18, cy+ry*0.22); X.lineTo(cx+rx*1.2, cy+ry*0.22); X.lineTo(cx+rx*1.2, cy+ry*1.2); X.lineTo(cx-rx*1.2, cy+ry*1.2); X.closePath(); X.fill();
+  X.fillStyle='#f4f4f0'; X.beginPath(); X.moveTo(cx-rx*0.18, cy+ry*0.22); X.lineTo(cx, cy+ry*0.70); X.lineTo(cx+rx*0.18, cy+ry*0.22); X.closePath(); X.fill();
+  X.fillStyle='#c52a2a'; X.beginPath(); X.moveTo(cx-rx*0.06, cy+ry*0.26); X.lineTo(cx+rx*0.06, cy+ry*0.26); X.lineTo(cx+rx*0.05, cy+ry*0.60); X.lineTo(cx, cy+ry*0.68); X.lineTo(cx-rx*0.05, cy+ry*0.60); X.closePath(); X.fill();
+  if(evo){ X.strokeStyle='#ffd23a'; X.lineWidth=Math.max(1.5, rx*0.05);                       // a gold chain for the top man
+    X.beginPath(); X.moveTo(cx+face*rx*0.30, cy+ry*0.50); X.quadraticCurveTo(cx+face*rx*0.55, cy+ry*0.68, cx+face*rx*0.80, cy+ry*0.48); X.stroke(); }
+  X.restore();
+  // shades over the eyes
+  const dx = rx*0.34, off = face*rx*0.10, ey = cy - ry*0.12;
+  X.fillStyle='#14161c';
+  for(const sgn of [-1,1]){ rr(cx+sgn*dx+off-rx*0.29, ey-ry*0.20, rx*0.58, ry*0.38, ry*0.12); X.fill(); }   // big enough to hide the eyes
+  X.fillRect(cx-dx+off+rx*0.25, ey-ry*0.10, dx*2-rx*0.5, ry*0.07);
+  X.fillStyle='rgba(255,255,255,.35)';
+  for(const sgn of [-1,1]){ X.beginPath(); X.ellipse(cx+sgn*dx+off-rx*0.10, ey-ry*0.08, rx*0.10, ry*0.05, -0.4, 0, 7); X.fill(); }
+  // fedora
+  const hy = cy - ry*0.66;
+  X.fillStyle='#1e2129'; X.beginPath(); X.ellipse(cx, hy, rx*0.98, ry*0.15, 0, 0, 7); X.fill();
+  X.beginPath(); X.moveTo(cx-rx*0.58, hy); X.quadraticCurveTo(cx-rx*0.62, hy-ry*0.52, cx-rx*0.10, hy-ry*0.48);
+  X.quadraticCurveTo(cx, hy-ry*0.38, cx+rx*0.10, hy-ry*0.48); X.quadraticCurveTo(cx+rx*0.62, hy-ry*0.52, cx+rx*0.58, hy); X.closePath(); X.fill();
+  X.fillStyle= evo ? '#ffd23a' : '#c52a2a'; X.fillRect(cx-rx*0.58, hy-ry*0.16, rx*1.16, ry*0.12);
+  // the revolver, held out toward the way he faces; it kicks up when it fires
+  X.save(); X.translate(cx + face*rx*0.78, cy + ry*0.12); X.scale(face, 1); X.rotate(-recoil*0.55);
+  const L = rx*1.35;
+  X.fillStyle='#6b4423'; rr(-L*0.12, -ry*0.02, L*0.22, ry*0.34, rx*0.05); X.fill();                       // grip
+  X.fillStyle= evo ? '#e8b72a' : '#a9b2bd'; rr(-L*0.06, -ry*0.14, L*0.34, ry*0.20, rx*0.05); X.fill();     // cylinder
+  X.fillStyle= evo ? '#ffd23a' : '#c9d1da'; rr(L*0.20, -ry*0.11, L*0.68, ry*0.10, rx*0.03); X.fill();      // barrel
+  X.strokeStyle='#2b2f36'; X.lineWidth=Math.max(1, rx*0.035); rr(-L*0.06, -ry*0.14, L*0.34, ry*0.20, rx*0.05); X.stroke();
+  if(recoil>0.6){ X.fillStyle='#fff3b0'; X.beginPath(); X.arc(L*0.95, -ry*0.06, rx*0.16*recoil, 0, 7); X.fill(); }   // muzzle flash
+  X.restore();
+  X.restore();
+}
 /* ---- DOCTOR BLOB kit: head mirror + stethoscope (the plague doctor swaps them for a hat and beak),
    and the syringe he jabs with. stab: -0.35 drawn back, 1 fully in ---- */
 function drawDoctorKit(cx, cy, rx, ry, dir, evo, stab){
@@ -4389,11 +4443,11 @@ function newBattle(li, isXp){
     pbHP:baseHP(), pbMax:baseHP(), ebHP:L.bhp, ebMax:L.bhp,
     units:[], parts:[], shots:[], rings:[],
     juice:100, inc:income(), cap:juiceCap(), wealth:0,
-    cd:{blob:0, golden:0, baby:0, doctor:0, mage:0, elder:0, reaper:0, chonk:0, sword:0, dino:0, boom:0, jumper:0, fierce:0}, used:{},
+    cd:{blob:0, golden:0, baby:0, doctor:0, hitman:0, mage:0, elder:0, reaper:0, chonk:0, sword:0, dino:0, boom:0, jumper:0, fierce:0}, used:{},
     cannon:{ch:55, rate:5.5, ready:false, recoil:0},
     isXp:!!isXp, xpT:(L.xpMode && L.xpMode.first) || 0, xpWaveAt:0, xpBonus:0, xpWave:0, pendingXp:[],
     time:0, si:0, loopT:0, poolI:0, bossFired:false, bossWave:0, bossUnits:[], pendingPeons:[], killed:{}, hits:{}, waveGap:WAVE_GAP,
-    throws:[], spits:[], coins:[], pendingRise:[], spores:[], bossMus:0, aiT:0, aiPick:null, qbOn:false, qbT:0, hurt:{}, shock:[], strikes:[], pendingK:[], finaleDone:0, ekT:((L.everyK && !L.everyK.after)? L.everyK.t : 0),
+    throws:[], spits:[], coins:[], pendingRise:[], spores:[], tracers:[], bossMus:0, aiT:0, aiPick:null, qbOn:false, qbT:0, hurt:{}, shock:[], strikes:[], pendingK:[], finaleDone:0, ekT:((L.everyK && !L.everyK.after)? L.everyK.t : 0),
     camX:0, camT:0, camManual:0, field:FIELD,
     over:null, overT:0, paused:false, kills:0
   };
@@ -4434,6 +4488,7 @@ function unlockedUnits(){
   if(save.lv.baby>0) out.push('baby');
   if(save.lv.mage>0) out.push('mage');
   if(save.lv.doctor>0) out.push('doctor');
+  if(save.lv.hitman>0) out.push('hitman');
   if(save.lv.elder>0) out.push('elder');
   if(save.lv.reaper>0) out.push('reaper');
   if(save.lv.chonk>0) out.push('chonk');
@@ -4525,7 +4580,47 @@ function tryDeploy(k){
   const u=spawnUnit(k);
   SFX.spawn();
   for(let i=0;i<10;i++) puff(u.x, GY-14, U[k].c[1]);
+  if(d.hitman) launchHitman(u);
   if(B.tut && B.tut.step===0) tutNext();
+}
+/* ---- HIT MAN BLOB: lights a stick of dynamite, rides the blast to the far side, turns round and shoots ---- */
+function launchHitman(u){
+  u.fly = {t:0, dur:1.3, x0:u.x, x1:Math.max(u.x+60, E_FRONT-70), h:230};
+  SFX.boom(); shake=Math.max(shake,10); flashScreen=Math.max(flashScreen,0.18);
+  ring(u.x, GY-20, '#ffd08a', 10, 110, 0.4, 8); ring(u.x, GY-8, '#ff7a2f', 8, 140, 0.5, 6);
+  for(let q=0;q<22;q++){ const a=-Math.PI*Math.random();
+    B.parts.push({x:u.x, y:GY-16, vx:Math.cos(a)*(100+Math.random()*260), vy:Math.sin(a)*(120+Math.random()*260),
+      r:3+Math.random()*6, life:0.4+Math.random()*0.5, t:0, col: Math.random()<0.5?'#ffd08a':'#7a7068', g:380}); }
+}
+function hitmanTick(u, d, udt){
+  u.moving = false;
+  if(u.fly){                                         // riding the blast
+    const f=u.fly; f.t += udt; const q=Math.min(1, f.t/f.dur);
+    u.x = f.x0 + (f.x1-f.x0)*q; u.flyZ = Math.sin(q*Math.PI)*f.h; u.spin = (u.spin||0) + udt*13;
+    if(Math.random()<0.7) B.parts.push({x:u.x-8, y:GY-30-u.flyZ, vx:-40-Math.random()*60, vy:-20+Math.random()*40,
+      r:4+Math.random()*5, life:0.5+Math.random()*0.4, t:0, col: Math.random()<0.3?'#ffb35a':'#8d857c', g:-20});
+    if(q>=1){ u.fly=null; u.flyZ=0; u.spin=0; u.atk=0.35; SFX.whump(); shake=Math.max(shake,6);
+      ring(u.x, GY-6, '#e8dccb', 8, 70, 0.35, 6); for(let i=0;i<10;i++) puff(u.x, GY-6, '#cfc6ba', -80); }
+    return;
+  }
+  u.recoil = Math.max(0, (u.recoil||0) - udt*5);
+  u.atk -= udt; if(u.atk > 0) return;
+  // facing home: he shoots whichever slime has got furthest toward your base — any distance
+  let t=null, bx=1e9;
+  for(const o of B.units){
+    if(o.team===u.team || o.dead || o.dying || o.air || o.fly) continue;
+    if(o.x > u.x + 16) continue;                     // nothing behind his back
+    if(o.x < bx){ bx=o.x; t=o; }
+  }
+  if(!t){ u.atk = 0.1; return; }
+  u.atk = d.rate;
+  dmgUnit(t, unitDmg(u), u.team, u);
+  u.recoil = 1;
+  const mx = u.x - d.r*1.15, my = GY - d.r*0.85, ty = GY - U[t.k].r*0.7*(t.rs||1);
+  B.tracers.push({x0:mx, y0:my, x1:t.x, y1:ty, t:0, gold:!!u.evo});
+  noise(0.07,0.30,3200,900,1.3); tone(170,0.07,'square',0.12,60);
+  for(let q=0;q<5;q++) B.parts.push({x:t.x, y:ty, vx:(Math.random()-0.5)*200, vy:-60-Math.random()*120, r:1.5+Math.random()*2.5,
+    life:0.25+Math.random()*0.2, t:0, col:'#ffe08a', g:500});
 }
 
 /* a worker slime lobs a barricade; it lands and becomes a unit */
@@ -4763,7 +4858,7 @@ function shieldBreak(u){
 function pickBack(u, d){
   let best=null, bd=-1;
   for(const o of B.units){
-    if(o.team===u.team || o.dead || o.dying || o.air || o.held) continue;
+    if(o.team===u.team || o.dead || o.dying || o.air || o.held || o.fly) continue;
     const dd = Math.abs(o.x-u.x);
     if(dd <= d.tongue.reach && dd > bd){ bd = dd; best = o; }
   }
@@ -4805,7 +4900,7 @@ function tongueTick(u, d){
   u.tongueY = t && t.held===u ? GY - U[t.k].r*0.8*(t.rs||1) : mouthY;
 }
 function dmgUnit(u, amount, from, src){
-  if(u.dead || u.dying) return;
+  if(u.dead || u.dying || u.fly) return;            // mid-air on a stick of dynamite: nothing can touch him
   const d=U[u.k];
   if(src && src!==u && src.team!==u.team) amount *= dmgMultiplier(src, u);
   if(d.hitCap) amount = d.hitCap;                     // golden blob: any hit is exactly 1 damage
@@ -4843,7 +4938,7 @@ function frontTarget(u){
   // nearest opposing unit within range, else the base
   let best=null, bd=1e9;
   for(const o of B.units){
-    if(o.dead || o.dying || o.team===u.team) continue;
+    if(o.dead || o.dying || o.team===u.team || o.fly) continue;
     const d=Math.abs(o.x-u.x);
     if((u.team>0 ? o.x>u.x-10 : o.x<u.x+10) && d<bd){ bd=d; best=o; }
   }
@@ -4857,6 +4952,8 @@ function frontTarget(u){
 }
 
 function updateFX(dt){
+  for(const tr of (B.tracers||[])) tr.t += dt;
+  if(B.tracers) B.tracers = B.tracers.filter(tr => tr.t < 0.14);
   for(const sc of (B.spores||[])){                   // spore clouds: anything of the other side inside is slowed
     sc.t += dt;
     for(const o of B.units){
@@ -5042,6 +5139,7 @@ function updateBattle(dt){
     if(u.freezeT>0){ u.freezeT -= dt; u.moving=false; continue; }   // frozen solid: nothing ticks
     let udt = dt;
     if(u.slowT>0){ u.slowT -= dt; udt = dt*0.5; }                     // slowed: everything at half speed
+    if(d.hitman){ hitmanTick(u, d, udt); continue; }
 
     if(d.heal && !u.air){              // menders work to their own clock
       u.atk -= udt;
@@ -5708,6 +5806,7 @@ function drawUnit(u){
   else if(d.elderCane) drawElder(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.reap) drawReaper(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.rabbit) drawRabbit(u,cx,cy,rx,ry,dir,u.flash);
+  else if(d.hitman) drawHitman(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.team>0 && !d.shadowOf) drawBlob(u,cx,cy,rx,ry,dir,u.flash);
   else drawSlime(u,cx,cy,rx,ry,dir,u.flash);
   if(d.needle && !u.dead) drawDoctorKit(cx, cy, rx, ry, dir, !!u.evo, u.sw>0? (u.stab||0) : 0);
@@ -5844,6 +5943,14 @@ function drawShot(s){
 }
 
 function drawFX(){
+  for(const tr of (B.tracers||[])){                  // revolver shots: a bright streak, gone in a blink
+    const a = 1 - tr.t/0.14;
+    X.save(); X.globalAlpha=a; X.lineCap='round';
+    X.strokeStyle = tr.gold? '#ffd23a' : '#fff1b0'; X.lineWidth=3;
+    X.beginPath(); X.moveTo(tr.x0, tr.y0); X.lineTo(tr.x1, tr.y1); X.stroke();
+    X.fillStyle='#fff6d0'; X.beginPath(); X.arc(tr.x0, tr.y0, 7*a+2, 0, 7); X.fill();
+    X.restore();
+  }
   for(const sc of (B.spores||[])){
     const a = Math.min(1, sc.t/0.3) * Math.min(1, (sc.life-sc.t)/0.8);
     X.save();
@@ -6209,6 +6316,7 @@ function drawMini(k, cx, cy, r, dir, seed){
     if(evoOn(k)) evoFace(k, cx, cy-r*0.12, rw, r, dir);
     if(d.sword) drawSword(cx + dir*rw*0.72, cy + r*0.10, rw*1.5, dir, -0.55, evoOn(k), 0);
     if(d.needle) drawDoctorKit(cx, cy, rw, r, dir, evoOn(k), 0);
+    if(d.hitman) drawHitmanKit(cx, cy, rw, r, dir, evoOn(k), 0, seed||1);
     if(d.coin){
       if(!evoOn(k)){
         X.save(); gooPath(cx,cy,rw,r*1.02,0.022,3,T,seed,true); X.clip();
@@ -6464,7 +6572,7 @@ function newBlobs(){
   const out=[];
   for(const k of ['chonk','sword','dino'])
     if(isLocked(k) && !isGated(k) && save.xp>=UPG[k].unlockCost) out.push(k);
-  for(const k of ['blob','golden','baby','mage','doctor','chonk','sword','dino'])
+  for(const k of ['blob','golden','baby','mage','doctor','hitman','chonk','sword','dino'])
     if(evoAvail(k) && save.xp>=EVO[k].cost) out.push(k);
   return out;
 }
@@ -6762,7 +6870,7 @@ function chunkyBtn(x, y, w, h, label, fn, o){
 let cheatArm = 0;
 const CHEAT_XP = 99999999;
 function cheatAll(){
-  const order = ['blob','chonk','sword','dino','boom','jumper','fierce','golden','baby','mage','doctor','elder','reaper'];
+  const order = ['blob','chonk','sword','dino','boom','jumper','fierce','golden','baby','mage','doctor','hitman','elder','reaper'];
   for(const k of order.concat(Object.keys(UPG)))           // the main blobs get first claim on the squad
     if(UPG[k] && UPG[k].kind==='unit' && !(save.lv[k]>0)){ save.lv[k]=1; autoEquip(k); }
   save.best  = LEVELS.length;                     // every level open
@@ -7077,7 +7185,7 @@ function pips(x, y, lv, max, col){
 
 const LAB_TABS = [
   {nm:'BLOBS',      keys:['blob','chonk','sword','dino','boom','jumper','fierce']},
-  {nm:'RARE BLOBS', keys:['golden','baby','mage','doctor']},
+  {nm:'RARE BLOBS', keys:['golden','baby','mage','doctor','hitman']},
   {nm:'GODLY BLOBS', keys:['elder','reaper']},
   {nm:'UPGRADES',   keys:['flow','tank','armour','cannon']}
 ];
@@ -7089,7 +7197,7 @@ function setLabTab(i){ if(i===labTab) return; labTab=i; labIdx=0; labPos=0; }
 function labAccent(k, canEvo){
   if(reinfOn(k)) return '#c06bff';
   if(canEvo || reinfAvail(k)) return '#ffd86a';
-  return {blob:'#3fb0f5', golden:'#e2b64a', baby:'#6fd8ef', mage:'#8a6fd6', doctor:'#5fd47a', chonk:'#ff9236', sword:'#ff5a46', dino:'#35b36a', flow:'#3fe0ff', tank:'#8affc9',
+  return {blob:'#3fb0f5', golden:'#e2b64a', baby:'#6fd8ef', mage:'#8a6fd6', doctor:'#5fd47a', hitman:'#8f9bb3', chonk:'#ff9236', sword:'#ff5a46', dino:'#35b36a', flow:'#3fe0ff', tank:'#8affc9',
           armour:'#ffd86a', cannon:'#b07dff'}[k] || '#3fb0f5';
 }
 function labStats(k){
@@ -7150,6 +7258,7 @@ const UNIT_BLURB = {
   baby:   'Tiny and very quick. Evolves onto balloons.',
   mage:   'Never attacks. Pulls a rabbit blob out every 4s.',
   doctor: 'Jabs with a needle. Immune to TOXIC poison.',
+  hitman: 'Blasts himself across the map, then shoots back. Every hit on him does 1.',
   elder:  'Old and slow. The cane comes down on a whole crowd.',
   reaper: 'What it kills may rise again \u2014 on your side.'
 };
@@ -7322,7 +7431,7 @@ function drawUpg(dt){
 /* ================================================================
    BLOB CAPSULE  —  spend a blob ticket, roll a new blob
    ================================================================ */
-const CAPSULE_POOL = ['golden','baby','mage','doctor'];   // RARE — nine pulls in ten
+const CAPSULE_POOL = ['golden','baby','mage','doctor','hitman'];   // RARE — nine pulls in ten
 const GODLY_POOL   = ['elder','reaper'];          // GODLY — one pull in ten
 const GODLY_CHANCE = 0.10;
 function isGodly(k){ return GODLY_POOL.indexOf(k) >= 0; }
@@ -7927,7 +8036,7 @@ function drawHow(dt){
   X.fillText('HOW TO PLAY', 500, 60); X.textAlign='left';
   // the blob list writes itself from the unit table, so it can never go stale
   const COL = {blob:'#3fb0f5', chonk:'#ff9236', sword:'#ff5a46', dino:'#35b36a', boom:'#2fc0ad', jumper:'#ff6fae',
-               fierce:'#7b88f0', golden:'#e2b64a', baby:'#6fd8ef', mage:'#8a6fd6', doctor:'#5fd47a'};
+               fierce:'#7b88f0', golden:'#e2b64a', baby:'#6fd8ef', mage:'#8a6fd6', doctor:'#5fd47a', hitman:'#8f9bb3'};
   const f1 = n => (n%1)? n.toFixed(1) : String(n);
   const unitLine = (k)=>{
     const d=U[k], hit = d.bolts? d.bolts.n+' BOLTS' : d.coin? 'OUT + BACK' : d.aoe? 'AREA' : 'SINGLE';

@@ -464,7 +464,7 @@ const Music = {
             final: 'final.mp3' },           // "Epic Sport Rock Trailer" by bfcmusic: the title fight, every round
   muffled: false,
   el: null, elMode: null, elFailed: {},
-  trackVol() { return Math.max(0, Math.min(1, 0.5 * settingsValue('music') * (this.muffled ? 0.35 : 1))); },
+  trackVol() { return Math.max(0, Math.min(1, 0.2 * settingsValue('music') * (this.muffled ? 0.35 : 1))); },
   playTrack(mode) {
     const src = this.TRACKS[mode];
     if (!src || this.elFailed[mode]) return false;

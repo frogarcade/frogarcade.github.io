@@ -1135,8 +1135,8 @@ const sfxHardMode=()=>{
   setTimeout(()=>{nz(0.4,0.3);t(60,0.7,'sine',0.25);},520);
 };
 let mT=null,mOn=false;
-function startBattleMusic(){stopMusic();if(!actx)return;mOn=true;const m=[{f:330,d:0.2},{f:330,d:0.2},{f:440,d:0.2},{f:392,d:0.2},{f:349,d:0.2},{f:330,d:0.2},{f:294,d:0.4},{f:349,d:0.2},{f:349,d:0.2},{f:440,d:0.2},{f:523,d:0.2},{f:494,d:0.2},{f:440,d:0.2},{f:392,d:0.4}];let i=0;function n(){if(!mOn)return;const x=m[i%m.length];t(x.f,x.d*0.6,'square',0.04);t(x.f/2,x.d*0.6,'triangle',0.03);if(i%2===0)kk();i++;mT=setTimeout(n,x.d*1000);}n();}
-function startLateMusic(){stopMusic();if(!actx)return;mOn=true;
+function startBattleMusic(){stopMusic();if(battleTrack())return;if(!actx)return;mOn=true;const m=[{f:330,d:0.2},{f:330,d:0.2},{f:440,d:0.2},{f:392,d:0.2},{f:349,d:0.2},{f:330,d:0.2},{f:294,d:0.4},{f:349,d:0.2},{f:349,d:0.2},{f:440,d:0.2},{f:523,d:0.2},{f:494,d:0.2},{f:440,d:0.2},{f:392,d:0.4}];let i=0;function n(){if(!mOn)return;const x=m[i%m.length];t(x.f,x.d*0.6,'square',0.04);t(x.f/2,x.d*0.6,'triangle',0.03);if(i%2===0)kk();i++;mT=setTimeout(n,x.d*1000);}n();}
+function startLateMusic(){stopMusic();if(battleTrack())return;if(!actx)return;mOn=true;
   // Epic intense battle theme - driving rhythm, tension building
   const m=[
     {f:196,d:0.12},{f:233,d:0.12},{f:294,d:0.12},{f:349,d:0.18},
@@ -1157,7 +1157,24 @@ function startLateMusic(){stopMusic();if(!actx)return;mOn=true;
     t(x.f,x.d*0.5,'sawtooth',0.045);t(x.f*0.5,x.d*0.6,'triangle',0.05);t(x.f*2,x.d*0.25,'sine',0.012);
     if(i%2===0)kk();if(i%4===2)nz(0.05,0.06);
     i++;mT=setTimeout(n,x.d*1000);}n();}
-function startMenuMusic(){stopMusic();if(!actx)return;mOn=true;menuMusicPlaying=true;
+// real songs (Pixabay, by ebunny): menu = "Pirate Adventure (acoustic)", battles = "Pirate Ship (loop)",
+// every boss fight = "Pirates Battle"
+const TRACK_FILES={menu:'menu.mp3',battle:'battle.mp3',boss:'boss.mp3'};
+const tracks={},trackFailed={};let menuTrack=null;          // menuTrack = whichever song is playing now
+function menuTrackVol(){return Math.max(0,Math.min(1,0.4*musVolume));}
+function playTrack(kind){
+  if(trackFailed[kind])return false;
+  if(!tracks[kind]){const a=new Audio(TRACK_FILES[kind]);a.loop=true;a.preload='auto';
+    a.addEventListener('error',()=>{trackFailed[kind]=true;});tracks[kind]=a;}
+  menuTrack=tracks[kind];menuTrack.volume=menuTrackVol();
+  const p=menuTrack.play();if(p&&p.catch)p.catch(()=>{});
+  return true;
+}
+function playMenuTrack(){return playTrack('menu');}
+function battleTrack(){ if(playTrack('battle')){mOn=true;return true;} return false; }   // every battle theme uses the song
+function startMenuMusic(){stopMusic();
+  if(playMenuTrack()){mOn=true;menuMusicPlaying=true;return;}   // the synth tune below is only a fallback
+  if(!actx)return;mOn=true;menuMusicPlaying=true;
   // Calm adventurous theme - gentle and inviting
   const m=[
     {f:330,d:0.35},{f:392,d:0.25},{f:440,d:0.35},{f:523,d:0.5},
@@ -1176,7 +1193,7 @@ function startMenuMusic(){stopMusic();if(!actx)return;mOn=true;menuMusicPlaying=
     t(x.f,x.d*0.7,'sine',0.035);t(x.f*0.5,x.d*0.8,'triangle',0.025);t(x.f*1.5,x.d*0.4,'sine',0.01);
     if(i%8===0)kk();
     i++;mT=setTimeout(n,x.d*1000);}n();}
-function startBossMusic(){stopMusic();if(!actx)return;mOn=true;const m=[{f:220,d:0.15},{f:262,d:0.15},{f:294,d:0.15},{f:349,d:0.15},{f:294,d:0.15},{f:262,d:0.15},{f:220,d:0.3},{f:196,d:0.15},{f:220,d:0.15},{f:262,d:0.15},{f:294,d:0.3},{f:262,d:0.15},{f:220,d:0.15},{f:196,d:0.3}];let i=0;function n(){if(!mOn)return;const x=m[i%m.length];t(x.f,x.d*0.55,'sawtooth',0.06);t(x.f/2,x.d*0.55,'triangle',0.07);t(x.f*1.5,x.d*0.3,'square',0.025);if(i%2===0)kk();if(i%2===1)nz(0.06,0.08);i++;mT=setTimeout(n,x.d*1000);}n();}
+function startBossMusic(){stopMusic();if(playTrack('boss')){mOn=true;return;}if(battleTrack())return;if(!actx)return;mOn=true;const m=[{f:220,d:0.15},{f:262,d:0.15},{f:294,d:0.15},{f:349,d:0.15},{f:294,d:0.15},{f:262,d:0.15},{f:220,d:0.3},{f:196,d:0.15},{f:220,d:0.15},{f:262,d:0.15},{f:294,d:0.3},{f:262,d:0.15},{f:220,d:0.15},{f:196,d:0.3}];let i=0;function n(){if(!mOn)return;const x=m[i%m.length];t(x.f,x.d*0.55,'sawtooth',0.06);t(x.f/2,x.d*0.55,'triangle',0.07);t(x.f*1.5,x.d*0.3,'square',0.025);if(i%2===0)kk();if(i%2===1)nz(0.06,0.08);i++;mT=setTimeout(n,x.d*1000);}n();}
 // Holy Throne Boss Music — dark, aggressive, driving track for hard mode
 function startAbyssMoonMusic(){stopMusic();if(!actx)return;mOn=true;
   // D minor — driving 16th-note bass with melodic stabs above
@@ -1250,6 +1267,7 @@ function setSfxVol(v){
 function setMusVol(v){
   musVolume=v/100;
   if(musG)musG.gain.value=musVolume;
+  if(menuTrack)menuTrack.volume=menuTrackVol();
   document.getElementById('mus-val').textContent=Math.round(v)+'%';
   localStorage.setItem('settings_mus',musVolume);
 }
@@ -10531,7 +10549,7 @@ function goMenu(){cancelBattle();rolling=false;showScreen('menu');updateMenuPack
   // Clear NEW badges when leaving the deck
   if(G.owned)G.owned.forEach(c=>{c.isNew=false;});save();
   if(!menuMusicPlaying){stopMusic();startMenuMusic();menuMusicPlaying=true;}}
-function stopMusic(){mOn=false;menuMusicPlaying=false;if(mT){clearTimeout(mT);mT=null;}}
+function stopMusic(){mOn=false;menuMusicPlaying=false;if(mT){clearTimeout(mT);mT=null;}if(menuTrack){menuTrack.pause();menuTrack.currentTime=0;}}
 let craftTab='craft';
 function switchCraftTab(tab){craftTab=tab;sfxClick();renderCraftContent();}
 function goCraft(){sfxClick();renderCraftContent();showScreen('craft');}
@@ -11531,8 +11549,7 @@ function launchBattle(sid,si,speed){
   const battleEl=$('battle');
   if(stage.isHardMode){battleEl.classList.add('holy-throne-arena');startHolyThroneFx();}
   else{battleEl.classList.remove('holy-throne-arena');stopHolyThroneFx();}
-  if(stage.isHardMode)startAbyssMoonMusic();
-  else if(stage.isBoss||si>=3)startBossMusic();
+  if(stage.isBoss)startBossMusic();          // every boss stage (Holy Throne included) gets the boss song
   else startBattleMusic();
   runBattle();
 }
