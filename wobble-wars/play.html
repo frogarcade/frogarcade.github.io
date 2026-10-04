@@ -398,7 +398,7 @@ const U = {
   shroom:{nm:'MUSHROOM SLIME', traits:['toxic'], team:-1, hp:60, dmg:14, rate:1.2, spd:30, rng:50, r:26, wide:1.05,
           swT:0.45, hitP:0.55, shroom:1, kbStep:0.5, spores:{r:72, t:4},
           c:['#fbf1dc','#e8d3ad','#8a6a44']},           // pops into a spore cloud when it dies: blobs inside are slowed
-  lord:  {nm:'THE TIDE', traits:['normal'], team:-1, hp:8000, dmg:130, rate:1.2, spd:14, rng:300, r:58, wide:1,
+  lord:  {nm:'THE TIDE', traits:['normal'], team:-1, hp:8000, dmg:260, rate:5.5, spd:14, rng:300, r:58, wide:1,   // one big wave every ~9s (5.5 rest + 3.5 swing), a rush window between
           swT:3.5, hitP:0.571, lord:1, boss:1, kbStep:0.25, tsunami:{speed:520, life:1.5, kb:1.25},
           c:['#f3e3c8','#3f8f5c','#1f4d33']},    // staff up for 2s, then a tsunami rolls 1.5s down the lane: every blob it reaches is hit AND knocked back
   frog:  {nm:'FROG ELITE', traits:['normal'], team:-1, hp:1, shield:250, dmg:28, rate:1.0, spd:34, rng:90, r:28, wide:1.15,
