@@ -363,10 +363,16 @@ const U = {
   magma: {nm:'MAGMA SLIME', traits:['fire'], team:-1, hp:21, dmg:70, rate:0.6, spd:240, rng:32, r:24, wide:1,
           swT:0.30, hitP:0.55, suicide:1, molten:1,
           c:['#ffe3ac','#ff6f2a','#883a19']},
+  hitslime:{nm:'HIT MAN SLIME', traits:['normal'], team:-1, hp:5, dmg:25, rate:0.7, spd:0, rng:9999, r:27, wide:1,
+          swT:0.2, hitP:0.5, hitman:1, hitslime:1, hitCap:1, kbStep:0.2,
+          c:['#e2f5c4','#8fcf5a','#3f6e2a']},          // the Hit Man Blob's stats, for the other side: rides dynamite behind your lines and shoots back
+  tophit:{nm:'TOP HIT MAN SLIME', traits:['normal'], team:-1, hp:80, dmg:33, rate:0.7, spd:0, rng:9999, r:32, wide:1.05,
+          swT:0.2, hitP:0.5, hitman:1, hitslime:1, hitCap:1, noKB:1, boss:1, doom:1, gold:1,
+          c:['#eef9d4','#9ad860','#3f6e2a']},          // 80 hits to drop, never knocked back — and if nobody is left to shoot, he turns round
   iceblow:{nm:'ICE BLOWER', traits:['ice'], abil:[{t:'freeze', chance:0.10, time:1}, {t:'slow', chance:1, time:2}], team:-1, hp:480, dmg:0, rate:2.0, spd:70, rng:80, r:26, wide:1.05,
           swT:0.90, hitP:0.45, icebreath:1, iceSlime:1, aoe:55, aoeOff:60, kbStep:0.5,
           c:['#f2fbff','#9fd8f2','#3f7fa6']},          // a slime frozen half-solid: quick, and its breath does no damage — it just might freeze you
-  yeti:  {nm:'THE YETI', traits:['ice'], abil:[{t:'freeze', chance:0.60, time:2}, {t:'slow', chance:1, time:2}], team:-1, hp:13000, dmg:180, rate:2.2, spd:58, rng:120, r:56, wide:1.15,
+  yeti:  {nm:'THE YETI', traits:['ice'], abil:[{t:'freeze', chance:0.60, time:2}, {t:'slow', chance:1, time:2}], team:-1, hp:4000, dmg:180, rate:2.2, spd:58, rng:120, r:56, wide:1.15,
           swT:1.20, hitP:0.50, icebreath:1, yeti:1, boss:1, aoe:100, aoeOff:100, kbStep:0.2,
           c:['#ffffff','#e6f1f8','#7d9bb3']},          // the same breath, much colder: 60% to freeze for 2s, and it hurts
   phoenix:{nm:'THE GODLY PHOENIX', traits:['fire','angelic'], abil:[{t:'kb', chance:0.50}], team:-1, hp:5000, dmg:10, rate:8, spd:43.9, rng:640, r:62, wide:1.22,
@@ -467,7 +473,7 @@ const UPG = {
   golden: {nm:'GOLDEN BLOB', kind:'unit', min:1, max:5, costs:[600, 900, 1300, 1800], capsule:1},   // capsule prize only
   baby:   {nm:'BABY BLOB',  kind:'unit', min:1, max:5, costs:[600, 900, 1300, 1800], capsule:1},
   doctor: {nm:'DOCTOR BLOB', kind:'unit', min:1, max:5, costs:[800, 1200, 1700, 2300], capsule:1},
-  hitman: {nm:'HIT MAN BLOB', kind:'unit', min:1, max:5, costs:[800, 1200, 1700, 2300], capsule:1},
+  hitman: {nm:'HIT MAN BLOB', kind:'unit', min:1, max:5, costs:[800, 1200, 1700, 2300], levelReward:22},   // beat level 22 for him
   mage:   {nm:'MAGICIAN BLOB', kind:'unit', min:1, max:5, costs:[800, 1200, 1700, 2300], capsule:1},
   elder:  {nm:'ELDERLY BLOB', kind:'unit', min:1, max:5, costs:[1800, 2600, 3500, 4600], capsule:1, godly:1},
   reaper: {nm:'REAPER BLOB',  kind:'unit', min:1, max:5, costs:[1800, 2600, 3500, 4600], capsule:1, godly:1},
@@ -573,7 +579,7 @@ function uspd(k){ return U[k].spd * (evoOn(k)? (EVO[k].spdMul||1) : 1); }
 function income(){ return INCOME[(save.lv.flow||1)-1] * (reinfOn('flow')?1.35:1) * finMul('flow'); }
 function juiceCap(){ return Math.round(CAPS[(save.lv.tank||1)-1] * (reinfOn('tank')?1.35:1) * finMul('tank')); }
 function isLocked(k){ return !!UPG[k].unlockCost && save.lv[k]===0; }
-function capLocked(k){ return !!UPG[k].capsule && save.lv[k]===0; }      // only the capsule hands these out
+function capLocked(k){ return !!(UPG[k].capsule || UPG[k].levelReward) && save.lv[k]===0; }      // only the capsule (or a level) hands these out
 function isGated(k){ return isLocked(k) && save.best < (UPG[k].gate||1); }
 function upgCost(k){
   const u=UPG[k], l=save.lv[k];
@@ -784,7 +790,15 @@ const LEVELS = [
    boss:'yeti', bossAt:3500, bossPeons:0,
    list:[[2,'iceblow'],[5,'iceblow'],[8,'iceblow'],[10,'iceblow'],[13,'iceblow'],[16,'iceblow'],[18,'iceblow'],
          [21,'iceblow'],[24,'iceblow'],[27,'iceblow'],[30,'iceblow']],
-   loop:4, pool:['iceblow']}
+   loop:4, pool:['iceblow']},
+
+  {nm:"THE HIT MAN'S HOUSE", bhp:4000, xp:38000, size:'medium', night:1, unlock:'hitman',
+   sky:['#1c1f30','#4b4664'], hill:'#2f2a3d',
+   // hit man slimes ride dynamite over your army and shoot from behind it. Drop three and the TOP HIT MAN comes for you —
+   // keep something on the field, because the moment he has nobody left to shoot, he turns round and ends it
+   boss:'tophit', bossNeed:{kills:{k:'hitslime', n:3}}, bossPeons:0,
+   list:[[3,'hitslime'],[10,'hitslime'],[17,'hitslime']],
+   loop:10, pool:['hitslime']}                      // one every 10s: any faster and nobody ever reaches a base
 ];
 
 /* XP LEVELS — short farming stages with their own spawn rules, no campaign progress */
@@ -1728,11 +1742,23 @@ function drawAero(u, cx, cy, rx, ry, dir, flash){
   X.restore();
 }
 function drawHitman(u, cx, cy, rx, ry, dir, flash){
-  const face = u.fly ? 1 : -1, fz = u.flyZ||0, by = cy - fz;
+  const d = U[u.k], tm = (u.team!=null) ? u.team : d.team;
+  const turned = (u.doomT||0) > 0.35;                // the top hit man swings round toward your base
+  const face = u.mini ? dir : (u.fly || turned) ? tm : -tm, fz = u.flyZ||0, by = cy - fz;
   X.save();
   if(u.fly){ X.translate(cx, by); X.rotate(u.spin||0); X.translate(-cx, -by); }
-  drawBlob(u, cx, by, rx, ry, face, flash);
-  drawHitmanKit(cx, by, rx, ry, face, !!u.evo, u.recoil||0, u.seed);
+  if(d.hitslime) drawSlime(u, cx, by, rx, ry, face, flash); else drawBlob(u, cx, by, rx, ry, face, flash);
+  drawHitmanKit(cx, by, rx, ry, face, !!u.evo || !!d.gold, Math.min(1, u.recoil||0), u.seed);
+  if(turned && !u.mini){                             // charging the big one: the muzzle glows, and a warning over his hat
+    const ch = Math.min(1, ((u.doomT||0) - 0.35)/1.25), gx = cx + face*(rx*0.78 + rx*1.35*0.9), gy = by + ry*0.06;
+    X.save(); X.globalCompositeOperation='lighter';
+    const gg = X.createRadialGradient(gx, gy, 0, gx, gy, rx*(0.4 + 1.2*ch));
+    gg.addColorStop(0, 'rgba(255,250,220,.95)'); gg.addColorStop(0.4, 'rgba(255,160,60,.7)'); gg.addColorStop(1, 'rgba(255,60,20,0)');
+    X.fillStyle = gg; X.beginPath(); X.arc(gx, gy, rx*(0.4 + 1.2*ch), 0, 7); X.fill(); X.restore();
+    const blink = Math.sin(T*18) > 0;
+    X.fillStyle = blink? '#ff3b30' : '#ffd23a'; X.font='900 '+Math.round(rx*1.1)+'px ui-rounded, Trebuchet MS, sans-serif';
+    X.textAlign='center'; X.fillText('!', cx, by - ry*1.55); X.textAlign='left';
+  }
   if(u.fly){                                       // the dynamite stick still fizzing under him
     X.fillStyle='#c8372b'; rr(cx-rx*0.18, by+ry*0.55, rx*0.36, ry*0.42, rx*0.06); X.fill();
     X.fillStyle= Math.sin(T*40)>0 ? '#ffe36a' : '#ff8a2a'; X.beginPath(); X.arc(cx, by+ry*0.50, rx*0.10, 0, 7); X.fill();
@@ -3318,13 +3344,15 @@ function drawSlime(u, cx, cy, rx, ry, dir, flash){
   X.beginPath(); X.ellipse(cx-rx*0.36, cy-ry*0.50, rx*0.21, ry*0.11, -0.55,0,7); X.fill();
   X.fillStyle='rgba(255,255,255,.32)';
   X.beginPath(); X.ellipse(cx-rx*0.15, cy-ry*0.62, rx*0.07, ry*0.05, -0.4,0,7); X.fill();
-  // face
+  // face (the ice blower draws its own — it has a whole breathing routine)
+  if(!U[u.k].iceSlime){
   eyes(cx, cy-ry*0.14, rx, dir, 'slit', u.blink>0, true);
   X.strokeStyle=INK; X.lineWidth=Math.max(2,rx*0.08); X.lineCap='round';
   X.beginPath();
   if(u.sw>0){ X.arc(cx+dir*rx*0.05, cy+ry*0.16, rx*0.26, 1.15*Math.PI, 1.85*Math.PI); }
   else { X.moveTo(cx-rx*0.2, cy+ry*0.26); X.quadraticCurveTo(cx, cy+ry*0.14, cx+rx*0.2, cy+ry*0.26); }
   X.stroke();
+  }
   if(flash>0){ X.save(); X.globalCompositeOperation='lighter'; X.globalAlpha=flash*0.8;
     gooPath(cx,cy,rx,ry,wob,fq,T,u.seed,true); X.fillStyle='#ffffff'; X.fill(); X.restore(); }
 }
@@ -3339,25 +3367,37 @@ function iceBreathAmt(u){                            // 0..1: how hard the breat
   if(p < h) return (p-(h-0.10))/0.10;
   return Math.max(0, 1 - Math.max(0, p-(h+0.25))/0.20);
 }
-function drawIceBreath(u, mx, my, dir, len, wid){   // a widening cone of frost, flakes streaming down it
+function snowflake(x, y, r, rot){
+  X.save(); X.translate(x, y); X.rotate(rot); X.beginPath();
+  for(let i=0;i<3;i++){ const a=i*Math.PI/3, c=Math.cos(a)*r, s2=Math.sin(a)*r; X.moveTo(-c, -s2); X.lineTo(c, s2); }
+  X.stroke(); X.restore();
+}
+function drawIceBreath(u, mx, my, dir, len, wid){   // frost pouring out of the mouth: a soft cone, rolling billows, spinning flakes
   const a = iceBreathAmt(u); if(a<=0) return;
-  X.save(); X.globalAlpha = a;
+  const seed = u.seed||1;
+  X.save();
+  // the cone: narrow at the lips, opening out, fading at the far end
+  X.globalAlpha = a*0.75;
   const g = X.createLinearGradient(mx, my, mx+dir*len, my);
-  g.addColorStop(0, 'rgba(235,250,255,.95)'); g.addColorStop(0.3, 'rgba(110,195,250,.80)'); g.addColorStop(1, 'rgba(70,150,230,0)');
-  // a billowing plume: narrow at the mouth, puffing out round at the far end
-  const plume = () => { X.beginPath(); X.moveTo(mx, my - wid*0.12);
-    X.quadraticCurveTo(mx+dir*len*0.50, my - wid*0.42, mx+dir*len*0.82, my - wid*0.58);
-    X.quadraticCurveTo(mx+dir*len*1.08, my, mx+dir*len*0.82, my + wid*0.58);
-    X.quadraticCurveTo(mx+dir*len*0.50, my + wid*0.42, mx, my + wid*0.12); X.closePath(); };
-  plume(); X.fillStyle = g; X.fill();
-  X.save(); X.globalAlpha = a*0.5; X.strokeStyle='rgba(60,140,215,.6)'; X.lineWidth=1.5; X.setLineDash([6,5]); X.lineDashOffset = -T*40*dir;
-  plume(); X.stroke(); X.restore();                                                 // a faint moving edge so it reads on snow
-  X.fillStyle='#ffffff';
-  for(let i=0;i<9;i++){
-    const q = ((T*2.6 + i/9 + (u.seed||1)*0.11) % 1), s = Math.sin(i*2.3+(u.seed||1));
+  g.addColorStop(0, 'rgba(240,252,255,.95)'); g.addColorStop(0.35, 'rgba(140,210,252,.65)'); g.addColorStop(1, 'rgba(90,165,235,0)');
+  X.fillStyle = g; X.beginPath(); X.moveTo(mx, my - wid*0.08);
+  X.quadraticCurveTo(mx+dir*len*0.45, my - wid*0.30, mx+dir*len, my - wid*0.55);
+  X.lineTo(mx+dir*len, my + wid*0.55);
+  X.quadraticCurveTo(mx+dir*len*0.45, my + wid*0.30, mx, my + wid*0.08); X.closePath(); X.fill();
+  // billows: puffs of frost that roll out, swell and thin away
+  for(let i=0;i<7;i++){
+    const q = ((T*1.9 + i/7 + seed*0.07) % 1), wob = Math.sin(i*1.9 + seed + T*3)*wid*0.12*q;
+    const px = mx + dir*len*q*0.92, py = my + wob, pr = wid*(0.10 + 0.34*q);
+    const pg = X.createRadialGradient(px, py, 0, px, py, pr);
+    pg.addColorStop(0, 'rgba(255,255,255,.9)'); pg.addColorStop(0.55, 'rgba(190,232,255,.55)'); pg.addColorStop(1, 'rgba(150,210,250,0)');
+    X.globalAlpha = a*(1-q*q)*0.85; X.fillStyle = pg; X.beginPath(); X.arc(px, py, pr, 0, 7); X.fill();
+  }
+  // snowflakes tumbling down the stream
+  X.strokeStyle='#ffffff'; X.lineCap='round'; X.lineWidth=Math.max(1, wid*0.03);
+  for(let i=0;i<8;i++){
+    const q = ((T*2.4 + i/8 + seed*0.13) % 1), sp = Math.sin(i*2.3 + seed);
     X.globalAlpha = a*(1-q)*0.95;
-    const fx = mx + dir*len*q, fy = my + s*wid*0.55*q;
-    X.beginPath(); X.arc(fx, fy, 1.4 + wid*0.035*(1-q*0.5), 0, 7); X.fill();
+    snowflake(mx + dir*len*q, my + sp*wid*0.48*q, wid*(0.05 + 0.05*(1-q)), T*4 + i);
   }
   X.restore();
 }
@@ -3387,7 +3427,43 @@ function drawIceBlower(u, cx, cy, rx, ry, dir, flash){
     X.strokeStyle='rgba(255,255,255,'+(0.9*tw)+')'; X.lineWidth=Math.max(1, rx*0.035);
     X.beginPath(); X.moveTo(sx-s, sy); X.lineTo(sx+s, sy); X.moveTo(sx, sy-s); X.lineTo(sx, sy+s); X.stroke();
   }
-  if(!u.mini) drawIceBreath(u, cx + dir*rx*0.55, cy + ry*0.12, dir, (U[u.k].aoeOff + U[u.k].aoe)*0.95, ry*1.3);
+  // the face, by phase: glaring -> cheeks puffed full, eyes squeezed -> a big round O, blowing
+  const d = U[u.k], p = (u.sw>0 && !u.mini) ? 1-u.sw/u.swT : -1, h = hitPoint(u, d);
+  const inhale = p>=0 && p < h-0.10 ? p/(h-0.10) : 0, blow = iceBreathAmt(u);
+  const ey = cy - ry*0.16, omx = cx + dir*rx*0.34, omy = cy + ry*0.20;
+  X.lineCap='round'; X.lineJoin='round';
+  if(inhale > 0){
+    for(const s2 of [-1,1]){                                                     // > <  squeezed shut
+      const ex = cx + s2*rx*0.34 + dir*rx*0.10;
+      X.strokeStyle=INK; X.lineWidth=Math.max(2, rx*0.08);
+      X.beginPath(); X.moveTo(ex - s2*rx*0.13, ey - ry*0.10); X.lineTo(ex + s2*rx*0.06, ey); X.lineTo(ex - s2*rx*0.13, ey + ry*0.10); X.stroke();
+    }
+    for(const s2 of [-1,1]){                                                     // cheeks filling up
+      const chx = cx + s2*rx*0.58 + dir*rx*0.06, chr = rx*(0.10 + 0.13*inhale);
+      X.fillStyle='rgba(205,240,255,.85)'; X.beginPath(); X.arc(chx, cy + ry*0.16, chr, 0, 7); X.fill();
+      X.strokeStyle='rgba(63,127,166,.55)'; X.lineWidth=Math.max(1, rx*0.035); X.stroke();
+      X.fillStyle='rgba(255,255,255,.9)'; X.beginPath(); X.arc(chx - chr*0.3, cy + ry*0.16 - chr*0.35, chr*0.28, 0, 7); X.fill();
+    }
+    X.fillStyle=INK; X.beginPath(); X.ellipse(omx, omy, rx*0.06, ry*0.05, 0, 0, 7); X.fill();   // lips pursed tight
+    X.save(); X.fillStyle='#ffffff';                                             // cold air being sucked in
+    for(let i=0;i<5;i++){ const q = 1 - ((T*2.2 + i/5) % 1);
+      X.globalAlpha = 0.8*(1-q)*inhale; X.beginPath();
+      X.arc(omx + dir*rx*(0.15 + 1.5*q), omy + Math.sin(i*2.4)*ry*0.35*q, rx*0.05, 0, 7); X.fill(); }
+    X.restore();
+  } else if(blow > 0){
+    eyes(cx, ey, rx, dir, 'slit', false, true);
+    const ow = rx*(0.10 + 0.10*blow), oh = ry*(0.10 + 0.10*blow);                 // the O, as wide as the gust
+    X.fillStyle='#16304a'; X.beginPath(); X.ellipse(omx, omy, ow, oh, 0, 0, 7); X.fill();
+    const og = X.createRadialGradient(omx, omy, 0, omx, omy, ow);
+    og.addColorStop(0, 'rgba(220,245,255,.95)'); og.addColorStop(1, 'rgba(120,200,250,0)');
+    X.fillStyle=og; X.beginPath(); X.ellipse(omx, omy, ow*0.8, oh*0.8, 0, 0, 7); X.fill();
+    X.strokeStyle='#3f7fa6'; X.lineWidth=Math.max(1.5, rx*0.06); X.beginPath(); X.ellipse(omx, omy, ow, oh, 0, 0, 7); X.stroke();
+  } else {
+    eyes(cx, ey, rx, dir, 'slit', u.blink>0, true);
+    X.strokeStyle=INK; X.lineWidth=Math.max(2, rx*0.08);
+    X.beginPath(); X.moveTo(cx-rx*0.2+dir*rx*0.05, cy+ry*0.26); X.quadraticCurveTo(cx+dir*rx*0.05, cy+ry*0.14, cx+rx*0.2+dir*rx*0.05, cy+ry*0.26); X.stroke();
+  }
+  if(!u.mini) drawIceBreath(u, omx + dir*rx*0.10, omy, dir, (U[u.k].aoeOff + U[u.k].aoe)*0.95, ry*1.3);
 }
 function yetiFur(cx, cy, rx, ry, n, jag, seed){     // a shaggy outline: pointed tufts all the way round
   X.beginPath();
@@ -4956,6 +5032,7 @@ function spawnUnit(k, asBoss, quiet){
   if(d.shadowOf) u.undead = 1;                              // a dev-mode shadow: drawn like a reaped one
   B.units.push(u);
   if(u.isBoss) bossEntry(u);                                  // and makes an entrance
+  if(d.hitman && d.team<0 && !quiet) launchHitman(u);         // a hit man slime lights the dynamite the moment he's out
   return u;
 }
 function buyWealth(){
@@ -4985,7 +5062,9 @@ function tryDeploy(k){
 }
 /* ---- HIT MAN BLOB: lights a stick of dynamite, rides the blast to the far side, turns round and shoots ---- */
 function launchHitman(u){
-  u.fly = {t:0, dur:1.3, x0:u.x, x1:Math.max(u.x+60, E_FRONT-70), h:230};
+  // clean over the other army, landing out in the field — well clear of their base and of where they deploy
+  const GAP = 240;
+  u.fly = {t:0, dur:1.3, x0:u.x, x1: u.team>0 ? Math.max(u.x+60, E_FRONT-GAP) : Math.min(u.x-60, P_FRONT+GAP), h:230};
   SFX.boom(); shake=Math.max(shake,10); flashScreen=Math.max(flashScreen,0.18);
   ring(u.x, GY-20, '#ffd08a', 10, 110, 0.4, 8); ring(u.x, GY-8, '#ff7a2f', 8, 140, 0.5, 6);
   for(let q=0;q<22;q++){ const a=-Math.PI*Math.random();
@@ -4997,30 +5076,107 @@ function hitmanTick(u, d, udt){
   if(u.fly){                                         // riding the blast
     const f=u.fly; f.t += udt; const q=Math.min(1, f.t/f.dur);
     u.x = f.x0 + (f.x1-f.x0)*q; u.flyZ = Math.sin(q*Math.PI)*f.h; u.spin = (u.spin||0) + udt*13;
-    if(Math.random()<0.7) B.parts.push({x:u.x-8, y:GY-30-u.flyZ, vx:-40-Math.random()*60, vy:-20+Math.random()*40,
+    if(Math.random()<0.7) B.parts.push({x:u.x-u.team*8, y:GY-30-u.flyZ, vx:-u.team*(40+Math.random()*60), vy:-20+Math.random()*40,
       r:4+Math.random()*5, life:0.5+Math.random()*0.4, t:0, col: Math.random()<0.3?'#ffb35a':'#8d857c', g:-20});
     if(q>=1){ u.fly=null; u.flyZ=0; u.spin=0; u.atk=0.35; SFX.whump(); shake=Math.max(shake,6);
       ring(u.x, GY-6, '#e8dccb', 8, 70, 0.35, 6); for(let i=0;i<10;i++) puff(u.x, GY-6, '#cfc6ba', -80); }
     return;
   }
   u.recoil = Math.max(0, (u.recoil||0) - udt*5);
-  u.atk -= udt; if(u.atk > 0) return;
-  // facing home: he shoots whichever slime has got furthest toward your base — any distance
-  let t=null, bx=1e9;
+  // facing home, he shoots the NEAREST enemy in front of him — the one the bullet actually reaches first
+  // (it used to pick whoever was furthest down the lane, so shots flew straight through the slimes in between)
+  const home = -u.team;
+  let t=null, bd=1e9;
   for(const o of B.units){
     if(o.team===u.team || o.dead || o.dying || o.air || o.fly) continue;
-    if(o.x > u.x + 16) continue;                     // nothing behind his back
-    if(o.x < bx){ bx=o.x; t=o; }
+    if((o.x - u.x)*home < -16) continue;             // nothing behind his back
+    const dd = Math.abs(o.x - u.x);
+    if(dd < bd){ bd=dd; t=o; }
   }
+  // is anyone at all still on the other side? (behind his back counts — he just can't aim there)
+  const anyFoe = B.units.some(o => o.team!==u.team && !o.dead && !o.dying && !o.fly);
+  if(d.doom){                                        // TOP HIT MAN: everyone gone? he turns round
+    if(anyFoe || B.doom){ u.doomT = 0; }
+    else {
+      if(!u.doomT){ SFX.charge(); tone(90,1.4,'sawtooth',0.12,420); }
+      u.doomT = (u.doomT||0) + udt;
+      if(u.doomT >= 1.6){ fireDoom(u); u.doomT = 0; }
+    }
+  }
+  if(!t && !d.doom){
+    // every enemy cleared: he sprints back to his own base and waits there — the moment anything
+    // shows up again, he lights another stick and rides it back over. (Enemies only behind his
+    // back? he holds still and lets them walk into his sights.)
+    const homeX = u.team>0 ? P_FRONT+18 : E_FRONT-22, atHome = (homeX - u.x)*home <= 3;
+    if(!anyFoe && !atHome){
+      u.moving = true; u.homeRun = 1;
+      u.x += home*280*(u.slowT>0 ? 0.5 : 1)*udt;
+      if((homeX - u.x)*home < 0) u.x = homeX;
+      if(Math.random()<0.25) puff(u.x - home*10, GY-6, '#cfc6ba', -30);   // dust kicked up behind him
+      return;
+    }
+    u.homeRun = 0;
+    if(atHome && !anyFoe){ u.wentHome = 1; return; }
+    if(atHome && anyFoe && u.wentHome && !B.over){ u.wentHome = 0; launchHitman(u); return; }
+    return;
+  }
+  u.homeRun = 0;
+  u.atk -= udt; if(u.atk > 0) return;
   if(!t){ u.atk = 0.1; return; }
   u.atk = d.rate;
   dmgUnit(t, unitDmg(u), u.team, u);
   u.recoil = 1;
-  const mx = u.x - d.r*1.15, my = GY - d.r*0.85, ty = GY - U[t.k].r*0.7*(t.rs||1);
+  const mx = u.x + home*d.r*1.15, my = GY - d.r*0.85, ty = GY - U[t.k].r*0.7*(t.rs||1);
   B.tracers.push({x0:mx, y0:my, x1:t.x, y1:ty, t:0, gold:!!u.evo});
   noise(0.07,0.30,3200,900,1.3); tone(170,0.07,'square',0.12,60);
   for(let q=0;q<5;q++) B.parts.push({x:t.x, y:ty, vx:(Math.random()-0.5)*200, vy:-60-Math.random()*120, r:1.5+Math.random()*2.5,
     life:0.25+Math.random()*0.2, t:0, col:'#ffe08a', g:500});
+}
+
+/* THE TOP HIT MAN's last word: one gigantic bullet into your base. Infinite damage — the base and every blob go. */
+function fireDoom(u){
+  const gx = u.x + u.team*U[u.k].r*1.4, gy = GY - U[u.k].r*0.85;
+  B.doom = {x:gx, y:gy, x1: u.team<0 ? P_BASE_X+20 : E_BASE_X-20, dir:u.team, t:0, team:u.team, hit:false};
+  u.recoil = 1.6;
+  SFX.boom(); noise(0.5,0.35,2400,300,0.8); shake=Math.max(shake,22); flashScreen=Math.max(flashScreen,0.5);
+  ring(gx, gy, '#fff1b0', 14, 120, 0.4, 9);
+}
+function updateDoom(dt){
+  const D = B.doom; if(!D) return;
+  D.t += dt;
+  if(!D.hit){
+    D.x += D.dir*900*dt;
+    if(Math.random()<0.9) B.parts.push({x:D.x - D.dir*40, y:D.y+(Math.random()-0.5)*20, vx:-D.dir*(60+Math.random()*120), vy:(Math.random()-0.5)*80,
+      r:4+Math.random()*6, life:0.4+Math.random()*0.3, t:0, col: Math.random()<0.5?'#ffb35a':'#8d857c', g:-30});
+    if((D.x - D.x1)*D.dir >= 0){
+      D.hit = true; D.t = 0;
+      if(D.team<0) B.pbHP = 0; else B.ebHP = 0;                       // infinite damage: the wall is gone
+      for(const o of B.units){                                       // and so is everyone on that side
+        if(o.team===D.team || o.dead || o.dying) continue;
+        o.fly = null; o.hp = 0; knockback(o, 1.8, true);
+      }
+      SFX.boom(); SFX.baseHit(); tone(50,1.2,'sine',0.35,24); noise(1.2,0.35,1600,120,0.6);
+      shake = 34; flashScreen = 1; hitStop = 0.12;
+      ring(D.x1, GY-80, '#fff1b0', 20, 320, 0.7, 14); ring(D.x1, GY-40, '#ff7a2f', 16, 420, 0.9, 10);
+      for(let q=0;q<60;q++){ const a=Math.random()*Math.PI*2;
+        B.parts.push({x:D.x1, y:GY-70, vx:Math.cos(a)*(150+Math.random()*520), vy:Math.sin(a)*(150+Math.random()*520)-120,
+          r:4+Math.random()*9, life:0.6+Math.random()*0.8, t:0, col: Math.random()<0.4?'#ffd08a':Math.random()<0.5?'#ff5a1f':'#6b625a', g:420}); }
+    }
+  } else if(D.t > 1.5) B.doom = null;
+}
+function drawDoom(){
+  const D = B && B.doom; if(!D || D.hit) return;
+  X.save(); X.translate(D.x, D.y); X.scale(D.dir, 1);
+  const tg = X.createLinearGradient(-160, 0, 0, 0);                  // the vapour trail
+  tg.addColorStop(0, 'rgba(255,180,90,0)'); tg.addColorStop(1, 'rgba(255,230,160,.85)');
+  X.fillStyle = tg; X.beginPath(); X.moveTo(-160, -6); X.lineTo(-20, -22); X.lineTo(-20, 22); X.lineTo(-160, 6); X.closePath(); X.fill();
+  const bg = X.createLinearGradient(0, -24, 0, 24);                  // a brass shell the size of a blob
+  bg.addColorStop(0, '#fff0b0'); bg.addColorStop(0.45, '#e2a53a'); bg.addColorStop(1, '#7a4a12');
+  X.fillStyle = bg; X.strokeStyle='#4a2c08'; X.lineWidth=3;
+  X.beginPath(); X.moveTo(-30, -24); X.lineTo(26, -24); X.quadraticCurveTo(70, -20, 78, 0); X.quadraticCurveTo(70, 20, 26, 24); X.lineTo(-30, 24); X.closePath(); X.fill(); X.stroke();
+  X.fillStyle='#b9772a'; X.fillRect(-30, -24, 10, 48);
+  X.fillStyle='rgba(255,255,255,.55)'; X.fillRect(-14, -17, 60, 6);
+  X.restore();
 }
 
 /* a worker slime lobs a barricade; it lands and becomes a unit */
@@ -5413,6 +5569,7 @@ function frontTarget(u){
 }
 
 function updateFX(dt){
+  if(B.doom) updateDoom(dt);
   if(B.waves && B.waves.length) updateWaves(dt);
   for(const tr of (B.tracers||[])) tr.t += dt;
   if(B.tracers) B.tracers = B.tracers.filter(tr => tr.t < 0.14);
@@ -5613,7 +5770,7 @@ function updateBattle(dt){
     }
     if(u.freezeT>0){ u.freezeT -= dt; u.moving=false; continue; }   // frozen solid: nothing ticks
     let udt = dt;
-    if(u.slowT>0){ u.slowT -= dt; udt = dt*0.5; }                     // slowed: everything at half speed
+    if(u.slowT>0) u.slowT -= dt;                                       // slowed: it walks at half speed (attacks stay at full speed)
     if(d.hitman){ hitmanTick(u, d, udt); continue; }
 
     if(d.heal && !u.air){              // menders work to their own clock
@@ -5934,7 +6091,7 @@ function updateBattle(dt){
     } else {
       u.moving=true;
       if(!d.summon) u.atk = Math.max(0, u.atk - udt);   // keep reloading on the march
-      u.x += u.team * (u.team>0 ? uspd(u.k) : espec(u.k,'spd')) * (u.spdMul||1) * udt;
+      u.x += u.team * (u.team>0 ? uspd(u.k) : espec(u.k,'spd')) * (u.spdMul||1) * (u.slowT>0 ? 0.5 : 1) * udt;
       u.x = Math.max(P_FRONT-30, Math.min(E_FRONT+30, u.x));
     }
   }
@@ -6020,10 +6177,15 @@ function updateBattle(dt){
       save.xp += gain; B.xpGain = gain;
       if(first && B.L.ticket){ save.tickets = (save.tickets||0) + B.L.ticket; B.ticketGain = B.L.ticket; }
       if(first && B.L.rareTicket){ save.rare = (save.rare||0) + B.L.rareTicket; B.rareGain = B.L.rareTicket; }
+      if(first && B.L.unlock){
+        const uk = B.L.unlock;
+        if(!(save.lv[uk] > 0)){ save.lv[uk] = 1; autoEquip(uk); B.unlockGain = uk; }
+        else { save.rare = (save.rare||0) + 1; B.rareGain = 1; }          // already had him: a rare ticket instead
+      }
       if(!B.isXp && B.li+1>save.best) save.best=B.li+1;
       persist();
       result = {win:true, xp:gain, kills:B.kills, li:B.li, isXp:B.isXp, first, t:0,
-                ticket:B.ticketGain||0, rare:B.rareGain||0, nm:B.L.nm, time:B.time};
+                ticket:B.ticketGain||0, rare:B.rareGain||0, unlock:B.unlockGain||null, nm:B.L.nm, time:B.time};
       // the scoreboard waits a moment: first your blobs get to celebrate on the field
       B.winT = T; for(const u of B.units) if(u.team>0) u.sw = 0;
       stopMusic(); startMusic('victory');
@@ -6064,6 +6226,7 @@ const SHADE_BOX = 230;                                   // half-width of the bu
 const CONFETTI = ['#ffd23a','#ff5a6e','#4fb3ff','#7dffb0','#c08bff','#ffffff'];
 // VICTORY: every surviving blob hops for joy, each to its own beat
 function cheerHop(u){
+  if(scene==='result') return null;                 // once the scoreboard is up, the field behind it holds still
   if(!B || B.over!=='win' || B.winT==null || u.team<=0 || u.dead || u.dying || u.air || u.fly || U[u.k].still) return null;
   const q = ((T - B.winT)*2.3 + u.seed*0.37) % 1;
   return {hop: Math.sin(q*Math.PI)*30*(u.rs||1), sq: Math.max(0, 1 - q/0.14)*0.22};
@@ -6176,8 +6339,11 @@ function drawUnit(u){
       }
       else if(d.icebreath){
         const h=hitPoint(u,d);
-        if(p < h-0.10){ const q=p/(h-0.10); rx*=1+0.10*q; ry*=1+0.12*q; cx-=dir*5*q; }
-        else { const q=Math.min(1,(p-(h-0.10))/(1-(h-0.10))), e=1-q; rx*=1+0.10*e-0.04*Math.sin(q*Math.PI); ry*=1+0.12*e-0.06*Math.sin(q*Math.PI); cx+=dir*(-5*e + 7*Math.sin(q*Math.PI)); }
+        const ss=x=>x*x*(3-2*x);
+        if(p < h-0.10){ const q=ss(p/(h-0.10)); rx*=1+0.16*q; ry*=1+0.07*q; cx-=dir*6*q; rot=-dir*0.10*q; }        // a big breath in: puff out, rock back
+        else { const q=Math.min(1,(p-(h-0.10))/(1-(h-0.10))), e=1-q, gust=Math.sin(Math.min(1,q*1.6)*Math.PI*0.5);
+               rx*=1+0.16*e*e-0.06*gust*e; ry*=1+0.07*e*e-0.05*gust*e;                                   // the air goes out of it
+               cx+=dir*(-6*e*e + 8*gust*e); rot=dir*0.14*gust*e; }                                         // and it leans into the blow
         cy = GY - ry*0.98;
       }
       else if(d.phoenix || d.aero){ cy = GY - ry*0.98; }
@@ -6472,6 +6638,7 @@ function drawShot(s){
 
 function drawFX(){
   if(B.waves && B.waves.length) drawWaves();
+  if(B.doom) drawDoom();
   for(const tr of (B.tracers||[])){                  // revolver shots: a bright streak, gone in a blink
     const a = 1 - tr.t/0.14;
     X.save(); X.globalAlpha=a; X.lineCap='round';
@@ -6796,7 +6963,8 @@ function drawMini(k, cx, cy, r, dir, seed){
                      [ 'barrier',drawBarrier,0.95,0.95],
                      [ 'knife', drawAssassin, 0.88, 0.90],
                      [ 'yeti',  drawYeti,  0.80, 0.80],
-                     [ 'iceSlime', drawIceBlower, 0.86, 0.86]];
+                     [ 'iceSlime', drawIceBlower, 0.86, 0.86],
+                     [ 'hitslime', drawHitman, 0.90, 0.92]];
     for(const [flag, fn, fx, fy] of SPECIAL){
       if(!d[flag]) continue;
       const u2={k, seed:seed||1, sw:0, swT:1, blink:0, ph:0, mini:1, armA:0, golemA:0, hold:1, lockX:null};
@@ -7069,9 +7237,9 @@ function drawResult(dt){
   if(win){
     resultLine('XP EARNED', result.xp? '+'+result.xp.toLocaleString() : 'NONE', py+102,
                result.xp? '#ffd86a' : 'rgba(255,255,255,.45)');
-    const extra = result.rare? '\u2605 RARE TICKET' : result.ticket? '\u2605 BLOB TICKET'
+    const extra = result.unlock? '\u2605 NEW: '+U[result.unlock].nm : result.rare? '\u2605 RARE TICKET' : result.ticket? '\u2605 BLOB TICKET'
                 : result.first? '\u2014' : 'ALREADY CLEARED';
-    resultLine('REWARD', extra, py+134, result.rare||result.ticket? '#ffd86a' : 'rgba(255,255,255,.45)');
+    resultLine('REWARD', extra, py+134, result.unlock||result.rare||result.ticket? '#ffd86a' : 'rgba(255,255,255,.45)');
   } else {
     resultLine('NEST LEFT', B? Math.round(B.ebHP)+' / '+B.ebMax : '\u2014', py+102, '#ff9e8c');
     resultLine('XP EARNED', 'NONE', py+134, 'rgba(255,255,255,.45)');
@@ -7794,7 +7962,7 @@ const UNIT_BLURB = {
   baby:   'Tiny and very quick. Evolves onto balloons.',
   mage:   'Never attacks. Pulls a rabbit blob out every 4s.',
   doctor: 'Jabs with a needle. Immune to TOXIC poison.',
-  hitman: 'Blasts himself across the map, then shoots back. Every hit on him does 1.',
+  hitman: 'Blasts himself across the map and shoots back. Every hit on him does 1. Beat level 22 for him.',
   elder:  'Old and slow. The cane comes down on a whole crowd, and can slow them.',
   reaper: 'What it kills may rise again \u2014 on your side.',
   aero:   'Rockets in at 10x speed and smashes with a rocket fist. Only 400 HP.'
@@ -7833,7 +8001,7 @@ function labCard(k, cx, f){
   if(locked){
     X.fillStyle= gated? '#7f94a6' : '#ffd86a';
     X.font='800 '+Math.round(13*sc)+'px ui-rounded, Trebuchet MS, sans-serif';
-    X.fillText(cap? 'WIN IT FROM THE BLOB CAPSULE' : gated? 'CLEAR LEVEL '+(UPG[k].gate||1)+' FIRST' : 'READY TO UNLOCK', cx, y+168*sc);
+    X.fillText(cap? (UPG[k].levelReward? 'BEAT LEVEL '+UPG[k].levelReward+' TO GET HIM' : 'WIN IT FROM THE BLOB CAPSULE') : gated? 'CLEAR LEVEL '+(UPG[k].gate||1)+' FIRST' : 'READY TO UNLOCK', cx, y+168*sc);
   } else {
     X.save(); X.translate(cx-pw/2, y+158*sc); X.scale(sc,sc);
     pips(0, 0, pipLv, pipMax, evolved? '#ffd86a' : accent); X.restore();
@@ -7945,7 +8113,7 @@ function drawUpg(dt){
   const canRe=reinfAvail(k), canFin=finAvail(k), canEvo=evoAvail(k)||canRe, evolved=evoOn(k)||reinfOn(k);
   const maxed = lv>=ecoMax(k) && !canEvo && !canFin, cost=upgCost(k), buy=canBuy(k);
   const accent=labAccent(k, canEvo);
-  const label = cap? 'CAPSULE ONLY'
+  const label = cap? (UPG[k].levelReward? 'BEAT LEVEL '+UPG[k].levelReward : 'CAPSULE ONLY')
               : maxed? (finOn(k)? 'FINALIZED' : reinfOn(k)? 'REINFORCED' : evolved? 'FULLY EVOLVED' : 'MAXED OUT')
               : gated? 'LOCKED'
               : locked? (buy?'UNLOCK — ':'NEED ')+cost+' XP'
@@ -7968,7 +8136,7 @@ function drawUpg(dt){
 /* ================================================================
    BLOB CAPSULE  —  spend a blob ticket, roll a new blob
    ================================================================ */
-const CAPSULE_POOL = ['golden','baby','mage','doctor','hitman'];   // RARE — nine pulls in ten
+const CAPSULE_POOL = ['golden','baby','mage','doctor'];   // (the Hit Man is earned on level 22 now)   // RARE — nine pulls in ten
 const GODLY_POOL   = ['elder','reaper','aero'];          // GODLY — one pull in ten
 const GODLY_CHANCE = 0.10;
 function isGodly(k){ return GODLY_POOL.indexOf(k) >= 0; }
@@ -8579,6 +8747,7 @@ function drawHow(dt){
     const d=U[k], hit = d.bolts? d.bolts.n+' BOLTS' : d.coin? 'OUT + BACK' : d.aoe? 'AREA' : 'SINGLE';
     const tag = d.once? ' · once a battle'
               : (UPG[k] && UPG[k].capsule)? ' · capsule only'
+              : (UPG[k] && UPG[k].levelReward)? ' · beat level '+UPG[k].levelReward
               : (UPG[k] && UPG[k].gate>1)? ' · clears level '+UPG[k].gate : '';
     return [COL[k]||'#3fb0f5',
             U[k].nm+' — ¤'+d.cost+' · '+f1(d.hp)+' HP · '+f1(d.dmg)+' dmg/'+f1(d.rate)+'s · '+hit+tag];
