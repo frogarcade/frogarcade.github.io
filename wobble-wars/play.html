@@ -5,7 +5,7 @@
   :root{ color-scheme: dark; }
   *{box-sizing:border-box}
   html,body{height:100%; margin:0;}
-  html,body{height:100dvh;}
+  html,body{height:100dvh; overscroll-behavior:none;}   /* no swipe-back / bounce from the page itself */
   body{
     -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
     -webkit-tap-highlight-color:transparent; touch-action:manipulation; overscroll-behavior:none;
@@ -395,7 +395,7 @@ const U = {
   shroom:{nm:'MUSHROOM SLIME', traits:['toxic'], team:-1, hp:60, dmg:14, rate:1.2, spd:30, rng:50, r:26, wide:1.05,
           swT:0.45, hitP:0.55, shroom:1, kbStep:0.5, spores:{r:72, t:4},
           c:['#fbf1dc','#e8d3ad','#8a6a44']},           // pops into a spore cloud when it dies: blobs inside are slowed
-  lord:  {nm:'THE TIDE LORD', traits:['normal'], team:-1, hp:8000, dmg:130, rate:1.2, spd:14, rng:300, r:58, wide:1,
+  lord:  {nm:'THE TIDE', traits:['normal'], team:-1, hp:8000, dmg:130, rate:1.2, spd:14, rng:300, r:58, wide:1,
           swT:3.5, hitP:0.571, lord:1, boss:1, kbStep:0.25, tsunami:{speed:520, life:1.5, kb:1.25},
           c:['#f3e3c8','#3f8f5c','#1f4d33']},    // staff up for 2s, then a tsunami rolls 1.5s down the lane: every blob it reaches is hit AND knocked back
   frog:  {nm:'FROG ELITE', traits:['normal'], team:-1, hp:1, shield:250, dmg:28, rate:1.0, spd:34, rng:90, r:28, wide:1.15,
@@ -755,14 +755,14 @@ const LEVELS = [
    list:[[3,'brute'],[10,'brute'],[17,'brute'],[23,'brute'],[29,'brute'],[35,'brute'],[41,'brute']],
    loop:6, pool:['brute']},
 
-  {nm:'THE TIDE LORD', bhp:5000, xp:30000, rareTicket:1, size:'huge',
+  {nm:'THE TIDE', bhp:5000, xp:30000, rareTicket:1, size:'huge',
    sky:['#163231','#3f7f78'], hill:'#24433a',
-   // a purple sludge (no bar, full strength, 30% smaller) 3s in; frog elites every 4s; another sludge every 20s.
-   // The moment the first sludge falls, THE TIDE LORD walks out of the storm.
-   enemy:{ sludge:{rs:0.7}, frog:{dmg:84, shield:750} },       // frogs: +200% damage, +200% shield
+   // a purple sludge (no bar, full strength, 30% smaller) 3s in; frog elites every 8s; another sludge every 25s.
+   // The moment the first sludge falls, THE TIDE walks out of the storm.
+   enemy:{ sludge:{rs:0.7}, frog:{dmg:56, shield:500} },       // frogs: twice a normal frog elite's damage and shield
    boss:'lord', bossNeed:{kills:{k:'sludge', n:1}}, bossPeons:0,
    list:[[3,'sludge']],
-   every:[{k:'frog', t:4, first:4}, {k:'sludge', t:20, first:23}]}
+   every:[{k:'frog', t:8, first:4}, {k:'sludge', t:25, first:28}]}
 ];
 
 /* XP LEVELS — short farming stages with their own spawn rules, no campaign progress */
@@ -3357,7 +3357,7 @@ function drawFrog(u, cx, cy, rx, ry, dir, flash){
   if(flash>0){ X.save(); X.globalCompositeOperation='lighter'; X.globalAlpha=flash*0.7;
     gooPath(cx, by, rx, bry, 0.03, 3, T, seed, true); X.fillStyle='#ffffff'; X.fill(); X.restore(); }
 }
-/* ---- THE TIDE LORD: long white hair and beard, a green cloak over a pale robe, a staff he raises to
+/* ---- THE TIDE: long white hair and beard, a green cloak over a pale robe, a staff he raises to
    call the water — it glows while he charges (2s), then he swings it down and the tsunami goes (1.5s) ---- */
 function drawLord(u, cx, cy, rx, ry, dir, flash){
   const H = ry, R = rx, gy = u.mini ? ry*0.96 : GY - cy;
@@ -4951,7 +4951,7 @@ function shieldBreak(u){
   for(let q=0;q<14;q++) B.parts.push({x:sx, y:sy, vx:(Math.random()-0.5)*300 + u.team*60, vy:-80-Math.random()*220,
     r:2.5+Math.random()*4, life:0.45+Math.random()*0.4, t:0, col: Math.random()<0.5?'#b07a3c':'#c9cfd6', g:520});
 }
-/* ---- THE TIDE LORD's tsunami: a wall of water rolls down the lane toward your base. Everything it
+/* ---- THE TIDE's tsunami: a wall of water rolls down the lane toward your base. Everything it
    reaches is hit and knocked back — no dodging, no lucky miss. It breaks on your base if it gets there ---- */
 function unleashTsunami(u, d){
   const T0 = d.tsunami;
@@ -8593,6 +8593,11 @@ function dropPtr(e){
 cv.addEventListener('pointerup', dropPtr);
 cv.addEventListener('pointercancel', dropPtr);
 // trackpad two-finger scroll (and mouse wheel) pans the field too
+// A two-finger sideways swipe is the browser's BACK gesture. If the game doesn't claim it, a swipe
+// meant to look along the map takes you off the page — so every sideways swipe is the game's.
+addEventListener('wheel', e=>{
+  if(Math.abs(e.deltaX) > Math.abs(e.deltaY)) e.preventDefault();
+}, {passive:false});
 cv.addEventListener('wheel', e=>{
   if(scene==='select' && selMax>0){
     const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
