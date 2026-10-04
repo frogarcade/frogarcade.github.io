@@ -1747,13 +1747,13 @@ function drawAero(u, cx, cy, rx, ry, dir, flash){
 }
 function drawHitman(u, cx, cy, rx, ry, dir, flash){
   const d = U[u.k], tm = (u.team!=null) ? u.team : d.team;
-  const turned = (u.doomT||0) > 0.35 || (u.turnHold||0) > 0;   // swung round toward your base (and held after the shot)
+  const turned = (u.doomT||0) > 0.35 || (u.turnHold||0) > 0 || !!u.aimBack;   // swung round toward your base (charging, just fired, or shooting behind him)
   const face = u.mini ? dir : (u.fly || turned) ? tm : -tm, fz = u.flyZ||0, by = cy - fz;
   X.save();
   if(u.fly){ X.translate(cx, by); X.rotate(u.spin||0); X.translate(-cx, -by); }
   if(d.hitslime) drawSlime(u, cx, by, rx, ry, face, flash); else drawBlob(u, cx, by, rx, ry, face, flash);
   drawHitmanKit(cx, by, rx, ry, face, !!u.evo || !!d.gold, Math.min(1, u.recoil||0), u.seed);
-  if(turned && !u.mini){                             // charging the big one: the muzzle glows, and a warning over his hat
+  if(turned && !u.mini && !u.aimBack){              // charging the big one: the muzzle glows, and a warning over his hat
     const ch = Math.min(1, ((u.doomT||0) - 0.35)/1.25), gx = cx + face*(rx*0.78 + rx*1.35*0.9), gy = by + ry*0.06;
     X.save(); X.globalCompositeOperation='lighter';
     const gg = X.createRadialGradient(gx, gy, 0, gx, gy, rx*(0.4 + 1.2*ch));
@@ -5099,6 +5099,15 @@ function hitmanTick(u, d, udt){
   }
   // is anyone at all still on the other side? (behind his back counts — he just can't aim there)
   const anyFoe = B.units.some(o => o.team!==u.team && !o.dead && !o.dying && !o.fly);
+  // the TOP HIT MAN never stands idle: nobody in front? he swings round and shoots whoever is behind him
+  u.aimBack = false;
+  if(d.doom && !t){
+    for(const o of B.units){
+      if(o.team===u.team || o.dead || o.dying || o.air || o.fly) continue;
+      const dd = Math.abs(o.x - u.x);
+      if(dd < bd){ bd=dd; t=o; u.aimBack = true; }
+    }
+  }
   if(d.doom){                                        // TOP HIT MAN: everyone gone? he turns round
     if(anyFoe || doomPending()){ u.doomT = 0; }
     else {
@@ -5122,7 +5131,7 @@ function hitmanTick(u, d, udt){
     if(u.doomT >= 1.0){ fireBig(u, 200, 0.6); u.doomT = 0; u.leaving = true; u.turnHold = 0.45; }   // holds the pose a beat after the shot
     return;
   }
-  if(d.hitslime) u.doomT = 0;                        // someone stepped into his sights: back to work
+  if(d.hitslime && !d.doom) u.doomT = 0;            // someone stepped into his sights: back to work (not the boss — his charge is his own)
   if(!t && !d.doom){
     // every enemy cleared: he sprints back to his own base and waits there — the moment anything
     // shows up again, he lights another stick and rides it back over. (Enemies only behind his
@@ -5146,7 +5155,8 @@ function hitmanTick(u, d, udt){
   u.atk = d.rate;
   dmgUnit(t, unitDmg(u), u.team, u);
   u.recoil = 1;
-  const mx = u.x + home*d.r*1.15, my = GY - d.r*0.85, ty = GY - U[t.k].r*0.7*(t.rs||1);
+  const aim = u.aimBack ? -home : home;
+  const mx = u.x + aim*d.r*1.15, my = GY - d.r*0.85, ty = GY - U[t.k].r*0.7*(t.rs||1);
   B.tracers.push({x0:mx, y0:my, x1:t.x, y1:ty, t:0, gold:!!u.evo});
   noise(0.07,0.30,3200,900,1.3); tone(170,0.07,'square',0.12,60);
   for(let q=0;q<5;q++) B.parts.push({x:t.x, y:ty, vx:(Math.random()-0.5)*200, vy:-60-Math.random()*120, r:1.5+Math.random()*2.5,
