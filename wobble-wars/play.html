@@ -363,6 +363,12 @@ const U = {
   magma: {nm:'MAGMA SLIME', traits:['fire'], team:-1, hp:21, dmg:70, rate:0.6, spd:240, rng:32, r:24, wide:1,
           swT:0.30, hitP:0.55, suicide:1, molten:1,
           c:['#ffe3ac','#ff6f2a','#883a19']},
+  iceblow:{nm:'ICE BLOWER', traits:['ice'], abil:[{t:'freeze', chance:0.10, time:1}, {t:'slow', chance:1, time:2}], team:-1, hp:480, dmg:0, rate:2.0, spd:70, rng:80, r:26, wide:1.05,
+          swT:0.90, hitP:0.45, icebreath:1, iceSlime:1, aoe:55, aoeOff:60, kbStep:0.5,
+          c:['#f2fbff','#9fd8f2','#3f7fa6']},          // a slime frozen half-solid: quick, and its breath does no damage — it just might freeze you
+  yeti:  {nm:'THE YETI', traits:['ice'], abil:[{t:'freeze', chance:0.60, time:2}, {t:'slow', chance:1, time:2}], team:-1, hp:13000, dmg:180, rate:2.2, spd:58, rng:120, r:56, wide:1.15,
+          swT:1.20, hitP:0.50, icebreath:1, yeti:1, boss:1, aoe:100, aoeOff:100, kbStep:0.2,
+          c:['#ffffff','#e6f1f8','#7d9bb3']},          // the same breath, much colder: 60% to freeze for 2s, and it hurts
   phoenix:{nm:'THE GODLY PHOENIX', traits:['fire','angelic'], abil:[{t:'kb', chance:0.50}], team:-1, hp:5000, dmg:10, rate:8, spd:43.9, rng:640, r:62, wide:1.22,
           swT:8, hitP:0.375, phoenix:1, boss:1, kbStep:0.1, beam:{t0:0.375, n:100, reach:Infinity},
           c:['#e6f6ff','#3fa9f5','#1b4d8c']},   // 3s charging in the sky, 5s of beam, 8s rest. It starts from 640 away,
@@ -546,7 +552,8 @@ const EVO = {
   reaper:{nm:'GRIM BLOB', cost:9000, hpMul:1.25, spdMul:1,
           note:'+25% HP', aura:'#b58cff', c:['#7c7896','#2c2840','#0e0c15']},
   aero:  {nm:'JETSTREAM BLOB', cost:9000, hpMul:1, dmgMul:1.30, spdMul:0.91, jet:1, bump:1,
-          note:'+30% damage, and it rams instead of punching', c:['#fff1ea','#e8584a','#6e1f1c']},
+          abil:[{t:'tough', vs:['ice']}, {t:'nofreeze'}, {t:'noslow'}],   // the ice counter: half damage from ICE, can't be frozen or slowed
+          note:'+30% damage, rams, and counters ICE', c:['#fff1ea','#e8584a','#6e1f1c']},
   fierce:{nm:'GOD BLOB', cost:24000, hpMul:1.30, dmgMul:1.30, spdMul:1, godly:1,
           cdMul:1.30, note:'+30% HP and damage', aura:'#fff0a8', c:['#fffdf2','#ffe067','#a8791a']}
 };
@@ -769,7 +776,15 @@ const LEVELS = [
    enemy:{ sludge:{rs:0.7}, frog:{dmg:56, shield:500} },       // frogs: twice a normal frog elite's damage and shield
    boss:'lord', bossNeed:{kills:{k:'sludge', n:1}}, bossPeons:0,
    list:[[3,'sludge']],
-   every:[{k:'frog', t:8, first:4}, {k:'sludge', t:50, first:53}]}
+   every:[{k:'frog', t:8, first:4}, {k:'sludge', t:50, first:53}]},
+
+  {nm:'COLD BREATH', bhp:7000, xp:35000, rareTicket:1, size:'small', snow:1,
+   sky:['#bcd9ec','#eef7fd'], hill:'#d9eaf3',
+   // ice blowers: quick, harmless breath that can freeze you; at half the nest THE YETI comes down the mountain
+   boss:'yeti', bossAt:3500, bossPeons:0,
+   list:[[2,'iceblow'],[5,'iceblow'],[8,'iceblow'],[10,'iceblow'],[13,'iceblow'],[16,'iceblow'],[18,'iceblow'],
+         [21,'iceblow'],[24,'iceblow'],[27,'iceblow'],[30,'iceblow']],
+   loop:4, pool:['iceblow']}
 ];
 
 /* XP LEVELS — short farming stages with their own spawn rules, no campaign progress */
@@ -3315,6 +3330,139 @@ function drawSlime(u, cx, cy, rx, ry, dir, flash){
 }
 
 
+/* ---- COLD BREATH: the ice blower (a slime frozen half-solid) and THE YETI. Both inhale, then blow a
+   cone of frost down the lane — the blowers' breath does no damage, it just might freeze you. ---- */
+function iceBreathAmt(u){                            // 0..1: how hard the breath is blowing right now
+  if(!(u.sw>0)) return 0;
+  const d=U[u.k], p=1-u.sw/u.swT, h=hitPoint(u,d);
+  if(p < h-0.10) return 0;
+  if(p < h) return (p-(h-0.10))/0.10;
+  return Math.max(0, 1 - Math.max(0, p-(h+0.25))/0.20);
+}
+function drawIceBreath(u, mx, my, dir, len, wid){   // a widening cone of frost, flakes streaming down it
+  const a = iceBreathAmt(u); if(a<=0) return;
+  X.save(); X.globalAlpha = a;
+  const g = X.createLinearGradient(mx, my, mx+dir*len, my);
+  g.addColorStop(0, 'rgba(235,250,255,.95)'); g.addColorStop(0.3, 'rgba(110,195,250,.80)'); g.addColorStop(1, 'rgba(70,150,230,0)');
+  // a billowing plume: narrow at the mouth, puffing out round at the far end
+  const plume = () => { X.beginPath(); X.moveTo(mx, my - wid*0.12);
+    X.quadraticCurveTo(mx+dir*len*0.50, my - wid*0.42, mx+dir*len*0.82, my - wid*0.58);
+    X.quadraticCurveTo(mx+dir*len*1.08, my, mx+dir*len*0.82, my + wid*0.58);
+    X.quadraticCurveTo(mx+dir*len*0.50, my + wid*0.42, mx, my + wid*0.12); X.closePath(); };
+  plume(); X.fillStyle = g; X.fill();
+  X.save(); X.globalAlpha = a*0.5; X.strokeStyle='rgba(60,140,215,.6)'; X.lineWidth=1.5; X.setLineDash([6,5]); X.lineDashOffset = -T*40*dir;
+  plume(); X.stroke(); X.restore();                                                 // a faint moving edge so it reads on snow
+  X.fillStyle='#ffffff';
+  for(let i=0;i<9;i++){
+    const q = ((T*2.6 + i/9 + (u.seed||1)*0.11) % 1), s = Math.sin(i*2.3+(u.seed||1));
+    X.globalAlpha = a*(1-q)*0.95;
+    const fx = mx + dir*len*q, fy = my + s*wid*0.55*q;
+    X.beginPath(); X.arc(fx, fy, 1.4 + wid*0.035*(1-q*0.5), 0, 7); X.fill();
+  }
+  X.restore();
+}
+function iceCrystal(x, y, h, w, tilt){
+  X.save(); X.translate(x, y); X.rotate(tilt);
+  X.fillStyle='#e9f9ff'; X.strokeStyle='#5d9fc6'; X.lineWidth=Math.max(1, w*0.18);
+  X.beginPath(); X.moveTo(-w/2, 0); X.lineTo(0, -h); X.lineTo(w/2, 0); X.closePath(); X.fill(); X.stroke();
+  X.fillStyle='rgba(255,255,255,.9)'; X.beginPath(); X.moveTo(-w*0.18, -h*0.15); X.lineTo(0, -h*0.85); X.lineTo(w*0.05, -h*0.2); X.closePath(); X.fill();
+  X.restore();
+}
+function drawIceBlower(u, cx, cy, rx, ry, dir, flash){
+  // ice crystals growing out of the top of its head
+  const tops = [[-0.42,0.62,-0.45],[-0.12,0.95,-0.12],[0.22,0.80,0.18],[0.48,0.55,0.5]];
+  drawSlime(u, cx, cy, rx, ry, dir, flash);
+  for(const [ox, hh, tl] of tops) iceCrystal(cx + rx*ox, cy - ry*0.62 + Math.abs(ox)*ry*0.30, ry*0.50*hh, rx*0.24, tl);
+  // frost on the skin: a frozen glaze and a few twinkles
+  X.save(); gooPath(cx,cy,rx,ry,0.075,5,T,u.seed,true); X.clip();
+  X.fillStyle='rgba(255,255,255,.22)'; X.beginPath(); X.ellipse(cx, cy-ry*0.55, rx*1.1, ry*0.42, 0, 0, 7); X.fill();
+  X.strokeStyle='rgba(255,255,255,.55)'; X.lineWidth=Math.max(1, rx*0.04);
+  for(const [a,b,c2,d2] of [[-0.55,0.10,-0.30,0.32],[0.30,0.42,0.52,0.22],[-0.10,0.55,0.08,0.70]]){
+    X.beginPath(); X.moveTo(cx+rx*a, cy+ry*b); X.lineTo(cx+rx*c2, cy+ry*d2); X.stroke(); }    // little cracks in the ice
+  X.restore();
+  for(let i=0;i<3;i++){
+    const tw = Math.max(0, Math.sin(T*2.2 + i*2.1 + (u.seed||1)));
+    if(tw<0.2) continue;
+    const sx = cx + rx*[-0.5,0.45,0.1][i], sy = cy + ry*[-0.2,0.05,0.45][i], s = rx*0.10*tw;
+    X.strokeStyle='rgba(255,255,255,'+(0.9*tw)+')'; X.lineWidth=Math.max(1, rx*0.035);
+    X.beginPath(); X.moveTo(sx-s, sy); X.lineTo(sx+s, sy); X.moveTo(sx, sy-s); X.lineTo(sx, sy+s); X.stroke();
+  }
+  if(!u.mini) drawIceBreath(u, cx + dir*rx*0.55, cy + ry*0.12, dir, (U[u.k].aoeOff + U[u.k].aoe)*0.95, ry*1.3);
+}
+function yetiFur(cx, cy, rx, ry, n, jag, seed){     // a shaggy outline: pointed tufts all the way round
+  X.beginPath();
+  for(let i=0;i<=n*2;i++){
+    const a = i/(n*2)*Math.PI*2, k = (i%2===0) ? 1 + jag*(0.8 + 0.4*Math.sin(i*1.7+seed)) : 1 - jag*0.25;
+    const x = cx + Math.cos(a)*rx*k, y = cy + Math.sin(a)*ry*k;
+    if(i===0) X.moveTo(x, y); else X.lineTo(x, y);
+  }
+  X.closePath();
+}
+function drawYeti(u, cx, cy, rx, ry, dir, flash){
+  const seed = u.seed||1, br = iceBreathAmt(u);
+  const sway = u.moving ? Math.sin(T*7 + seed) : 0;
+  if(!u.mini) shadow(cx, rx*1.05, 0.30);
+  const R = rx, by = cy + ry*0.05;
+  const furG = (x0,y0,r0) => { const g = X.createRadialGradient(x0 - r0*0.3, y0 - r0*0.4, r0*0.1, x0, y0, r0*1.3);
+    g.addColorStop(0, '#ffffff'); g.addColorStop(0.55, '#e6f1f8'); g.addColorStop(1, '#a9c4d6'); return g; };
+  X.lineJoin='round'; X.lineCap='round';
+  // feet
+  for(const s of [-1,1]){
+    const fx = cx + s*R*0.42 + (s===dir? 1 : -1)*sway*R*0.06, fy = by + ry*0.86;
+    yetiFur(fx, fy, R*0.30, ry*0.17, 6, 0.10, seed+s); X.fillStyle=furG(fx, fy, R*0.3); X.fill();
+    X.strokeStyle='#7d9bb3'; X.lineWidth=Math.max(1.5, R*0.04); X.stroke();
+  }
+  // back arm, behind the body
+  const armSwing = br*0.5;
+  X.save(); X.translate(cx - dir*R*0.78, by - ry*0.10); X.rotate(dir*(0.25 + sway*0.12));
+  yetiFur(0, ry*0.38, R*0.24, ry*0.50, 7, 0.10, seed+3); X.fillStyle='#c9dce8'; X.fill();
+  X.strokeStyle='#7d9bb3'; X.lineWidth=Math.max(1.5, R*0.04); X.stroke(); X.restore();
+  // the body: a great shaggy heap of white fur
+  yetiFur(cx, by, R, ry*0.98, 14, 0.07, seed);
+  X.fillStyle = furG(cx, by, R); X.fill();
+  X.strokeStyle='#7d9bb3'; X.lineWidth=Math.max(2, R*0.05); X.stroke();
+  X.save(); yetiFur(cx, by, R, ry*0.98, 14, 0.07, seed); X.clip();                // fur strokes
+  X.strokeStyle='rgba(125,155,179,.45)'; X.lineWidth=Math.max(1, R*0.03);
+  for(let i=0;i<14;i++){
+    const fx = cx + Math.sin(i*2.7+seed)*R*0.8, fy = by - ry*0.3 + ((i*37)%100)/100*ry*1.1;
+    X.beginPath(); X.moveTo(fx, fy); X.quadraticCurveTo(fx + R*0.04, fy + ry*0.08, fx - R*0.02, fy + ry*0.16); X.stroke();
+  }
+  X.restore();
+  // the face: a blue-grey patch, deep-set angry eyes, a fanged mouth that opens to blow
+  const fx = cx + dir*R*0.22, fy = by - ry*0.30, fw = R*0.50, fh = ry*0.42;
+  const fg = X.createLinearGradient(0, fy-fh, 0, fy+fh);
+  fg.addColorStop(0, '#9fc1da'); fg.addColorStop(1, '#5f86a6');
+  X.fillStyle = fg; X.beginPath(); X.ellipse(fx, fy, fw, fh, 0, 0, 7); X.fill();
+  X.strokeStyle='#45667f'; X.lineWidth=Math.max(1.5, R*0.035); X.stroke();
+  yetiFur(fx, fy - fh*0.95, fw*0.95, fh*0.30, 7, 0.22, seed+7); X.fillStyle='#f4f9fc'; X.fill();   // shaggy brow fringe
+  eyes(fx, fy - fh*0.18, fw*0.95, dir, 'slit', u.blink>0, true);
+  const mx = fx + dir*fw*0.18, my = fy + fh*0.48;
+  if(br > 0.05 || (u.sw>0 && !u.mini)){
+    const op = Math.max(0.35, br);
+    X.fillStyle='#24323f'; X.beginPath(); X.ellipse(mx, my, fw*0.34, fh*0.30*op, 0, 0, 7); X.fill();
+    X.fillStyle='#ffffff';
+    for(const s of [-1,1]){ X.beginPath(); X.moveTo(mx + s*fw*0.20, my - fh*0.30*op); X.lineTo(mx + s*fw*0.12, my - fh*0.30*op);
+      X.lineTo(mx + s*fw*0.16, my - fh*0.30*op + fh*0.22); X.closePath(); X.fill(); }
+  } else {
+    X.strokeStyle='#24323f'; X.lineWidth=Math.max(2, R*0.05);
+    X.beginPath(); X.moveTo(mx - fw*0.30, my + fh*0.06); X.quadraticCurveTo(mx, my - fh*0.10, mx + fw*0.30, my + fh*0.06); X.stroke();
+    X.fillStyle='#ffffff';
+    for(const s of [-1,1]){ X.beginPath(); X.moveTo(mx + s*fw*0.22, my); X.lineTo(mx + s*fw*0.13, my - fh*0.02);
+      X.lineTo(mx + s*fw*0.19, my + fh*0.20); X.closePath(); X.fill(); }                                  // fangs over the lip
+  }
+  // front arm, claws out
+  X.save(); X.translate(cx + dir*R*0.70, by - ry*0.05); X.rotate(dir*(-0.15 - sway*0.12 - armSwing));
+  yetiFur(0, ry*0.40, R*0.27, ry*0.52, 7, 0.10, seed+5); X.fillStyle=furG(0, ry*0.4, R*0.3); X.fill();
+  X.strokeStyle='#7d9bb3'; X.lineWidth=Math.max(1.5, R*0.04); X.stroke();
+  X.fillStyle='#2f3e4c';
+  for(let i=-1;i<=1;i++){ X.beginPath(); X.moveTo(i*R*0.09 - R*0.03, ry*0.86); X.lineTo(i*R*0.09 + R*0.03, ry*0.86);
+    X.lineTo(i*R*0.09 + dir*R*0.04, ry*1.0); X.closePath(); X.fill(); }
+  X.restore();
+  if(flash>0){ X.save(); X.globalCompositeOperation='lighter'; X.globalAlpha=flash*0.6;
+    yetiFur(cx, by, R, ry*0.98, 14, 0.07, seed); X.fillStyle='#ffffff'; X.fill(); X.restore(); }
+  if(!u.mini) drawIceBreath(u, mx + dir*fw*0.2, my, dir, (U[u.k].aoeOff + U[u.k].aoe)*1.0, ry*1.2);
+}
+
 /* ---- GREEN GOOP: a low toxic puddle that bubbles and drips ---- */
 function drawGoop(u, cx, cy, rx, ry, dir, flash){
   const c = U[u.k].c, seed=u.seed||1;
@@ -4656,6 +4804,15 @@ function drawBG(L, dt){
       X.beginPath(); X.ellipse(lx+16, GY+16, 74, 13, 0, 0, 7); X.fill();
     }
   }
+  if(L.snow){                          // snow drifting down the whole field, fixed by index so it never pops
+    X.save(); X.fillStyle='#ffffff';
+    for(let i=0;i<Math.round(70*FW/W);i++){
+      const sp = 22 + (i%7)*7, x = ((i*131.7) + Math.sin(T*0.8+i)*18 + T*10) % FW, y = ((i*57.3) + T*sp) % (GY+20) - 10;
+      X.globalAlpha = 0.55 + 0.35*((i*13)%10)/10;
+      X.beginPath(); X.arc(x, y, 1.3 + (i%4)*0.6, 0, 7); X.fill();
+    }
+    X.restore();
+  }
   // grass tufts + pebbles
   X.strokeStyle=shade(L.hill,28); X.lineWidth=2.5; X.lineCap='round';
   for(let i=0;i<Math.round(46*FW/W);i++){
@@ -5033,9 +5190,11 @@ function endAir(u){
 const TRAITS = {
   normal: {nm:'NORMAL',  col:'#d8dde2'}, fire:   {nm:'FIRE',    col:'#ff6a2a'},
   dark:   {nm:'DARK',    col:'#8a5cff'}, angelic:{nm:'ANGELIC', col:'#ffd86a'},
-  toxic:  {nm:'TOXIC',   col:'#8ee23a'} };
+  toxic:  {nm:'TOXIC',   col:'#8ee23a'}, ice:    {nm:'ICE',     col:'#9fe0ff'} };
 const ABIL_NAMES = { massive:'MASSIVE DMG', extra:'EXTRA DMG', massdef:'RESISTANT', extradef:'EXTRA DEF',
-                     weak:'WEAK', kb:'KNOCKBACK', freeze:'FREEZE', slow:'SLOW', immune:'IMMUNE' };
+                     weak:'WEAK', kb:'KNOCKBACK', freeze:'FREEZE', slow:'SLOW', immune:'IMMUNE',
+                     tough:'VERY TOUGH', nofreeze:'NO FREEZE', noslow:'NO SLOW' };
+function hasAbil(u, t){ return abilsOf(u).some(ab => ab.t===t); }
 // POISON: a toxic hitter's poison{mul,t} adds mul x the hit as damage spread over t seconds
 function immuneTo(tgt, src){ return abilsOf(tgt).some(ab => ab.t==='immune' && abilHits(ab, src)); }
 function applyPoison(src, tgt, hit){
@@ -5054,15 +5213,16 @@ function dmgMultiplier(src, tgt){
     if(ab.t==='massive') m *= 2; else if(ab.t==='extra') m *= 1.5; }
   for(const ab of abilsOf(tgt)){ if(!abilHits(ab, src)) continue;
     if(ab.t==='massdef') m *= 0.5; else if(ab.t==='extradef') m /= 1.5;
-    else if(ab.t==='weak') m *= 1.5; }
+    else if(ab.t==='weak') m *= 1.5;
+    else if(ab.t==='tough') m *= 0.5; }
   return m;
 }
 function applyProcs(src, tgt){
   for(const ab of abilsOf(src)){
     if(ab.chance==null || !abilHits(ab, tgt) || Math.random() >= ab.chance) continue;
     if(ab.t==='kb'){ if(!U[tgt.k].noKB) tgt.push = Math.min(110, (tgt.push||0) + (ab.dist||44)); }
-    else if(ab.t==='freeze'){ tgt.freezeT = Math.max(tgt.freezeT||0, ab.time||1); tgt.sw=0; }
-    else if(ab.t==='slow'){ tgt.slowT = Math.max(tgt.slowT||0, ab.time||2); }
+    else if(ab.t==='freeze'){ if(hasAbil(tgt,'nofreeze')) continue; tgt.freezeT = Math.max(tgt.freezeT||0, ab.time||1); tgt.sw=0; }
+    else if(ab.t==='slow'){ if(hasAbil(tgt,'noslow')) continue; tgt.slowT = Math.max(tgt.slowT||0, ab.time||2); }
   }
 }
 function traitIcon(t, x, y, r){                       // a coloured disc with a tiny glyph in it
@@ -5077,6 +5237,8 @@ function traitIcon(t, x, y, r){                       // a coloured disc with a 
   else if(t==='fire'){ X.moveTo(x, y-q); X.quadraticCurveTo(x+q, y, x+q*0.3, y+q); X.lineTo(x-q*0.3, y+q); X.quadraticCurveTo(x-q, y, x, y-q); X.fill(); }
   else if(t==='dark'){ X.arc(x, y, q, 0.6, Math.PI*2-0.6); X.arc(x+q*0.45, y, q*0.7, Math.PI*2-0.9, 0.9, true); X.fill(); }
   else if(t==='angelic'){ X.ellipse(x, y, q, q*0.45, 0, 0, 7); X.stroke(); }
+  else if(t==='ice'){ for(let i=0;i<3;i++){ const a=i*Math.PI/3;                 // a snowflake
+                        X.moveTo(x+Math.cos(a)*q, y+Math.sin(a)*q); X.lineTo(x-Math.cos(a)*q, y-Math.sin(a)*q); } X.stroke(); }
   else if(t==='toxic'){ X.moveTo(x, y-q*1.05); X.quadraticCurveTo(x+q*0.95, y+q*0.15, x, y+q*0.95);    // a drip
                         X.quadraticCurveTo(x-q*0.95, y+q*0.15, x, y-q*1.05); X.fill(); }
   X.restore();
@@ -5258,7 +5420,7 @@ function updateFX(dt){
     sc.t += dt;
     for(const o of B.units){
       if(o.team===sc.team || o.dead || o.dying || o.air) continue;
-      if(Math.abs(o.x - sc.x) <= sc.r + U[o.k].r*0.4) o.slowT = Math.max(o.slowT||0, 0.35);
+      if(Math.abs(o.x - sc.x) <= sc.r + U[o.k].r*0.4 && !hasAbil(o,'noslow')) o.slowT = Math.max(o.slowT||0, 0.35);
     }
   }
   if(B.spores) B.spores = B.spores.filter(sc => sc.t < sc.life);
@@ -5568,8 +5730,9 @@ function updateBattle(dt){
           } else {
             dmgUnit(t2, dmg, u.team, u);
           }
-          ring(ix, iy, u.team>0?'#bfefff':'#d8ff9a', 4, 26+d.r*0.5, 0.26, 4);
-          splat(ix, iy, u.team>0?'#9fdcff':'#b6ee6a', u.k==='chonk'?12:7, u.k==='chonk'?200:120);
+          const icy = U[u.k].icebreath;                      // frost, not goo
+          ring(ix, iy, icy? '#e6f7ff' : u.team>0?'#bfefff':'#d8ff9a', 4, 26+d.r*0.5, 0.26, 4);
+          splat(ix, iy, icy? '#dff4ff' : u.team>0?'#9fdcff':'#b6ee6a', u.k==='chonk'?12:7, u.k==='chonk'?200:120);
           if(u.k==='chonk'){
             SFX.slam();
             ring(ix, GY-6, '#ffe2b0', 14, d.aoe*2.1, 0.45, 9);
@@ -5652,6 +5815,13 @@ function updateBattle(dt){
             for(let q=0;q<10;q++) B.parts.push({x:ix+(Math.random()-0.5)*30, y:GY-4,
               vx:(Math.random()-0.5)*260, vy:-40-Math.random()*140, r:3+Math.random()*4,
               life:0.35+Math.random()*0.35, t:0, col:'#dbeeff', g:420});
+          } else if(U[u.k].icebreath){                 // a gust of frost rolls over them
+            noise(0.35, U[u.k].yeti? 0.16 : 0.08, 3000, 900, 0.7); tone(U[u.k].yeti? 300 : 520, 0.25, 'sine', 0.06, U[u.k].yeti? 160 : 260);
+            ring(ix, iy, '#e6f7ff', 8, d.aoe*1.3, 0.35, 5);
+            for(let q=0;q<(U[u.k].yeti? 20 : 10);q++) B.parts.push({x:ix+(Math.random()-0.5)*d.aoe, y:iy+(Math.random()-0.5)*50,
+              vx:u.team*(60+Math.random()*200), vy:-30-Math.random()*90, r:1.5+Math.random()*3,
+              life:0.4+Math.random()*0.4, t:0, col: Math.random()<0.5?'#ffffff':'#bfe8ff', g:60});
+            if(U[u.k].yeti){ shake=Math.max(shake,8); }
           } else if(U[u.k].aero && u.evo){             // JETSTREAM: a body bump — a heavy thud, no explosion
             SFX.slam(); tone(150,0.14,'square',0.13,70);
             shake=Math.max(shake,10); hitStop=Math.max(hitStop,0.04);
@@ -6004,6 +6174,12 @@ function drawUnit(u){
         ry *= 1 - 0.05*Math.max(0, ga);
         cy = GY - ry*0.98;
       }
+      else if(d.icebreath){
+        const h=hitPoint(u,d);
+        if(p < h-0.10){ const q=p/(h-0.10); rx*=1+0.10*q; ry*=1+0.12*q; cx-=dir*5*q; }
+        else { const q=Math.min(1,(p-(h-0.10))/(1-(h-0.10))), e=1-q; rx*=1+0.10*e-0.04*Math.sin(q*Math.PI); ry*=1+0.12*e-0.06*Math.sin(q*Math.PI); cx+=dir*(-5*e + 7*Math.sin(q*Math.PI)); }
+        cy = GY - ry*0.98;
+      }
       else if(d.phoenix || d.aero){ cy = GY - ry*0.98; }
       else if(d.elderCane || d.reap){ cy = GY - ry*0.98; }
       else if(d.hammer){
@@ -6148,6 +6324,8 @@ function drawUnit(u){
   else if(d.toad) drawToad(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.lord) drawLord(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.shroom) drawShroom(u,cx,cy,rx,ry,dir,u.flash);
+  else if(d.yeti) drawYeti(u,cx,cy,rx,ry,dir,u.flash);
+  else if(d.iceSlime) drawIceBlower(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.spear) drawFrog(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.goop) drawGoop(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.knife) drawAssassin(u,cx,cy,rx,ry,dir,u.flash);
@@ -6616,7 +6794,9 @@ function drawMini(k, cx, cy, r, dir, seed){
                      [ 'devil', drawDevil, 0.80, 0.80],
                      [ 'worker',drawWorker,0.92, 0.92],
                      [ 'barrier',drawBarrier,0.95,0.95],
-                     [ 'knife', drawAssassin, 0.88, 0.90]];
+                     [ 'knife', drawAssassin, 0.88, 0.90],
+                     [ 'yeti',  drawYeti,  0.80, 0.80],
+                     [ 'iceSlime', drawIceBlower, 0.86, 0.86]];
     for(const [flag, fn, fx, fy] of SPECIAL){
       if(!d[flag]) continue;
       const u2={k, seed:seed||1, sw:0, swT:1, blink:0, ph:0, mini:1, armA:0, golemA:0, hold:1, lockX:null};
