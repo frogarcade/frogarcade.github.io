@@ -339,8 +339,8 @@ const U = {
           hpUp:30, dmgUp:5.2, wide:1, swT:0.55, hitP:0.45, kbStep:0.34,
           coin:{dist:330, speed:640, r:22},                // out and back — it hits on both passes
           c:['#d8fbf3','#2fc0ad','#1c6e67']},
-  elder: {nm:'ELDERLY BLOB', abil:[{t:'kb', chance:0.80, vs:['normal']}], team:1, hp:600, dmg:320, rate:1.6, spd:14, rng:270, r:40, cost:1250, cd:40,
-          hpUp:120, dmgUp:64, wide:1.18, swT:2.0, hitP:0.72, elderCane:1, kbStep:0.34, aoe:110, aoeOff:170,   // the cane's shockwave rolls out to 280
+  elder: {nm:'ELDERLY BLOB', abil:[{t:'kb', chance:0.80, vs:['normal']}, {t:'slow', chance:0.40, time:2}], team:1, hp:360, dmg:320, rate:1.6, spd:14, rng:324, r:40, cost:1250, cd:40,
+          hpUp:72, dmgUp:64, wide:1.18, swT:2.0, hitP:0.72, elderCane:1, kbStep:0.34, aoe:110, aoeOff:204,   // the cane's shockwave rolls out to 314
           tier:'godly', c:['#eef0f6','#a9b1c6','#5b6378']},   // slow, old, and the cane comes down hard
   reaper:{nm:'REAPER BLOB', abil:[{t:'massive', vs:['normal']}], team:1, hp:1250, dmg:500, rate:1.6, spd:20, rng:180, r:40, cost:1400, cd:40,
           hpUp:250, dmgUp:100, wide:1.10, swT:1.4, hitP:0.62, reap:{chance:0.45, mul:0.40}, kbStep:0.34,
@@ -545,10 +545,10 @@ const EVO = {
           note:'+20% HP and damage, and 20% slower still', c:['#f4f2ee','#b7b0a4','#6b645a']},
   reaper:{nm:'GRIM BLOB', cost:9000, hpMul:1.25, spdMul:1,
           note:'+25% HP', aura:'#b58cff', c:['#7c7896','#2c2840','#0e0c15']},
-  aero:  {nm:'JETSTREAM BLOB', cost:9000, hpMul:1, dmgMul:1.30, spdMul:1.30, jet:1,
-          note:'+30% speed and +30% damage', c:['#fff1ea','#e8584a','#6e1f1c']},
+  aero:  {nm:'JETSTREAM BLOB', cost:9000, hpMul:1, dmgMul:1.30, spdMul:0.91, jet:1, bump:1,
+          note:'+30% damage, and it rams instead of punching', c:['#fff1ea','#e8584a','#6e1f1c']},
   fierce:{nm:'GOD BLOB', cost:24000, hpMul:1.30, dmgMul:1.30, spdMul:1, godly:1,
-          note:'+30% HP and damage', aura:'#fff0a8', c:['#fffdf2','#ffe067','#a8791a']}
+          cdMul:1.30, note:'+30% HP and damage', aura:'#fff0a8', c:['#fffdf2','#ffe067','#a8791a']}
 };
 function evoOn(k){ return !!(save.evo && save.evo[k]); }
 function swingT(u, d){ const e = u.evo && EVO[u.k]; return (e && e.swT!=null)? e.swT : (d.swT||0.34); }
@@ -561,6 +561,7 @@ function evoAvail(k){ return !!EVO[k] && save.lv[k] >= UPG[k].max && !evoOn(k); 
 function lvOf(k){ return (U[k].team>0 && save.lv && save.lv[k]) ? save.lv[k] : 1; }
 function uhp(k){ return Math.round((U[k].hp + (U[k].hpUp||0)*(lvOf(k)-1)) * (evoOn(k)? EVO[k].hpMul : 1)); }
 function udmg(k){ return Math.round((U[k].dmg + (U[k].dmgUp||0)*(lvOf(k)-1)) * (evoOn(k)&&EVO[k].dmgMul? EVO[k].dmgMul : 1)); }
+function ucd(k){ return U[k].cd * (evoOn(k) && EVO[k].cdMul ? EVO[k].cdMul : 1); }   // an evolution can stretch the cooldown
 function uspd(k){ return U[k].spd * (evoOn(k)? (EVO[k].spdMul||1) : 1); }
 function income(){ return INCOME[(save.lv.flow||1)-1] * (reinfOn('flow')?1.35:1) * finMul('flow'); }
 function juiceCap(){ return Math.round(CAPS[(save.lv.tank||1)-1] * (reinfOn('tank')?1.35:1) * finMul('tank')); }
@@ -929,11 +930,21 @@ function drawBlob(u, cx, cy, rx, ry, dir, flash){
   X.fillStyle='rgba(255,255,255,.55)';
   X.beginPath(); X.ellipse(cx-rx*0.40, cy-ry*0.52, rx*0.17, ry*0.10, -0.6, 0,7); X.fill();
   // face
+  const joy = !u.mini && cheerHop(u);
+  if(joy){                                     // ^ ^ eyes and a big open grin
+    X.strokeStyle=INK; X.lineWidth=Math.max(2,rx*0.09); X.lineCap='round'; X.lineJoin='round';
+    for(const s2 of [-1,1]){ const ex=cx+s2*rx*0.34+dir*rx*0.10, ey=cy-ry*0.12;
+      X.beginPath(); X.moveTo(ex-rx*0.15, ey+ry*0.06); X.lineTo(ex, ey-ry*0.10); X.lineTo(ex+rx*0.15, ey+ry*0.06); X.stroke(); }
+    X.fillStyle=INK; X.beginPath(); X.arc(cx+dir*rx*0.07, cy+ry*0.14, rx*0.20, 0.05*Math.PI, 0.95*Math.PI); X.closePath(); X.fill();
+    X.fillStyle='#ff8fa0'; X.beginPath(); X.ellipse(cx+dir*rx*0.07, cy+ry*0.27, rx*0.10, ry*0.05, 0, 0, 7); X.fill();
+  } else {
   eyes(cx, cy-ry*0.12, rx, dir, 'round', u.blink>0, false);
+  }
   if(u.evo) evoFace(u.k, cx, cy-ry*0.12, rx, ry, dir);
   X.strokeStyle=INK; X.lineWidth=Math.max(2,rx*0.085); X.lineCap='round';
   X.beginPath();
-  if(u.sw>0) X.arc(cx+dir*rx*0.07, cy+ry*0.22, rx*0.22, 0.15*Math.PI, 0.85*Math.PI);
+  if(joy){}
+  else if(u.sw>0) X.arc(cx+dir*rx*0.07, cy+ry*0.22, rx*0.22, 0.15*Math.PI, 0.85*Math.PI);
   else X.arc(cx+dir*rx*0.07, cy+ry*0.20, rx*0.17, 0.12*Math.PI, 0.88*Math.PI);
   X.stroke();
   if(E && E.godly && !u.dead){                 // motes of light drifting off him
@@ -1600,8 +1611,13 @@ function drawAero(u, cx, cy, rx, ry, dir, flash){
   const evo = !!u.evo, c = evo? EVO.aero.c : U.aero.c, seed = u.seed||1, R = rx;
   const p = u.sw>0 ? 1-u.sw/u.swT : -1, ss = x=>x*x*(3-2*x);
   // the fist: a short wind-up, then it fires out, holds on the hit, and flies home
-  let ext = 0;
-  if(p>=0){
+  let ext = 0, lunge = 0;
+  if(p>=0 && evo){                                   // JETSTREAM: no fist, the whole mecha rams forward
+    if(p<0.30) lunge = -0.30*ss(p/0.30);
+    else if(p<0.50) lunge = -0.30 + 1.30*Math.pow((p-0.30)/0.20, 0.6);
+    else if(p<0.60) lunge = 1;
+    else lunge = 1 - ss((p-0.60)/0.40);
+  } else if(p>=0){
     if(p<0.30) ext = -0.18*ss(p/0.30);
     else if(p<0.50) ext = -0.18 + 1.18*Math.pow((p-0.30)/0.20, 0.6);
     else if(p<0.62) ext = 1;
@@ -1609,8 +1625,9 @@ function drawAero(u, cx, cy, rx, ry, dir, flash){
   }
   const zoom = u.moving && !u.mini;
   if(!u.mini) shadow(cx, rx*0.75, 0.16);
-  X.save(); X.translate(cx, cy); X.scale(dir, 1);
-  if(zoom) X.rotate(0.10);                           // nose down when it is flying flat out
+  X.save(); X.translate(cx + dir*lunge*R*0.95, cy); X.scale(dir, 1);
+  if(zoom) X.rotate(0.10);
+  if(lunge>0) X.rotate(0.16*lunge);                  // shoulder down into the bump                           // nose down when it is flying flat out
   X.lineJoin='round'; X.lineCap='round';
   // speed lines streaming off it
   if(zoom){
@@ -4801,7 +4818,7 @@ function tryDeploy(k){
   if(d.once && B.used[k]){ SFX.deny(); return; }   // one of him a battle, and that is that
   if(B.cd[k]>0){ SFX.deny(); return; }
   if(B.juice < d.cost){ SFX.deny(); return; }
-  B.juice -= d.cost; B.cd[k]=d.cd;
+  B.juice -= d.cost; B.cd[k]=ucd(k);
   if(d.once) B.used[k]=1;
   const u=spawnUnit(k);
   SFX.spawn();
@@ -5272,6 +5289,15 @@ function updateFX(dt){
 
 function updateBattle(dt){
   const L=B.L;
+  if(B.over==='win' && B.winT!=null){            // VICTORY: confetti over the cheering squad, then the scoreboard
+    const fans = B.units.filter(u => u.team>0 && !u.dead && !u.dying);
+    if(fans.length && Math.random() < 0.55){
+      const f = fans[(Math.random()*fans.length)|0];
+      B.parts.push({x:f.x+(Math.random()-0.5)*50, y:GY-U[f.k].r*2.2-Math.random()*40, vx:(Math.random()-0.5)*160, vy:-120-Math.random()*160,
+        r:2.5+Math.random()*3, life:0.9+Math.random()*0.6, t:0, col:CONFETTI[(Math.random()*CONFETTI.length)|0], g:340});
+    }
+    if(scene==='battle' && B.overT >= 2.2 && result) scene='result';
+  }
   if(B.over){ B.overT+=dt; updateFX(dt); for(const u of B.units){ u.flash=Math.max(0,u.flash-dt*4); if(u.dead){u.dt-=dt;} } B.units=B.units.filter(u=>!(u.dead&&u.dt<=0)); return; }
   B.time += dt;
   // income (WEALTHY BLOB raises both the rate and the ceiling mid-battle)
@@ -5626,6 +5652,13 @@ function updateBattle(dt){
             for(let q=0;q<10;q++) B.parts.push({x:ix+(Math.random()-0.5)*30, y:GY-4,
               vx:(Math.random()-0.5)*260, vy:-40-Math.random()*140, r:3+Math.random()*4,
               life:0.35+Math.random()*0.35, t:0, col:'#dbeeff', g:420});
+          } else if(U[u.k].aero && u.evo){             // JETSTREAM: a body bump — a heavy thud, no explosion
+            SFX.slam(); tone(150,0.14,'square',0.13,70);
+            shake=Math.max(shake,10); hitStop=Math.max(hitStop,0.04);
+            ring(ix, iy, '#ffe2dc', 10, d.aoe*1.5, 0.30, 6);
+            for(let q=0;q<12;q++) B.parts.push({x:ix, y:iy+(Math.random()-0.5)*40,
+              vx:u.team*(80+Math.random()*240), vy:-40-Math.random()*200, r:2.5+Math.random()*4,
+              life:0.3+Math.random()*0.35, t:0, col: Math.random()<0.5?'#ffffff':'#ffb3a8', g:420});
           } else if(U[u.k].aero){                      // the rocket fist goes off like a shell
             SFX.boom(); tone(240,0.12,'square',0.12,90); noise(0.16,0.16,2600,500,1.4);
             shake=Math.max(shake,12); hitStop=Math.max(hitStop,0.04);
@@ -5821,7 +5854,9 @@ function updateBattle(dt){
       persist();
       result = {win:true, xp:gain, kills:B.kills, li:B.li, isXp:B.isXp, first, t:0,
                 ticket:B.ticketGain||0, rare:B.rareGain||0, nm:B.L.nm, time:B.time};
-      scene='result'; stopMusic(); startMusic('victory');
+      // the scoreboard waits a moment: first your blobs get to celebrate on the field
+      B.winT = T; for(const u of B.units) if(u.team>0) u.sw = 0;
+      stopMusic(); startMusic('victory');
       shake=18; flashScreen=0.8;
       for(let i=0;i<40;i++) puff(E_BASE_X+(Math.random()-0.5)*140, GY-Math.random()*160, '#9ce85c',-140);
     }
@@ -5856,6 +5891,13 @@ function fireCannon(){
 // Far cheaper than a canvas filter, which re-processes the whole screen for every unit.
 const SHADE_CV = document.createElement('canvas'), SHADE = SHADE_CV.getContext('2d');
 const SHADE_BOX = 230;                                   // half-width of the buffer, in world px
+const CONFETTI = ['#ffd23a','#ff5a6e','#4fb3ff','#7dffb0','#c08bff','#ffffff'];
+// VICTORY: every surviving blob hops for joy, each to its own beat
+function cheerHop(u){
+  if(!B || B.over!=='win' || B.winT==null || u.team<=0 || u.dead || u.dying || u.air || u.fly || U[u.k].still) return null;
+  const q = ((T - B.winT)*2.3 + u.seed*0.37) % 1;
+  return {hop: Math.sin(q*Math.PI)*30*(u.rs||1), sq: Math.max(0, 1 - q/0.14)*0.22};
+}
 function drawUnit(u){
   const d=U[u.k], dir=u.team;
   const wf=(d.wide||1)*(u.rs||1), vf=(u.rs||1);
@@ -5879,6 +5921,8 @@ function drawUnit(u){
     const w = Math.sin(T*sp + u.ph);
     rx *= 1 - w*amp*0.55; ry *= 1 + w*amp;
     cy = GY - ry*0.98 - Math.max(0, w)*(u.moving?6:2);
+    const ch = cheerHop(u);
+    if(ch){ rx *= 1 + ch.sq; ry *= 1 - ch.sq*0.9; cy = GY - ry*0.98 - ch.hop; }
     if(d.cloud) cy -= 36 + Math.sin(T*1.6+u.seed)*5;
     if(u.sw>0){
       const p = 1-u.sw/u.swT;
@@ -6451,7 +6495,7 @@ function drawBar(){
     const d=U[k], h=82, x=302+i*(w+gapC), y=BAR_Y+12;
     if(i===0) TUT_AT.card = {x, y, w, h};
     const spent = !!(d.once && B.used[k]);
-    const cdp = B.cd[k]/d.cd, afford = B.juice>=d.cost && B.cd[k]<=0 && !B.over && !spent;
+    const cdp = B.cd[k]/ucd(k), afford = B.juice>=d.cost && B.cd[k]<=0 && !B.over && !spent;
     const hov = mouse.x>=x&&mouse.x<=x+w&&mouse.y>=y&&mouse.y<=y+h;
     buttons.push({x,y,w,h,fn:()=>tryDeploy(k),dis:false});
     X.save();
@@ -6793,7 +6837,8 @@ function drawBattle(dt){
     X.fillStyle='#ffffff'; X.font='900 54px ui-rounded, Trebuchet MS, sans-serif'; X.textAlign='center';
     X.fillText('PAUSED', 500, 200); X.textAlign='left';
     btn(410, 240, 180, 54, 'RESUME', ()=>{B.paused=false;});
-    btn(410, 306, 180, 54, 'QUIT', ()=>{ scene='select'; stopMusic(); startMusic('menu'); }, {c1:'#f3705f', c2:'#9b2f24'});
+    btn(410, 306, 180, 54, 'RETRY', ()=>{ const li=B.li, xp=B.isXp; stopMusic(); newBattle(li, xp); scene='battle'; }, {c1:'#7ea6ff', c2:'#2f4f9b'});   // start this level over
+    btn(410, 372, 180, 54, 'QUIT', ()=>{ scene='select'; stopMusic(); startMusic('menu'); }, {c1:'#f3705f', c2:'#9b2f24'});
   }
 }
 
@@ -7570,7 +7615,7 @@ const UNIT_BLURB = {
   mage:   'Never attacks. Pulls a rabbit blob out every 4s.',
   doctor: 'Jabs with a needle. Immune to TOXIC poison.',
   hitman: 'Blasts himself across the map, then shoots back. Every hit on him does 1.',
-  elder:  'Old and slow. The cane comes down on a whole crowd.',
+  elder:  'Old and slow. The cane comes down on a whole crowd, and can slow them.',
   reaper: 'What it kills may rise again \u2014 on your side.',
   aero:   'Rockets in at 10x speed and smashes with a rocket fist. Only 400 HP.'
 };

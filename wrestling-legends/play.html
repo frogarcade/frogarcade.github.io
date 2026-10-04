@@ -274,12 +274,33 @@
         <button class="pick-btn ol-btn alt" id="ol-join">JOIN</button>
       </div>
       <div class="ol-codebig hidden" id="ol-codebig"></div>
+      <button class="pick-btn ol-copy hidden" id="ol-copy">📋 COPY CODE</button>
       <div class="ol-status" id="ol-status">Host a match and send your friend the code — or type their code and JOIN. Works on any two computers with internet.</div>
+      <div class="ol-how">
+        <b>HOW TO PLAY A FRIEND</b>
+        <ol>
+          <li>You both open <u>frogarcade.github.io</u> → Wrestling Legends → <i>ONLINE 1V1</i>.</li>
+          <li>One of you presses <i>HOST A MATCH</i> and sends the 4-letter code (text it, say it, anything).</li>
+          <li>The other types the code and presses <i>JOIN</i>.</li>
+          <li>Once you're both in, the host presses <i>START MATCH</i>.</li>
+        </ol>
+        <span>Works on any two computers with internet. Some school or office Wi-Fi blocks it — if it won't connect, try another network.</span>
+      </div>
       <div class="ol-vs hidden" id="ol-vs"></div>
       <button class="pick-btn hidden" id="ol-start">START MATCH</button>
     </div>
   </div>
   <button class="back-btn" id="ol-back">&larr; BACK</button>
+</div>
+
+<!-- ============ ONLINE: OPPONENT LEFT ============ -->
+<div id="ol-lost" class="ol-lost hidden">
+  <div class="ol-lost-box">
+    <div class="ol-lost-ico">📡</div>
+    <div class="ol-lost-t">OPPONENT DISCONNECTED</div>
+    <div class="ol-lost-s" id="ol-lost-s">Your opponent left or lost their internet connection.</div>
+    <button class="big-btn" id="ol-lost-ok">OK</button>
+  </div>
 </div>
 
 <!-- ============ END SCREEN ============ -->

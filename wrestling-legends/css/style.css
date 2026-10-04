@@ -835,3 +835,22 @@ body { font-family: 'Barlow Condensed', 'Arial Narrow', sans-serif; color: #fff;
 .ol-vs i { font-style: normal; color: #ff5a4e; margin: 0 10px; }
 .ol-vs .them { color: #ffb4ab; }
 #online .back-btn { margin-top: 4px; }
+.ol-copy { width: auto; align-self: center; padding: 8px 22px; font-size: 18px; margin-top: -6px; }
+.ol-copy.done { background: linear-gradient(180deg, #5fe08a, #23a253); box-shadow: 0 5px 0 #0f6a2f; color: #062b13; }
+.ol-how { background: rgba(10,14,34,0.55); border: 1px solid #2b3566; border-radius: 12px; padding: 10px 14px;
+  color: #aab4d8; font-family: 'Barlow Condensed', sans-serif; font-size: 16px; letter-spacing: 0.02em; line-height: 1.35; }
+.ol-how b { font-family: 'Anton', Impact, sans-serif; font-weight: 400; letter-spacing: 0.1em; color: #ffd94d; font-size: 15px; }
+.ol-how ol { margin: 6px 0 6px 20px; padding: 0; }
+.ol-how i { font-style: normal; color: #fff; }
+.ol-how u { text-decoration: none; color: #8fd0ff; }
+.ol-how span { display: block; color: #7d88b0; font-size: 14px; }
+.ol-lost { position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center;
+  background: rgba(4,6,16,0.72); backdrop-filter: blur(3px); }
+.ol-lost.hidden { display: none; }
+.ol-lost-box { width: min(440px, 90vw); text-align: center; padding: 26px 24px 22px; border-radius: 18px;
+  background: linear-gradient(180deg, #2a1420, #170b14); border: 2px solid #ff5a4e; box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  animation: fadeUp 0.35s ease both; }
+.ol-lost-ico { font-size: 46px; }
+.ol-lost-t { font-family: 'Anton', Impact, sans-serif; font-size: 34px; letter-spacing: 0.06em; color: #ff8a80; margin: 4px 0 8px; }
+.ol-lost-s { color: #e7d4dc; font-family: 'Barlow Condensed', sans-serif; font-size: 19px; line-height: 1.35; margin-bottom: 18px; }
+.ol-lost .big-btn { width: auto; padding: 12px 48px; }

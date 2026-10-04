@@ -76,6 +76,7 @@ const Online = {
     peer.on('open', () => {
       $('ol-codebig').textContent = this.code;
       $('ol-codebig').classList.remove('hidden');
+      $('ol-copy').classList.remove('hidden', 'done'); $('ol-copy').textContent = '📋 COPY CODE';
       this.renderStatus('Your code is ' + this.code + ' — tell your friend to JOIN with it.');
     });
     peer.on('connection', (c) => {
@@ -106,6 +107,14 @@ const Online = {
   attach(c) {
     this.conn = c;
     c.on('open', () => {
+      // a heartbeat both ways: if nothing at all arrives for a while, the other side is gone
+      // (a closed tab or dropped Wi-Fi doesn't always fire 'close' straight away)
+      this.everOpen = true; this.lastRx = performance.now();
+      clearInterval(this.hb);
+      this.hb = setInterval(() => {
+        this.send({ k: 'hb' });
+        if (performance.now() - this.lastRx > 12000) this.lost();
+      }, 1000);
       this.renderStatus(this.role === 'host' ? 'Your friend joined! Press START MATCH when you are both ready.'
                                              : 'Connected! Waiting for the host to start…');
       this.send({ k: 'pick', id: this.myPick });
@@ -117,14 +126,30 @@ const Online = {
   send(m) { if (this.conn && this.conn.open) this.conn.send(m); },
   reset() {
     clearTimeout(this.roundTimer);
+    clearInterval(this.hb); this.hb = null;
     if (this.conn) { try { this.conn.close(); } catch (e) {} }
     if (this.peer) { try { this.peer.destroy(); } catch (e) {} }
     this.conn = null; this.peer = null; this.role = null; this.theirPick = null;
     $('ol-codebig').classList.add('hidden');
+    $('ol-copy').classList.add('hidden');
+  },
+  copyCode() {
+    const code = this.code, btn = $('ol-copy');
+    const ok = () => { btn.textContent = '✔ COPIED!'; btn.classList.add('done');
+      clearTimeout(this.copyT); this.copyT = setTimeout(() => { btn.textContent = '📋 COPY CODE'; btn.classList.remove('done'); }, 1800); };
+    const fallback = () => {             // older browsers / no clipboard permission: copy through a hidden box
+      const t = document.createElement('textarea'); t.value = code; t.style.position = 'fixed'; t.style.opacity = '0';
+      document.body.appendChild(t); t.select();
+      try { document.execCommand('copy'); ok(); } catch (e) { btn.textContent = 'CODE: ' + code; }
+      t.remove();
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(ok, fallback);
+    else fallback();
   },
   lost() {
     if (!this.role) return;
-    const wasPlaying = !!game.online;
+    const wasPlaying = !!game.online, wasOpen = !!this.everOpen;
+    this.everOpen = false;
     this.reset();
     this.endOnline();
     if (wasPlaying || game.state !== 'online') {
@@ -133,6 +158,12 @@ const Online = {
     }
     this.renderRoster();
     this.renderStatus('Your friend left the match.');
+    if (wasOpen) {                       // say it loudly, not just in the small status line
+      $('ol-lost-s').textContent = wasPlaying
+        ? 'Your opponent left or lost their internet connection, so the match was stopped.'
+        : 'Your friend left the room. Host again or join a new code.';
+      show('ol-lost');
+    }
   },
   leave() { this.reset(); this.endOnline(); },
   endOnline() {
@@ -145,6 +176,7 @@ const Online = {
 
   // ---------------------------------------------------------- messages
   onMsg(m) {
+    this.lastRx = performance.now();
     if (!m || !m.k) return;
     switch (m.k) {
       case 'pick': this.theirPick = m.id; this.renderStatus(); break;
@@ -511,6 +543,8 @@ $('ol-host').addEventListener('click', () => Online.host());
 $('ol-join').addEventListener('click', () => Online.join());
 $('ol-code').addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') Online.join(); });
 $('ol-start').addEventListener('click', () => Online.start());
+$('ol-copy').addEventListener('click', () => { AudioFX.init(); AudioFX.whoosh(); Online.copyCode(); });
+$('ol-lost-ok').addEventListener('click', () => hide('ol-lost'));
 $('ol-back').addEventListener('click', () => {
   Online.leave();
   hide('online'); show('menu'); game.state = 'menu'; Music.play('menu');
