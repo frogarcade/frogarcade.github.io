@@ -345,6 +345,9 @@ const U = {
   reaper:{nm:'REAPER BLOB', abil:[{t:'massive', vs:['normal']}], team:1, hp:1250, dmg:500, rate:1.6, spd:20, rng:180, r:40, cost:1400, cd:40,
           hpUp:250, dmgUp:100, wide:1.10, swT:1.4, hitP:0.62, reap:{chance:0.45, mul:0.40}, kbStep:0.34,
           tier:'godly', c:['#8a86a0','#3d3950','#16141e']},   // what it kills may get back up — for you
+  aero:  {nm:'AERO BLOB', team:1, hp:400, dmg:1500, rate:2.0, spd:420, rng:84, r:34, cost:1750, cd:120,
+          hpUp:80, dmgUp:300, wide:1.10, swT:0.70, hitP:0.50, aero:1, kbStep:0.25, aoe:46, aoeOff:78,   // the rocket fist goes off in a small blast
+          tier:'godly', c:['#eef6ff','#8fb8e6','#2c4a70']},   // a little mecha, a blob at the controls, rockets on its back
   fierce:{nm:'DEMIGOD BLOB', team:1, hp:875, dmg:65, rate:2.2, spd:20, rng:460, r:70, cost:1000, cd:60,
           hpUp:175, dmgUp:13, wide:1.10, swT:1.30, hitP:0.50, kbStep:0.34,
           storm:1, bolts:{n:3, gap:1.0, aoe:88, spread:30},
@@ -462,6 +465,7 @@ const UPG = {
   mage:   {nm:'MAGICIAN BLOB', kind:'unit', min:1, max:5, costs:[800, 1200, 1700, 2300], capsule:1},
   elder:  {nm:'ELDERLY BLOB', kind:'unit', min:1, max:5, costs:[1800, 2600, 3500, 4600], capsule:1, godly:1},
   reaper: {nm:'REAPER BLOB',  kind:'unit', min:1, max:5, costs:[1800, 2600, 3500, 4600], capsule:1, godly:1},
+  aero:   {nm:'AERO BLOB',    kind:'unit', min:1, max:5, costs:[1800, 2600, 3500, 4600], capsule:1, godly:1},
   chonk:  {nm:'BIG BLOB',    kind:'unit', min:1, max:5, costs:[900, 1300, 1800, 2400], unlockCost:1000, gate:1},
   sword:  {nm:'SWORD BLOB',  kind:'unit', min:1, max:5, costs:[900, 1300, 1700, 2100], unlockCost:4000, gate:2},
   dino:   {nm:'DINO BLOB',   kind:'unit', min:1, max:5, costs:[1200, 1700, 2300, 2800], unlockCost:5000, gate:4},
@@ -541,6 +545,8 @@ const EVO = {
           note:'+20% HP and damage, and 20% slower still', c:['#f4f2ee','#b7b0a4','#6b645a']},
   reaper:{nm:'GRIM BLOB', cost:9000, hpMul:1.25, spdMul:1,
           note:'+25% HP', aura:'#b58cff', c:['#7c7896','#2c2840','#0e0c15']},
+  aero:  {nm:'JETSTREAM BLOB', cost:9000, hpMul:1, dmgMul:1.30, spdMul:1.30, jet:1,
+          note:'+30% speed and +30% damage', c:['#fff1ea','#e8584a','#6e1f1c']},
   fierce:{nm:'GOD BLOB', cost:24000, hpMul:1.30, dmgMul:1.30, spdMul:1, godly:1,
           note:'+30% HP and damage', aura:'#fff0a8', c:['#fffdf2','#ffe067','#a8791a']}
 };
@@ -755,14 +761,14 @@ const LEVELS = [
    list:[[3,'brute'],[10,'brute'],[17,'brute'],[23,'brute'],[29,'brute'],[35,'brute'],[41,'brute']],
    loop:6, pool:['brute']},
 
-  {nm:'THE TIDE', bhp:5000, xp:30000, rareTicket:1, size:'huge',
+  {nm:'THE TIDE', bhp:5000, xp:30000, rareTicket:1, size:'huge', bossMusic:1,
    sky:['#163231','#3f7f78'], hill:'#24433a',
-   // a purple sludge (no bar, full strength, 30% smaller) 3s in; frog elites every 8s; another sludge every 25s.
+   // a purple sludge (no bar, full strength, 30% smaller) 3s in; frog elites every 8s; another sludge every 50s.
    // The moment the first sludge falls, THE TIDE walks out of the storm.
    enemy:{ sludge:{rs:0.7}, frog:{dmg:56, shield:500} },       // frogs: twice a normal frog elite's damage and shield
    boss:'lord', bossNeed:{kills:{k:'sludge', n:1}}, bossPeons:0,
    list:[[3,'sludge']],
-   every:[{k:'frog', t:8, first:4}, {k:'sludge', t:25, first:28}]}
+   every:[{k:'frog', t:8, first:4}, {k:'sludge', t:50, first:53}]}
 ];
 
 /* XP LEVELS — short farming stages with their own spawn rules, no campaign progress */
@@ -800,8 +806,8 @@ const XP_LEVELS = [
 
 /* save */
 const SKEY='battleblobs_v2';
-const LV0={blob:1, golden:0, baby:0, doctor:0, hitman:0, mage:0, elder:0, reaper:0, chonk:0, sword:0, dino:0, boom:0, jumper:0, fierce:0, flow:1, tank:1, armour:0, cannon:0};
-const EV0={blob:0, golden:0, baby:0, doctor:0, hitman:0, mage:0, elder:0, reaper:0, chonk:0, sword:0, dino:0, boom:0, jumper:0, fierce:0};
+const LV0={blob:1, golden:0, baby:0, doctor:0, hitman:0, mage:0, elder:0, reaper:0, aero:0, chonk:0, sword:0, dino:0, boom:0, jumper:0, fierce:0, flow:1, tank:1, armour:0, cannon:0};
+const EV0={blob:0, golden:0, baby:0, doctor:0, hitman:0, mage:0, elder:0, reaper:0, aero:0, chonk:0, sword:0, dino:0, boom:0, jumper:0, fierce:0};
 let save={best:0, xp:0, q:2, mus:0, vol:{sfx:1, mus:0.5}, slots:0, team:['blob'], tickets:0, rare:0, spun:0, lv:Object.assign({},LV0), evo:Object.assign({},EV0), reinf:{cannon:0, armour:0, flow:0, tank:0}, fin:{cannon:0, armour:0, flow:0, tank:0}};
 let aiMode = 0;     // AI MODE: the game plays itself. Off at launch AND at the start of every battle
 let fastMode = 0;   // 0 → 1.5x → 2x → back to 1x. NOT saved: every session starts at 1x
@@ -1567,6 +1573,128 @@ function drawSword(px, py, len, dir, ang, evo, sweep){
 }
 
 /* ---- HIT MAN BLOB: dark suit, red tie, fedora, shades and a revolver. Faces HOME once he has landed ---- */
+/* ---- AERO BLOB: a little mecha with a blob at the controls under a glass dome. Rockets on its
+   back carry it down the lane at ten times a blob's pace; it punches by firing its fist. ---- */
+function aeroFlame(x, y, ang, len, wid, seed){       // one rocket jet, pointing along ang
+  const fl = len*(0.85 + 0.18*Math.sin(T*47+seed) + 0.10*Math.sin(T*83+seed*3));
+  X.save(); X.translate(x, y); X.rotate(ang); X.globalCompositeOperation='lighter';
+  const g = X.createLinearGradient(0, 0, fl, 0);
+  g.addColorStop(0, 'rgba(255,255,240,.95)'); g.addColorStop(0.25, 'rgba(255,220,90,.9)');
+  g.addColorStop(0.6, 'rgba(255,120,40,.6)'); g.addColorStop(1, 'rgba(255,70,20,0)');
+  X.fillStyle=g; X.beginPath(); X.moveTo(0, -wid); X.quadraticCurveTo(fl*0.55, -wid*0.9, fl, 0);
+  X.quadraticCurveTo(fl*0.55, wid*0.9, 0, wid); X.closePath(); X.fill();
+  X.fillStyle='rgba(255,255,255,.85)'; X.beginPath(); X.ellipse(fl*0.12, 0, fl*0.16, wid*0.45, 0, 0, 7); X.fill();
+  X.restore();
+}
+function aeroFist(x, y, R, c, lit, seed){            // the fist, knuckles forward, a rocket cuff behind it
+  if(lit) aeroFlame(x - R*0.30, y, Math.PI, R*1.05, R*0.13, seed);
+  X.fillStyle='#59606c'; rr(x - R*0.34, y - R*0.17, R*0.16, R*0.34, R*0.05); X.fill();          // cuff / nozzle
+  X.fillStyle=c[1]; X.strokeStyle=c[2]; X.lineWidth=Math.max(1.5, R*0.05);
+  rr(x - R*0.20, y - R*0.24, R*0.46, R*0.48, R*0.13); X.fill(); X.stroke();
+  X.strokeStyle=shade(c[2], 10); X.lineWidth=Math.max(1, R*0.035);                               // knuckles
+  for(let i=-1;i<=1;i++){ X.beginPath(); X.moveTo(x + R*0.12, y + i*R*0.12); X.lineTo(x + R*0.24, y + i*R*0.12); X.stroke(); }
+  X.fillStyle='#ffd23a'; X.fillRect(x - R*0.20, y - R*0.24, R*0.07, R*0.48);                     // a hazard band on the wrist
+  X.fillStyle='rgba(255,255,255,.45)'; X.beginPath(); X.ellipse(x - R*0.02, y - R*0.13, R*0.13, R*0.05, 0, 0, 7); X.fill();
+}
+function drawAero(u, cx, cy, rx, ry, dir, flash){
+  const evo = !!u.evo, c = evo? EVO.aero.c : U.aero.c, seed = u.seed||1, R = rx;
+  const p = u.sw>0 ? 1-u.sw/u.swT : -1, ss = x=>x*x*(3-2*x);
+  // the fist: a short wind-up, then it fires out, holds on the hit, and flies home
+  let ext = 0;
+  if(p>=0){
+    if(p<0.30) ext = -0.18*ss(p/0.30);
+    else if(p<0.50) ext = -0.18 + 1.18*Math.pow((p-0.30)/0.20, 0.6);
+    else if(p<0.62) ext = 1;
+    else ext = 1 - ss((p-0.62)/0.38);
+  }
+  const zoom = u.moving && !u.mini;
+  if(!u.mini) shadow(cx, rx*0.75, 0.16);
+  X.save(); X.translate(cx, cy); X.scale(dir, 1);
+  if(zoom) X.rotate(0.10);                           // nose down when it is flying flat out
+  X.lineJoin='round'; X.lineCap='round';
+  // speed lines streaming off it
+  if(zoom){
+    X.save(); X.strokeStyle='rgba(255,255,255,.55)'; X.lineWidth=Math.max(1.5, R*0.05);
+    for(let i=0;i<4;i++){ const ph=((T*3.2 + i*0.27 + seed*0.13)%1), yy=(-0.5 + i*0.33)*ry;
+      X.globalAlpha=0.6*(1-ph); X.beginPath(); X.moveTo(-R*(1.3+ph*1.6), yy); X.lineTo(-R*(1.9+ph*1.6), yy); X.stroke(); }
+    X.restore();
+  }
+  // rocket jets: the big ones off the back pack, small ones under the feet
+  aeroFlame(-R*1.18, -ry*0.12, Math.PI + (zoom? 0.05 : 0.45), R*(zoom? 1.9 : 1.0), ry*0.20, seed);
+  aeroFlame(-R*1.10, ry*0.20, Math.PI + (zoom? 0.12 : 0.65), R*(zoom? 1.5 : 0.8), ry*0.15, seed+2);
+  for(const fx of [-0.36, 0.22]) aeroFlame(R*fx, ry*1.02, Math.PI/2, R*0.55, ry*0.09, seed+fx*9);
+  if(evo){                                           // JETSTREAM: swept wings and an afterburner
+    aeroFlame(-R*1.22, -ry*0.62, Math.PI + (zoom? 0.02 : 0.30), R*(zoom? 2.4 : 1.2), ry*0.16, seed+5);
+    X.fillStyle=shade(c[1], -8); X.strokeStyle=c[2]; X.lineWidth=Math.max(1.5, R*0.05);
+    X.beginPath(); X.moveTo(R*0.30, -ry*0.10); X.lineTo(-R*0.95, -ry*0.95); X.lineTo(-R*1.25, -ry*0.88);
+    X.lineTo(-R*0.55, -ry*0.05); X.closePath(); X.fill(); X.stroke();
+    X.fillStyle='#ffffff'; X.beginPath(); X.moveTo(-R*0.70, -ry*0.62); X.lineTo(-R*1.02, -ry*0.86); X.lineTo(-R*1.14, -ry*0.83); X.lineTo(-R*0.86, -ry*0.58); X.closePath(); X.fill();
+    X.fillStyle='#4a515d'; rr(-R*1.30, -ry*0.72, R*0.20, ry*0.20, R*0.05); X.fill();      // the afterburner nozzle
+  }
+  // back arm, tucked behind the hull
+  X.fillStyle=shade(c[2], 8); rr(-R*0.30, ry*0.05, R*0.30, ry*0.42, R*0.10); X.fill();
+  // the rocket pack
+  X.fillStyle='#4a515d'; rr(-R*1.22, -ry*0.30, R*0.18, ry*0.36, R*0.05); X.fill();               // nozzles
+  X.fillStyle='#4a515d'; rr(-R*1.15, ry*0.08, R*0.14, ry*0.26, R*0.04); X.fill();
+  const pg = X.createLinearGradient(0, -ry*0.5, 0, ry*0.45);
+  pg.addColorStop(0, '#d9dee6'); pg.addColorStop(1, '#7d8696');
+  X.fillStyle=pg; X.strokeStyle='#3b4150'; X.lineWidth=Math.max(1.5, R*0.05);
+  rr(-R*1.08, -ry*0.48, R*0.50, ry*0.90, R*0.20); X.fill(); X.stroke();
+  X.fillStyle='#e0412f'; X.fillRect(-R*1.06, -ry*0.12, R*0.46, ry*0.10);                         // red stripe
+  // legs: short, hanging, little thrusters for feet
+  for(const lx of [-0.36, 0.22]){
+    X.fillStyle=shade(c[2], 4); rr(R*lx - R*0.10, ry*0.40, R*0.20, ry*0.42, R*0.06); X.fill();
+    X.fillStyle='#4a515d'; X.beginPath(); X.moveTo(R*lx - R*0.16, ry*0.80); X.lineTo(R*lx + R*0.16, ry*0.80);
+    X.lineTo(R*lx + R*0.11, ry*1.02); X.lineTo(R*lx - R*0.11, ry*1.02); X.closePath(); X.fill();
+  }
+  // the hull
+  const hg = X.createLinearGradient(0, -ry*0.45, 0, ry*0.65);
+  hg.addColorStop(0, c[0]); hg.addColorStop(0.5, c[1]); hg.addColorStop(1, shade(c[1], -18));
+  X.fillStyle=hg; X.strokeStyle=c[2]; X.lineWidth=Math.max(2, R*0.07);
+  rr(-R*0.78, -ry*0.40, R*1.56, ry*0.98, ry*0.34); X.fill(); X.stroke();
+  X.fillStyle='rgba(255,255,255,.35)'; rr(-R*0.62, -ry*0.32, R*0.95, ry*0.12, ry*0.06); X.fill();  // shine along the top
+  // hazard stripes across the belly
+  X.save(); rr(-R*0.78, -ry*0.40, R*1.56, ry*0.98, ry*0.34); X.clip();
+  X.fillStyle='#ffd23a'; X.fillRect(-R*0.8, ry*0.30, R*1.6, ry*0.14);
+  X.fillStyle='#2a2f38';
+  for(let i=-6;i<6;i++){ X.beginPath(); X.moveTo(i*R*0.16, ry*0.30); X.lineTo(i*R*0.16+R*0.08, ry*0.30);
+    X.lineTo(i*R*0.16+R*0.02, ry*0.44); X.lineTo(i*R*0.16-R*0.06, ry*0.44); X.closePath(); X.fill(); }
+  X.restore();
+  // rivets and a chest light
+  X.fillStyle=c[2]; for(const [a,b] of [[-0.62,0.08],[0.62,0.08],[-0.62,-0.20],[0.62,-0.20]]){ X.beginPath(); X.arc(R*a, ry*b, R*0.035, 0, 7); X.fill(); }
+  X.fillStyle = (Math.sin(T*6+seed)>0) ? '#7dffb0' : '#2ea866'; X.beginPath(); X.arc(R*0.40, ry*0.10, R*0.07, 0, 7); X.fill();
+  // the cockpit: a blob at the controls under a glass dome
+  const dx = R*0.02, dy = -ry*0.40, dw = R*0.56, dh = ry*0.62;
+  X.save(); X.beginPath(); X.ellipse(dx, dy, dw, dh, 0, Math.PI, 0); X.closePath(); X.clip();
+  X.fillStyle='rgba(30,60,90,.55)'; X.fillRect(dx-dw, dy-dh, dw*2, dh);
+  const bw = dw*0.72, bh = dh*0.70, by = dy - bh*0.42;
+  const bg = X.createRadialGradient(dx-bw*0.3, by-bh*0.4, bw*0.1, dx, by, bw*1.2);
+  bg.addColorStop(0, '#d6f0ff'); bg.addColorStop(0.5, '#53b9ff'); bg.addColorStop(1, '#3f95d6');
+  X.fillStyle=bg; X.beginPath(); X.ellipse(dx, by + bh*0.15, bw, bh, 0, 0, 7); X.fill();
+  X.strokeStyle='#326ea0'; X.lineWidth=Math.max(1.5, R*0.05); X.stroke();
+  eyes(dx, by - bh*0.05, bw*0.95, 1, 'round', u.blink>0, p>=0.25 && p<0.65);
+  X.strokeStyle=INK; X.lineWidth=Math.max(1.5, bw*0.08);
+  X.beginPath(); X.arc(dx + bw*0.10, by + bh*0.40, bw*0.16, 0.12*Math.PI, 0.88*Math.PI); X.stroke();
+  X.restore();
+  X.fillStyle='rgba(200,235,255,.22)'; X.beginPath(); X.ellipse(dx, dy, dw, dh, 0, Math.PI, 0); X.closePath(); X.fill();
+  X.strokeStyle='rgba(255,255,255,.75)'; X.lineWidth=Math.max(1.5, R*0.05);
+  X.beginPath(); X.ellipse(dx, dy, dw*0.80, dh*0.80, 0, Math.PI*1.12, Math.PI*1.42); X.stroke();     // glass glint
+  X.fillStyle='#5b6474'; rr(dx-dw-R*0.04, dy-ry*0.05, dw*2+R*0.08, ry*0.12, ry*0.05); X.fill();     // the dome's collar
+  // front arm and the rocket fist
+  const sx = R*0.56, sy = ry*0.10;
+  const fx = R*1.05 + ext*R*1.25, fy = ry*0.22 + Math.max(0, ext)*ry*0.25;
+  X.fillStyle='#5b6474'; X.beginPath(); X.arc(sx, sy, R*0.17, 0, 7); X.fill();                         // shoulder
+  X.strokeStyle=c[2]; X.lineWidth=R*0.20; X.beginPath(); X.moveTo(sx, sy); X.lineTo(R*0.86, ry*0.22); X.stroke();
+  X.strokeStyle=c[1]; X.lineWidth=R*0.13; X.beginPath(); X.moveTo(sx, sy); X.lineTo(R*0.86, ry*0.22); X.stroke();
+  if(ext > 0.04){                                    // fired: a smoky trail back to the arm
+    X.save(); X.globalAlpha=0.45; X.fillStyle='#dfe3ea';
+    for(let i=1;i<=4;i++){ const q=i/5; X.beginPath(); X.arc(R*0.86 + (fx-R*0.86)*q, ry*0.22 + (fy-ry*0.22)*q + Math.sin(T*20+i)*R*0.03, R*(0.06+0.03*i), 0, 7); X.fill(); }
+    X.restore();
+    X.fillStyle='#4a515d'; X.beginPath(); X.arc(R*0.88, ry*0.22, R*0.10, 0, 7); X.fill();              // the empty wrist socket
+  }
+  aeroFist(fx, fy, R, c, ext > 0.04, seed);
+  X.restore();
+}
 function drawHitman(u, cx, cy, rx, ry, dir, flash){
   const face = u.fly ? 1 : -1, fz = u.flyZ||0, by = cy - fz;
   X.save();
@@ -4540,7 +4668,7 @@ function newBattle(li, isXp){
     pbHP:baseHP(), pbMax:baseHP(), ebHP:L.bhp, ebMax:L.bhp,
     units:[], parts:[], shots:[], rings:[],
     juice:100, inc:income(), cap:juiceCap(), wealth:0,
-    cd:{blob:0, golden:0, baby:0, doctor:0, hitman:0, mage:0, elder:0, reaper:0, chonk:0, sword:0, dino:0, boom:0, jumper:0, fierce:0}, used:{},
+    cd:{blob:0, golden:0, baby:0, doctor:0, hitman:0, mage:0, elder:0, reaper:0, aero:0, chonk:0, sword:0, dino:0, boom:0, jumper:0, fierce:0}, used:{},
     cannon:{ch:55, rate:5.5, ready:false, recoil:0},
     isXp:!!isXp, xpT:(L.xpMode && L.xpMode.first) || 0, xpWaveAt:0, xpBonus:0, xpWave:0, pendingXp:[],
     time:0, si:0, loopT:0, poolI:0, bossFired:false, bossWave:0, bossUnits:[], pendingPeons:[], killed:{}, hits:{}, waveGap:WAVE_GAP,
@@ -4588,6 +4716,7 @@ function unlockedUnits(){
   if(save.lv.hitman>0) out.push('hitman');
   if(save.lv.elder>0) out.push('elder');
   if(save.lv.reaper>0) out.push('reaper');
+  if(save.lv.aero>0) out.push('aero');
   if(save.lv.chonk>0) out.push('chonk');
   if(save.lv.sword>0) out.push('sword');
   if(save.lv.dino>0) out.push('dino');
@@ -5497,6 +5626,15 @@ function updateBattle(dt){
             for(let q=0;q<10;q++) B.parts.push({x:ix+(Math.random()-0.5)*30, y:GY-4,
               vx:(Math.random()-0.5)*260, vy:-40-Math.random()*140, r:3+Math.random()*4,
               life:0.35+Math.random()*0.35, t:0, col:'#dbeeff', g:420});
+          } else if(U[u.k].aero){                      // the rocket fist goes off like a shell
+            SFX.boom(); tone(240,0.12,'square',0.12,90); noise(0.16,0.16,2600,500,1.4);
+            shake=Math.max(shake,12); hitStop=Math.max(hitStop,0.04);
+            ring(ix, iy, '#fff1c2', 10, d.aoe*1.5, 0.32, 7);
+            ring(ix, iy, '#ff8a2a', 8, d.aoe*2.1, 0.42, 5);
+            for(let q=0;q<18;q++){ const a2=Math.random()*Math.PI*2;
+              B.parts.push({x:ix, y:iy, vx:Math.cos(a2)*(100+Math.random()*260), vy:Math.sin(a2)*(100+Math.random()*260)-50,
+                r:2.5+Math.random()*5, life:0.3+Math.random()*0.4, t:0,
+                col: Math.random()<0.35?'#fff3c0' : Math.random()<0.6?'#ff8a2a':'#8d939e', g:380}); }
           } else if(U[u.k].elderCane){                 // the cane hits the dirt and a shockwave rolls out
             SFX.slam(); tone(90,0.24,'square',0.14,44); shake=Math.max(shake,12); hitStop=Math.max(hitStop,0.03);
             const x0 = u.x + u.team*40;
@@ -5822,7 +5960,7 @@ function drawUnit(u){
         ry *= 1 - 0.05*Math.max(0, ga);
         cy = GY - ry*0.98;
       }
-      else if(d.phoenix){ cy = GY - ry*0.98; }
+      else if(d.phoenix || d.aero){ cy = GY - ry*0.98; }
       else if(d.elderCane || d.reap){ cy = GY - ry*0.98; }
       else if(d.hammer){
         // heave the hammer up over his head, then bring it down with everything he has
@@ -5914,6 +6052,7 @@ function drawUnit(u){
   if(!d.humanoid && !d.golem && (!d.cloud || u.air || u.dead)) cy += ry*0.28;
   if(d.baby && u.evo && !u.dead) cy -= ry*1.05 + Math.sin(T*1.8+u.seed)*3;   // the balloons hold it up
   if(d.jump && u.evo && !u.dead) cy -= ry*0.62;                              // the pogo spring holds it up
+  if(d.aero && !u.dead) cy -= ry*0.62 + Math.sin(T*3+u.seed)*4;           // it never touches the ground
   if(d.devil && !u.dead) cy -= ry*0.62 + Math.sin(T*1.5+u.seed)*5;           // the devil never stands on anything
   if(d.angel && !u.dead) cy -= ry*0.50 + Math.sin(T*1.8+u.seed)*4;           // he rides the cloud instead
   if(d.phoenix && !u.dead){                                                   // never lands; climbs to strike
@@ -5973,6 +6112,7 @@ function drawUnit(u){
   else if(d.reap) drawReaper(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.rabbit) drawRabbit(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.hitman) drawHitman(u,cx,cy,rx,ry,dir,u.flash);
+  else if(d.aero) drawAero(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.team>0 && !d.shadowOf) drawBlob(u,cx,cy,rx,ry,dir,u.flash);
   else drawSlime(u,cx,cy,rx,ry,dir,u.flash);
   if(d.needle && !u.dead) drawDoctorKit(cx, cy, rx, ry, dir, !!u.evo, u.sw>0? (u.stab||0) : 0);
@@ -6326,7 +6466,7 @@ function drawBar(){
       // a full squad of ten: portrait and price only
       X.save(); rr(x,y-lift,w,h,12); X.clip();
       X.globalAlpha=afford?1:0.55;
-      drawMini(k, x+w/2, y+34-lift, 13*pr, 1, i*3+1);
+      stillMini(k, x+w/2, y+34-lift, 13*pr, 1, i*3+1);
       X.restore();
       X.textAlign='center';
       X.fillStyle='#d8f6ff'; X.font='800 12px ui-rounded, Trebuchet MS, sans-serif';
@@ -6336,7 +6476,7 @@ function drawBar(){
       // portrait on top, name and cost stacked under it
       X.save(); rr(x,y-lift,w,h,12); X.clip();
       X.globalAlpha=afford?1:0.55;
-      drawMini(k, x+w/2-6, y+26-lift, 15*pr, 1, i*3+1);
+      stillMini(k, x+w/2-6, y+26-lift, 15*pr, 1, i*3+1);
       X.restore();
       X.textAlign='center';
       let fs=11; X.font='800 11px ui-rounded, Trebuchet MS, sans-serif';
@@ -6348,7 +6488,7 @@ function drawBar(){
     } else {
       X.save(); rr(x,y-lift,w,h,12); X.clip();
       X.globalAlpha=afford?1:0.55;
-      drawMini(k, x+30, y+46-lift, 22*pr, 1, i*3+1);
+      stillMini(k, x+30, y+46-lift, 22*pr, 1, i*3+1);
       X.restore();
       const tx = x+56;
       let fs=13; X.font='800 13px ui-rounded, Trebuchet MS, sans-serif';
@@ -6401,10 +6541,13 @@ function drawBar(){
   X.textAlign='left'; X.restore();
 }
 
+// the deploy cards hold still: their portraits are drawn with the clock stopped
+function stillMini(k, cx, cy, r, dir, seed){ const t0=T; T=0; try { drawMini(k, cx, cy, r, dir, seed); } finally { T=t0; } }
 // small portrait renderer used by cards/menus (independent of GY)
 function drawMini(k, cx, cy, r, dir, seed){
   const d=U[k], c=ucol(k), rw=r*(d.wide||1);
   if(d.elderCane){ drawElder({k, seed:seed||1, sw:0, swT:1, blink:0, ph:0, mini:1, evo:evoOn(k)}, cx, cy, r*0.95*(d.wide||1), r*0.97, dir, 0); return; }
+  if(d.aero){ drawAero({k, seed:seed||1, sw:0, swT:1, blink:0, ph:0, mini:1, evo:evoOn(k)}, cx - dir*r*0.05, cy - r*0.10, r*1.0*(d.wide||1), r*1.0, dir, 0); return; }
   if(d.reap){ drawReaper({k, seed:seed||1, sw:0, swT:1, blink:0, ph:0, mini:1, evo:evoOn(k)}, cx, cy, r*0.95*(d.wide||1), r*0.97, dir, 0); return; }
   if(d.bite){
     drawDino({seed:seed||1, evo:evoOn(k), bite:0.25, blink:0}, cx, cy+r*0.15, r*0.82, r*0.8, dir, 0);
@@ -6602,7 +6745,7 @@ function drawBattle(dt){
   // big units sit BEHIND the small ones — blobs read in front of chonks and bosses
   // ...except a god, who is never behind anybody
   // ...except a god, who is never behind anybody, and the godly blobs, who stand in front of the rest
-  const front=(u)=> U[u.k].storm? 2 : (u.k==='elder' || u.k==='reaper') ? 1 : 0;
+  const front=(u)=> U[u.k].storm? 2 : (u.k==='elder' || u.k==='reaper' || u.k==='aero') ? 1 : 0;
   const sorted=B.units.slice().sort((a,b)=> (front(a)-front(b)) || (U[b.k].r*(b.rs||1) - U[a.k].r*(a.rs||1)));
   for(const u of sorted) drawUnit(u);
   for(const s of B.shots) drawShot(s);
@@ -7038,7 +7181,7 @@ function chunkyBtn(x, y, w, h, label, fn, o){
 let cheatArm = 0;
 const CHEAT_XP = 99999999;
 function cheatAll(){
-  const order = ['blob','chonk','sword','dino','boom','jumper','fierce','golden','baby','mage','doctor','hitman','elder','reaper'];
+  const order = ['blob','chonk','sword','dino','boom','jumper','fierce','golden','baby','mage','doctor','hitman','elder','reaper','aero'];
   for(const k of order.concat(Object.keys(UPG)))           // the main blobs get first claim on the squad
     if(UPG[k] && UPG[k].kind==='unit' && !(save.lv[k]>0)){ save.lv[k]=1; autoEquip(k); }
   save.best  = LEVELS.length;                     // every level open
@@ -7354,7 +7497,7 @@ function pips(x, y, lv, max, col){
 const LAB_TABS = [
   {nm:'BLOBS',      keys:['blob','chonk','sword','dino','boom','jumper','fierce']},
   {nm:'RARE BLOBS', keys:['golden','baby','mage','doctor','hitman']},
-  {nm:'GODLY BLOBS', keys:['elder','reaper']},
+  {nm:'GODLY BLOBS', keys:['elder','reaper','aero']},
   {nm:'UPGRADES',   keys:['flow','tank','armour','cannon']}
 ];
 let labTab = 0, labIdx = 0, labPos = 0;
@@ -7428,7 +7571,8 @@ const UNIT_BLURB = {
   doctor: 'Jabs with a needle. Immune to TOXIC poison.',
   hitman: 'Blasts himself across the map, then shoots back. Every hit on him does 1.',
   elder:  'Old and slow. The cane comes down on a whole crowd.',
-  reaper: 'What it kills may rise again \u2014 on your side.'
+  reaper: 'What it kills may rise again \u2014 on your side.',
+  aero:   'Rockets in at 10x speed and smashes with a rocket fist. Only 400 HP.'
 };
 // one carousel card. f = 0 when dead centre, 1 when a full step away
 function labCard(k, cx, f){
@@ -7600,7 +7744,7 @@ function drawUpg(dt){
    BLOB CAPSULE  —  spend a blob ticket, roll a new blob
    ================================================================ */
 const CAPSULE_POOL = ['golden','baby','mage','doctor','hitman'];   // RARE — nine pulls in ten
-const GODLY_POOL   = ['elder','reaper'];          // GODLY — one pull in ten
+const GODLY_POOL   = ['elder','reaper','aero'];          // GODLY — one pull in ten
 const GODLY_CHANCE = 0.10;
 function isGodly(k){ return GODLY_POOL.indexOf(k) >= 0; }
 let capState = {phase:'idle', t:0, spin:0, spinV:0, prize:null};
