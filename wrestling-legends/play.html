@@ -23,6 +23,7 @@
     <div class="menu-buttons">
       <button class="big-btn" id="btn-fight">🥊 &nbsp;FIGHT</button>
       <button class="big-btn secondary" id="btn-challenges">⚔️ &nbsp;CHALLENGES</button>
+      <button class="big-btn secondary" id="btn-online">🌐 &nbsp;ONLINE 1V1</button>
       <button class="big-btn secondary" id="btn-controls">CONTROLS</button>
       <button class="big-btn secondary" id="btn-settings">SETTINGS</button>
     </div>
@@ -255,6 +256,32 @@
   </div>
 </div>
 
+<!-- ============ ONLINE 1V1 ============ -->
+<div id="online" class="screen hidden">
+  <div class="sel-top"><div class="select-header">🌐 ONLINE 1V1</div></div>
+  <div class="ol-wrap">
+    <div class="ol-card">
+      <div class="ol-label">1 · PICK YOUR WRESTLER <em>every wrestler unlocked · no steroids · best of 3</em></div>
+      <div class="ol-roster" id="ol-roster"></div>
+      <div class="ol-picked" id="ol-picked"></div>
+    </div>
+    <div class="ol-card">
+      <div class="ol-label">2 · HOST OR JOIN</div>
+      <div class="ol-row">
+        <button class="pick-btn ol-btn" id="ol-host">HOST A MATCH</button>
+        <span class="ol-or">or</span>
+        <input id="ol-code" maxlength="4" placeholder="CODE" autocomplete="off" spellcheck="false">
+        <button class="pick-btn ol-btn alt" id="ol-join">JOIN</button>
+      </div>
+      <div class="ol-codebig hidden" id="ol-codebig"></div>
+      <div class="ol-status" id="ol-status">Host a match and send your friend the code — or type their code and JOIN. Works on any two computers with internet.</div>
+      <div class="ol-vs hidden" id="ol-vs"></div>
+      <button class="pick-btn hidden" id="ol-start">START MATCH</button>
+    </div>
+  </div>
+  <button class="back-btn" id="ol-back">&larr; BACK</button>
+</div>
+
 <!-- ============ END SCREEN ============ -->
 <div id="end-screen" class="screen hidden">
   <div class="end-medal" id="end-medal">🏆</div>
@@ -272,5 +299,7 @@
 <script src="js/boxer.js"></script>
 <script src="js/ai.js"></script>
 <script src="js/main.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="js/online.js"></script>
 </body>
 </html>

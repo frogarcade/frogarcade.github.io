@@ -395,6 +395,9 @@ const U = {
   shroom:{nm:'MUSHROOM SLIME', traits:['toxic'], team:-1, hp:60, dmg:14, rate:1.2, spd:30, rng:50, r:26, wide:1.05,
           swT:0.45, hitP:0.55, shroom:1, kbStep:0.5, spores:{r:72, t:4},
           c:['#fbf1dc','#e8d3ad','#8a6a44']},           // pops into a spore cloud when it dies: blobs inside are slowed
+  lord:  {nm:'THE TIDE LORD', traits:['normal'], team:-1, hp:8000, dmg:130, rate:1.2, spd:14, rng:300, r:58, wide:1,
+          swT:3.5, hitP:0.571, lord:1, boss:1, kbStep:0.25, tsunami:{speed:520, life:1.5, kb:1.25},
+          c:['#f3e3c8','#3f8f5c','#1f4d33']},    // staff up for 2s, then a tsunami rolls 1.5s down the lane: every blob it reaches is hit AND knocked back
   frog:  {nm:'FROG ELITE', traits:['normal'], team:-1, hp:1, shield:250, dmg:28, rate:1.0, spd:34, rng:90, r:28, wide:1.15,
           swT:0.50, hitP:0.55, spear:1, kbStep:0.5,
           c:['#caf2a2','#5cb84a','#2b6a2a']},           // 1 HP behind a 250 HP shield; pokes with a spear
@@ -750,7 +753,16 @@ const LEVELS = [
    enemy:{ brute:{hp:1000, dmg:120} },                    // the purple slimes, buffed: ~5.7x HP, ~3x damage
    boss:'sludge', bossAt:2100, bossPeons:0,
    list:[[3,'brute'],[10,'brute'],[17,'brute'],[23,'brute'],[29,'brute'],[35,'brute'],[41,'brute']],
-   loop:6, pool:['brute']}
+   loop:6, pool:['brute']},
+
+  {nm:'THE TIDE LORD', bhp:5000, xp:30000, rareTicket:1, size:'huge',
+   sky:['#163231','#3f7f78'], hill:'#24433a',
+   // a purple sludge (no bar, full strength, 30% smaller) 3s in; frog elites every 4s; another sludge every 20s.
+   // The moment the first sludge falls, THE TIDE LORD walks out of the storm.
+   enemy:{ sludge:{rs:0.7}, frog:{dmg:84, shield:750} },       // frogs: +200% damage, +200% shield
+   boss:'lord', bossNeed:{kills:{k:'sludge', n:1}}, bossPeons:0,
+   list:[[3,'sludge']],
+   every:[{k:'frog', t:4, first:4}, {k:'sludge', t:20, first:23}]}
 ];
 
 /* XP LEVELS — short farming stages with their own spawn rules, no campaign progress */
@@ -3345,6 +3357,91 @@ function drawFrog(u, cx, cy, rx, ry, dir, flash){
   if(flash>0){ X.save(); X.globalCompositeOperation='lighter'; X.globalAlpha=flash*0.7;
     gooPath(cx, by, rx, bry, 0.03, 3, T, seed, true); X.fillStyle='#ffffff'; X.fill(); X.restore(); }
 }
+/* ---- THE TIDE LORD: long white hair and beard, a green cloak over a pale robe, a staff he raises to
+   call the water — it glows while he charges (2s), then he swings it down and the tsunami goes (1.5s) ---- */
+function drawLord(u, cx, cy, rx, ry, dir, flash){
+  const H = ry, R = rx, gy = u.mini ? ry*0.96 : GY - cy;
+  const p = u.sw>0 ? 1-u.sw/u.swT : -1, h = U.lord.hitP;
+  const charge = p<0 ? 0 : (p<h ? p/h : 0), rel = p>=h ? (p-h)/(1-h) : 0;
+  const ss = x => x*x*(3-2*x);
+  shadow(cx, R*0.9, 0.3);
+  X.save(); X.translate(cx, cy); X.scale(dir, 1); X.lineJoin='round'; X.lineCap='round';
+  const sway = Math.sin(T*1.6 + (u.seed||1))*0.05;
+  const shY = gy - 2.15*H, waist = gy - 1.15*H;
+  // cloak behind, billowing
+  X.fillStyle = '#245c3b';
+  X.beginPath(); X.moveTo(-0.30*R, shY); X.quadraticCurveTo(-1.05*R - sway*R*3, gy - 1.2*H, -0.95*R - sway*R*4, gy - 0.02*H);
+  X.lineTo(0.15*R, gy); X.lineTo(0.25*R, shY); X.closePath(); X.fill();
+  // sandals
+  X.fillStyle='#6b4423';
+  X.beginPath(); X.ellipse(0.22*R, gy-0.04*H, 0.22*R, 0.07*H, 0, 0, 7); X.fill();
+  X.beginPath(); X.ellipse(-0.20*R, gy-0.04*H, 0.20*R, 0.07*H, 0, 0, 7); X.fill();
+  // pale inner robe
+  X.fillStyle = '#d9cba6'; X.strokeStyle = '#8a7a55'; X.lineWidth = Math.max(1.5, R*0.03);
+  X.beginPath(); X.moveTo(-0.30*R, shY); X.lineTo(0.32*R, shY); X.lineTo(0.48*R, gy - 0.05*H); X.lineTo(-0.42*R, gy - 0.05*H); X.closePath(); X.fill(); X.stroke();
+  X.strokeStyle='rgba(120,100,60,.45)'; X.lineWidth=Math.max(1, R*0.025);
+  for(const k of [-0.15, 0.1, 0.3]){ X.beginPath(); X.moveTo(k*R, waist + 0.15*H); X.quadraticCurveTo((k+0.04)*R, gy - 0.5*H, (k+0.08)*R, gy - 0.08*H); X.stroke(); }
+  // green cloak over the shoulders and down the front, with a dark and a light stripe
+  X.fillStyle = '#2f7a4a';
+  X.beginPath(); X.moveTo(-0.42*R, shY - 0.05*H); X.quadraticCurveTo(0, shY - 0.22*H, 0.42*R, shY - 0.05*H);
+  X.lineTo(0.30*R, waist); X.lineTo(0.18*R, gy - 0.05*H); X.lineTo(-0.10*R, gy - 0.05*H); X.lineTo(-0.36*R, waist); X.closePath(); X.fill();
+  X.strokeStyle = '#163d25'; X.lineWidth = Math.max(2, R*0.06);
+  X.beginPath(); X.moveTo(0.20*R, shY + 0.05*H); X.lineTo(0.10*R, gy - 0.08*H); X.stroke();
+  X.strokeStyle = '#6cc48a'; X.lineWidth = Math.max(1.5, R*0.03);
+  X.beginPath(); X.moveTo(0.27*R, shY + 0.05*H); X.lineTo(0.17*R, gy - 0.08*H); X.stroke();
+  X.fillStyle = '#7a4a26'; X.fillRect(-0.34*R, waist - 0.07*H, 0.68*R, 0.14*H);   // sash
+  // the staff arm: raised while charging, swung forward on release
+  const ang = p<0 ? -0.15 + sway : (p<h ? -0.15 - 0.95*ss(charge) : -1.10 + 2.35*ss(Math.min(1, rel*3)));
+  const hx = -0.30*R, hy = shY + 0.12*H;
+  const hand = {x: hx + Math.sin(ang+0.6)*0.55*R, y: hy - Math.cos(ang+0.6)*0.55*R - 0.3*H*charge};
+  X.strokeStyle = '#2f7a4a'; X.lineWidth = R*0.22;
+  X.beginPath(); X.moveTo(hx, hy); X.lineTo(hand.x, hand.y); X.stroke();
+  X.fillStyle = '#e7b993'; X.beginPath(); X.arc(hand.x, hand.y, R*0.11, 0, 7); X.fill();
+  X.save(); X.translate(hand.x, hand.y); X.rotate(ang);
+  X.strokeStyle = '#5a3a1e'; X.lineWidth = R*0.10;
+  X.beginPath(); X.moveTo(0, 1.0*H); X.lineTo(0, -1.55*H); X.stroke();
+  X.fillStyle = '#6e4826'; X.beginPath(); X.ellipse(0, -1.62*H, R*0.10, R*0.14, 0, 0, 7); X.fill();
+  if(charge>0 || rel>0){                                    // it glows as he gathers the sea
+    const gl = charge>0 ? charge : Math.max(0, 1-rel*2.5);
+    X.globalCompositeOperation='lighter';
+    const rg = X.createRadialGradient(0, -1.62*H, 1, 0, -1.62*H, R*(0.25+0.65*gl));
+    rg.addColorStop(0,'rgba(230,255,250,.95)'); rg.addColorStop(0.4,'rgba(90,220,200,.6)'); rg.addColorStop(1,'rgba(40,160,150,0)');
+    X.fillStyle = rg; X.beginPath(); X.arc(0, -1.62*H, R*(0.25+0.65*gl), 0, 7); X.fill();
+    if(gl>0.3){                                              // forks of lightning off the tip
+      X.strokeStyle = 'rgba(235,255,250,.9)'; X.lineWidth = 2;
+      for(let i=0;i<3;i++){ const a0 = T*7 + i*2.1; X.beginPath(); X.moveTo(0, -1.62*H);
+        X.lineTo(Math.cos(a0)*R*0.35, -1.62*H + Math.sin(a0)*R*0.35); X.lineTo(Math.cos(a0+0.4)*R*0.6*gl, -1.62*H + Math.sin(a0+0.3)*R*0.6*gl); X.stroke(); }
+    }
+    X.globalCompositeOperation='source-over';
+  }
+  X.restore();
+  // head: long white hair down the back, a big white beard, stern brows
+  const hdx = 0.06*R, hdy = shY - 0.40*H;
+  X.fillStyle = '#f2f2ee';
+  X.beginPath(); X.moveTo(hdx - 0.30*R, hdy - 0.10*H); X.quadraticCurveTo(hdx - 0.55*R, hdy + 0.45*H, hdx - 0.40*R, shY + 0.30*H);
+  X.lineTo(hdx - 0.05*R, shY + 0.05*H); X.closePath(); X.fill();
+  X.fillStyle = '#e7b993'; X.beginPath(); X.ellipse(hdx, hdy, 0.27*R, 0.31*H, 0, 0, 7); X.fill();
+  X.fillStyle = '#f7f7f3';
+  X.beginPath(); X.moveTo(hdx - 0.24*R, hdy + 0.02*H); X.quadraticCurveTo(hdx - 0.30*R, hdy + 0.70*H + sway*H, hdx + 0.02*R, shY + 0.62*H);
+  X.quadraticCurveTo(hdx + 0.32*R, hdy + 0.68*H, hdx + 0.27*R, hdy + 0.02*H);
+  X.quadraticCurveTo(hdx + 0.05*R, hdy + 0.20*H, hdx - 0.24*R, hdy + 0.02*H); X.closePath(); X.fill();
+  X.strokeStyle='rgba(170,170,165,.6)'; X.lineWidth=Math.max(1, R*0.02);
+  for(const k of [-0.1, 0.05, 0.18]){ X.beginPath(); X.moveTo(hdx + k*R, hdy + 0.22*H); X.lineTo(hdx + (k-0.03)*R, shY + 0.45*H); X.stroke(); }
+  X.fillStyle = '#f2f2ee';
+  X.beginPath(); X.ellipse(hdx - 0.05*R, hdy - 0.20*H, 0.30*R, 0.16*H, -0.2, Math.PI*0.9, Math.PI*2.1); X.fill();
+  X.fillStyle = '#2b1d14'; X.beginPath(); X.arc(hdx + 0.13*R, hdy - 0.02*H, R*0.035, 0, 7); X.fill();
+  X.strokeStyle = '#efefe9'; X.lineWidth = Math.max(2, R*0.06);
+  X.beginPath(); X.moveTo(hdx + 0.02*R, hdy - 0.10*H); X.lineTo(hdx + 0.24*R, hdy - 0.06*H); X.stroke();
+  // the free arm: thrown forward toward the lane, open hand
+  const fa = p>=h ? ss(Math.min(1, rel*3)) : (charge>0 ? 0.2 : 0.55);
+  const fx0 = 0.30*R, fy0 = shY + 0.12*H, fx1 = fx0 + (0.45 + 0.35*fa)*R, fy1 = fy0 + (0.25 - 0.30*fa)*H;
+  X.strokeStyle = '#2f7a4a'; X.lineWidth = R*0.22;
+  X.beginPath(); X.moveTo(fx0, fy0); X.lineTo(fx1, fy1); X.stroke();
+  X.fillStyle = '#e7b993'; X.beginPath(); X.ellipse(fx1 + 0.08*R, fy1, R*0.13, R*0.09, -0.2, 0, 7); X.fill();
+  if(flash>0){ X.globalCompositeOperation='lighter'; X.globalAlpha=flash*0.5; X.fillStyle='#ffffff';
+    X.fillRect(-0.5*R, shY - 0.8*H, R, 2.9*H); }
+  X.restore();
+}
 /* ---- MUSHROOM SLIME: a pale stalky slime under a big spotted cap ---- */
 function drawShroom(u, cx, cy, rx, ry, dir, flash){
   const c = U[u.k].c, seed=u.seed||1;
@@ -4447,7 +4544,7 @@ function newBattle(li, isXp){
     cannon:{ch:55, rate:5.5, ready:false, recoil:0},
     isXp:!!isXp, xpT:(L.xpMode && L.xpMode.first) || 0, xpWaveAt:0, xpBonus:0, xpWave:0, pendingXp:[],
     time:0, si:0, loopT:0, poolI:0, bossFired:false, bossWave:0, bossUnits:[], pendingPeons:[], killed:{}, hits:{}, waveGap:WAVE_GAP,
-    throws:[], spits:[], coins:[], pendingRise:[], spores:[], tracers:[], bossMus:0, aiT:0, aiPick:null, qbOn:false, qbT:0, hurt:{}, shock:[], strikes:[], pendingK:[], finaleDone:0, ekT:((L.everyK && !L.everyK.after)? L.everyK.t : 0),
+    throws:[], spits:[], coins:[], pendingRise:[], spores:[], tracers:[], waves:[], everyT:null, bossMus:0, aiT:0, aiPick:null, qbOn:false, qbT:0, hurt:{}, shock:[], strikes:[], pendingK:[], finaleDone:0, ekT:((L.everyK && !L.everyK.after)? L.everyK.t : 0),
     camX:0, camT:0, camManual:0, field:FIELD,
     over:null, overT:0, paused:false, kills:0
   };
@@ -4854,6 +4951,62 @@ function shieldBreak(u){
   for(let q=0;q<14;q++) B.parts.push({x:sx, y:sy, vx:(Math.random()-0.5)*300 + u.team*60, vy:-80-Math.random()*220,
     r:2.5+Math.random()*4, life:0.45+Math.random()*0.4, t:0, col: Math.random()<0.5?'#b07a3c':'#c9cfd6', g:520});
 }
+/* ---- THE TIDE LORD's tsunami: a wall of water rolls down the lane toward your base. Everything it
+   reaches is hit and knocked back — no dodging, no lucky miss. It breaks on your base if it gets there ---- */
+function unleashTsunami(u, d){
+  const T0 = d.tsunami;
+  B.waves.push({x: u.x + u.team*d.r*0.6, dir: u.team, speed: T0.speed, life: T0.life, t: 0,
+    dmg: unitDmg(u), kb: T0.kb, hit: new Set(), baseHit: false, src: u});
+  SFX.boom(); noise(1.4,0.30,1800,200,0.6); tone(70,0.9,'sine',0.30,34);
+  shake = Math.max(shake, 14); flashScreen = Math.max(flashScreen, 0.35);
+}
+function updateWaves(dt){
+  for(const w of B.waves){
+    w.t += dt; w.x += w.dir*w.speed*dt;
+    const front = w.x, back = w.x - w.dir*90;
+    for(const o of B.units){
+      if(o.team===w.src.team || o.dead || o.dying || o.air || o.fly || w.hit.has(o)) continue;
+      const ins = w.dir<0 ? (o.x >= front - 12 && o.x <= back) : (o.x <= front + 12 && o.x >= back);
+      if(!ins) continue;
+      w.hit.add(o);
+      dmgUnit(o, w.dmg, w.src.team, w.src);
+      if(!o.dead && !o.dying && !o.air && !U[o.k].noKB) knockback(o, w.kb, false);   // 100%: every blob it touches
+      for(let q=0;q<6;q++) B.parts.push({x:o.x, y:GY-20-Math.random()*40, vx:w.dir*(60+Math.random()*160), vy:-80-Math.random()*180,
+        r:2+Math.random()*4, life:0.4+Math.random()*0.3, t:0, col: Math.random()<0.5?'#e8fbff':'#7fd6d0', g:420});
+    }
+    const wall = w.dir<0 ? P_FRONT : E_FRONT;
+    if(!w.baseHit && (w.dir<0 ? w.x <= wall : w.x >= wall)){
+      w.baseHit = true;
+      if(w.dir<0) B.pbHP = Math.max(0, B.pbHP - w.dmg); else B.ebHP = Math.max(0, B.ebHP - w.dmg);
+      SFX.baseHit(); shake = Math.max(shake, 10);
+    }
+    if(Math.random()<0.8) B.parts.push({x:w.x + (Math.random()-0.3)*40*(-w.dir), y:GY-90-Math.random()*70, vx:w.dir*(80+Math.random()*120),
+      vy:-40-Math.random()*120, r:2+Math.random()*4, life:0.35+Math.random()*0.3, t:0, col:'#effcff', g:360});
+  }
+  B.waves = B.waves.filter(w => w.t < w.life);
+}
+function drawWaves(){
+  for(const w of B.waves){
+    const grow = Math.min(1, w.t/0.18), fade = Math.min(1, (w.life - w.t)/0.25);
+    const Hh = 175*grow, x = w.x, d = w.dir;            // d = which way it rolls (-1 = toward your base)
+    X.save(); X.globalAlpha = 0.92*fade;
+    const g = X.createLinearGradient(0, GY-Hh, 0, GY);
+    g.addColorStop(0,'#bff3ec'); g.addColorStop(0.25,'#3fb8ad'); g.addColorStop(1,'#14566a');
+    X.fillStyle = g;
+    X.beginPath();
+    X.moveTo(x - d*170, GY);                                         // long back slope
+    X.quadraticCurveTo(x - d*110, GY - Hh*0.55, x - d*20, GY - Hh);     // up to the crest
+    X.quadraticCurveTo(x + d*40, GY - Hh*1.06, x + d*55, GY - Hh*0.72); // curling over the top
+    X.quadraticCurveTo(x + d*20, GY - Hh*0.70, x + d*12, GY - Hh*0.42); // the hollow under the lip
+    X.quadraticCurveTo(x + d*30, GY - Hh*0.12, x + d*48, GY);           // front face down to the ground
+    X.closePath(); X.fill();
+    X.strokeStyle = 'rgba(255,255,255,.85)'; X.lineWidth = 5; X.lineCap='round';      // foam on the crest
+    X.beginPath(); X.moveTo(x - d*60, GY - Hh*0.86); X.quadraticCurveTo(x, GY - Hh*1.04, x + d*52, GY - Hh*0.74); X.stroke();
+    X.globalAlpha = 0.5*fade; X.strokeStyle = '#e8fbff'; X.lineWidth = 2.5;
+    for(let i=0;i<3;i++){ const yy = GY - Hh*(0.25 + i*0.2); X.beginPath(); X.moveTo(x - d*(130 - i*25), yy + 8); X.quadraticCurveTo(x - d*(80 - i*20), yy - 6, x - d*(40 - i*10), yy + 4); X.stroke(); }
+    X.restore();
+  }
+}
 /* the Toad King's tongue: pick the blob furthest back, shoot out, grab, reel it in, bite */
 function pickBack(u, d){
   let best=null, bd=-1;
@@ -4952,6 +5105,7 @@ function frontTarget(u){
 }
 
 function updateFX(dt){
+  if(B.waves && B.waves.length) updateWaves(dt);
   for(const tr of (B.tracers||[])) tr.t += dt;
   if(B.tracers) B.tracers = B.tracers.filter(tr => tr.t < 0.14);
   for(const sc of (B.spores||[])){                   // spore clouds: anything of the other side inside is slowed
@@ -5047,6 +5201,10 @@ function updateBattle(dt){
   }
   else if(!B.over){
     while(B.si < L.list.length && B.time >= L.list[B.si][0]){ spawnUnit(L.list[B.si][1]); B.si++; }
+    if(L.every){                                      // steady drips: one of each kind every t seconds
+      B.everyT = B.everyT || L.every.map(e => e.first!=null ? e.first : e.t);
+      L.every.forEach((e,i)=>{ B.everyT[i] -= dt; if(B.everyT[i] <= 0){ B.everyT[i] += e.t; spawnUnit(e.k); } });
+    }
     if(L.everyK && (!L.everyK.after || (B.hurt[L.everyK.after]||0) > 0)){
       B.ekT -= dt;
       if(B.ekT<=0){ B.ekT = L.everyK.t; spawnUnit(L.everyK.k); }
@@ -5158,6 +5316,12 @@ function updateBattle(dt){
         u.x = u.jx0 + (u.jx1-u.jx0)*q;
       }
       if(d.tongue){ u.dealt = true; tongueTick(u, d); }
+      if(d.tsunami){
+        u.dealt = true;
+        const pr = 1-u.sw/u.swT;
+        if(!u.charged0){ u.charged0 = true; tone(110,2.0,'sawtooth',0.10,420); noise(2.0,0.10,300,2400,0.9); }
+        if(!u.waved && pr >= hitPoint(u,d)){ u.waved = true; unleashTsunami(u, d); }
+      }
       if(d.beam){                         // the phoenix: charge, then a long beam that ticks
         u.dealt = true;                   // it never uses the one-shot hit
         const pr = 1-u.sw/u.swT;
@@ -5400,6 +5564,7 @@ function updateBattle(dt){
         u.atk=d.rate; u.sw=u.swT=swingT(u,d); u.dealt=false; u.dealt2=false;
         if(d.beam){ u.beamAcc=0; u.beamT=null; u.beamX=null; SFX.charge(); }
         if(d.tongue){ u.dealt=true; u.grabT = pickBack(u, d); u.grabbed0=false; u.grabHit=false; u.tongueX=null; }
+        if(d.tsunami){ u.dealt=true; u.waved=false; u.charged0=false; }
         if(d.aoeTarget){                              // the ground he picks now is the ground he hits
           u.lockX = (tgt && tgt!=='base') ? tgt.x : (u.team>0 ? E_FRONT-24 : P_FRONT+24);
         }
@@ -5798,6 +5963,7 @@ function drawUnit(u){
   else if(d.oak) drawOak(u,cx,cy,rx,ry,dir,u.flash);   // before d.thorns — the oak has thorns too
   else if(d.sludge) drawSludge(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.toad) drawToad(u,cx,cy,rx,ry,dir,u.flash);
+  else if(d.lord) drawLord(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.shroom) drawShroom(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.spear) drawFrog(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.goop) drawGoop(u,cx,cy,rx,ry,dir,u.flash);
@@ -5854,7 +6020,7 @@ function drawUnit(u){
   if(d.hpbar && !u.dead && !u.dying)
     hpBarSmall(cx, cy - ry*1.35, 46, u.hp/u.max, '#ff9a4a');
   if(!u.dead && !u.dying && !u.rise && u.team<0 && d.traits){               // what it is, at a glance
-    const tr=d.traits, iy = cy - ry*(d.phoenix||d.devil? 1.6 : 1.30) - 8;
+    const tr=d.traits, iy = cy - ry*(d.lord? 2.75 : d.phoenix||d.devil? 1.6 : 1.30) - 8;
     tr.forEach((t,i)=> traitIcon(t, cx + (i-(tr.length-1)/2)*15, iy, 6));
   }
   if(u.freezeT>0 && !u.dead){                            // frozen: an ice shell over it
@@ -5943,6 +6109,7 @@ function drawShot(s){
 }
 
 function drawFX(){
+  if(B.waves && B.waves.length) drawWaves();
   for(const tr of (B.tracers||[])){                  // revolver shots: a bright streak, gone in a blink
     const a = 1 - tr.t/0.14;
     X.save(); X.globalAlpha=a; X.lineCap='round';
@@ -6254,6 +6421,7 @@ function drawMini(k, cx, cy, r, dir, seed){
                      [ 'oak',   drawOak,   0.86, 0.86],
                      [ 'sludge',drawSludge,0.80, 0.80],
                      [ 'toad',  drawToad,  0.78, 0.80],
+                     [ 'lord',  drawLord,  0.62, 0.62],
                      [ 'shroom',drawShroom,0.92, 0.92],
                      [ 'spear', drawFrog,  0.92, 0.92],
                      [ 'goop',  drawGoop,  0.92, 0.92],

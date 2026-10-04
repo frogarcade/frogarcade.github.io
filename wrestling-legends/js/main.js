@@ -712,6 +712,7 @@ const STEROID_MAX = 5;
 save.steroids = save.steroids | 0;
 save.stacks = save.stacks || {};
 function getSteroids(id) {
+  if (game.online) return { hp: 0, dmg: 0 };      // ONLINE: everyone fights clean
   const s = save.stacks[id];
   return { hp: s ? (s.hp | 0) : 0, dmg: s ? (s.dmg | 0) : 0 };
 }
@@ -732,7 +733,7 @@ const RAGE_HP_GATE = 0.40;               // ...and only once you're in trouble
 const RAGE_MIN = 3, RAGE_MAX = 10;       // seconds
 const RAGE_CAP = 10;                     // an extension never pushes past this
 function rageChanceFor(b) {
-  if (!b || !b.isPlayer || !b.cfg) return 0;
+  if (!b || !b.isPlayer || !b.cfg || game.online) return 0;
   if (b.hp > b.maxHp * RAGE_HP_GATE) return 0;   // you snap when you're cornered
   const s = getSteroids(b.cfg.id);
   return ((s.hp | 0) + (s.dmg | 0)) * RAGE_CHANCE_PER_STEROID;
@@ -1378,9 +1379,16 @@ $('btn-controls').addEventListener('click', () => { Music.play('menu'); $('contr
 $('btn-back').addEventListener('click', () => { hide('select'); hideSelectModels(); show('menu'); game.state = 'menu'; });
 $('btn-start').addEventListener('click', () => startTournament(game.selectedId));
 
-$('btn-rematch').addEventListener('click', () => { hide('end-screen'); startTournament(game.selectedId); });
-$('btn-reselect').addEventListener('click', () => { cleanupMatch(); openSelect(); });
+$('btn-rematch').addEventListener('click', () => {
+  if (game.online) { Online.rematch(); return; }
+  hide('end-screen'); startTournament(game.selectedId);
+});
+$('btn-reselect').addEventListener('click', () => {
+  if (game.online) { Online.backToLobby(); return; }
+  cleanupMatch(); openSelect();
+});
 $('btn-menu').addEventListener('click', () => {
+  if (game.online) Online.leave();
   hide('end-screen'); cleanupMatch(); hideSelectModels();
   Music.play('menu'); show('menu'); game.state = 'menu';
 });
@@ -1713,6 +1721,7 @@ function armVersusStart() {
 }
 $('versus').addEventListener('click', () => {
   if (game.state !== 'versus') return;
+  if (game.online) { requestLock(); Online.readyClick(); return; }
   $('versus').classList.remove('waiting');
   requestLock();
   startRound();
@@ -1760,7 +1769,11 @@ function startRound() {
   game.enemy = new Boxer(enemyId, scene, false);
   game.player.resetFor(new THREE.Vector3(0, RING.top, 1.9), Math.PI);
   game.enemy.resetFor(new THREE.Vector3(0, RING.top, -1.9), 0);
-  for (const b of [game.player, game.enemy]) {
+  for (const b of [game.player, game.enemy]) wireBoxer(b);
+  game.ai = new AIController(game.enemy, game.player, combatAPI);
+  beginRoundCommon();
+}
+function wireBoxer(b) {
     b.onSlamLand = (self) => combatAPI.slamImpact(self);
     b.onRollHit = (self) => combatAPI.rollImpact(self);
     b.onWallRelease = (self, stored) => combatAPI.wallRelease(self, stored);
@@ -1771,9 +1784,9 @@ function startRound() {
     b.onRicochetBounce = (self, n) => combatAPI.ricochetBounce(self, n);
     b.onFeastStart = (self) => combatAPI.feastStart(self);
     b.onQuake = (self) => combatAPI.quakeHit(self);
-  }
-  game.ai = new AIController(game.enemy, game.player, combatAPI);
-
+}
+// everything a round needs once both boxers are in the ring (shared with online)
+function beginRoundCommon() {
   game.matchOver = false;
   game.timeScale = 1;
   game.lastPhp = undefined; game.lastEhp = undefined;
@@ -1789,7 +1802,7 @@ function startRound() {
   $('special-name').textContent = game.player.cfg.specialName;
   renderRoundHud();
 
-  if (game.carryMeter != null) {
+  if (game.carryMeter != null && !game.online) {
     // carried as a FRACTION, since wrestlers need different punch counts
     const need = game.player.cfg.meterPunches || 5;
     game.player.meterHits = Math.floor(game.carryMeter * need);
@@ -1805,6 +1818,7 @@ function startRound() {
   Music.play(game.isTitleFight ? 'final' : 'fight');   // the champion gets the big song
   announce(game.round === 1 ? 'FIGHT!' : 'ROUND ' + game.round + '!');
   updatePauseOverlay();
+  if (game.online) game.camYaw = game.player.yaw;   // look at your opponent from either corner
 }
 
 // One wrestler is out for the run. Bring on the next — both corners come back
@@ -1832,6 +1846,7 @@ function doTagIn() {
 
 // score the round, then either start the next one or settle the match
 function finishRound() {
+  if (game.online) { Online.hostRoundOver(); return; }
   if (document.pointerLockElement) document.exitPointerLock();
   hide('ko-overlay');
   container.classList.remove('ko-grey');
@@ -2005,13 +2020,18 @@ document.addEventListener('mousemove', (e) => {
 
 document.addEventListener('mousedown', (e) => {
   if (game.state !== 'fight' || !game.locked || e.button !== 0) return;
+  if (game.online === 'guest') { Online.guestAction('punch'); return; }
   playerAction();
 });
 
 document.addEventListener('keydown', (e) => {
   keys[e.code] = true;
-  if (e.code === 'KeyE' && game.state === 'fight' && game.locked) playerGrabThrow();
-  if (e.code === 'KeyQ' && game.state === 'fight' && game.locked) playerSpecial();
+  if (e.code === 'KeyE' && game.state === 'fight' && game.locked) {
+    if (game.online === 'guest') Online.guestAction('grab'); else playerGrabThrow();
+  }
+  if (e.code === 'KeyQ' && game.state === 'fight' && game.locked) {
+    if (game.online === 'guest') Online.guestAction('special'); else playerSpecial();
+  }
   if (e.code === 'Space' && game.state === 'fight' && game.locked) e.preventDefault();
 });
 document.addEventListener('keyup', (e) => { keys[e.code] = false; });
@@ -2035,13 +2055,21 @@ function crosshairGroundPoint() {
   return p;
 }
 
+// a hint for whoever pressed the button — on the host, that may be the guest
+function hintFor(p, text) {
+  if (p && p.remote) { Online.toGuest(['hint', text]); return; }
+  subhint(text);
+  setTimeout(() => updateHints(), 900);
+}
+
 // Q — pick a knocked-out body up, and heave it on the second press.
-function playerGrabThrow() {
-  const p = game.player, e = game.enemy;
+// (b, opp, lookDir) are only passed for an online guest; otherwise it's you.
+function playerGrabThrow(b, opp, lookDir) {
+  const p = b || game.player, e = opp || game.enemy;
   if (!p || game.matchOver || p.state !== 'fight') return;
   if (p.carrying) {
     const dir = new THREE.Vector3();
-    camera.getWorldDirection(dir);
+    if (lookDir) dir.copy(lookDir); else camera.getWorldDirection(dir);
     // scaled up with the 30% bigger ring so even the heaviest fighters clear it
     const vel = dir.multiplyScalar(7.6);
     vel.y = Math.max(vel.y, 3.0);
@@ -2051,23 +2079,22 @@ function playerGrabThrow() {
   if (e.isKO && e.state === 'ragdoll') {
     const c = e.ragdoll.center();
     if (p.pos.distanceTo(c) < 2.0) { combatAPI.tryGrab(p, e); return; }
-    announce('TOO FAR', '#8b96bd');
+    if (p.remote) Online.toGuest(['ann', 'TOO FAR', '#8b96bd']); else announce('TOO FAR', '#8b96bd');
   }
 }
 
 // Left click is ALWAYS a punch now — including into a body on the canvas.
-function playerAction() {
-  const p = game.player;
+function playerAction(b) {
+  const p = b || game.player;
   if (!p || game.matchOver || p.state !== 'fight') return;
   if (p.canAct && p.startPunch()) AudioFX.whoosh();
 }
 
-function playerSpecial() {
-  const p = game.player, e = game.enemy;
+function playerSpecial(b, opp, aim) {
+  const p = b || game.player, e = opp || game.enemy;
   if (!p || game.matchOver || !p.canAct) return;
   if (p.meter < 1) {
-    subhint('SPECIAL NOT CHARGED — LAND MORE PUNCHES!');
-    setTimeout(() => updateHints(), 900);
+    hintFor(p, 'SPECIAL NOT CHARGED — LAND MORE PUNCHES!');
     return;
   }
   let fired = true;
@@ -2081,8 +2108,7 @@ function playerSpecial() {
       break;
     case 'roll':
       if (downForTheCount(e)) {
-        subhint('THEY\u2019RE DOWN — GRAB THEM AND THROW!');
-        setTimeout(() => updateHints(), 900);
+        hintFor(p, 'THEY\u2019RE DOWN — GRAB THEM AND THROW!');
         fired = false;
       } else {
         combatAPI.doRoll(p, e);
@@ -2119,8 +2145,7 @@ function playerSpecial() {
       if (TMP.v.subVectors(e.pos, p.pos).setY(0).length() < 2.6 && e.state === 'fight') {
         combatAPI.doPiledriver(p, e);
       } else {
-        subhint('GET CLOSER TO SLAM THEM!');
-        setTimeout(() => updateHints(), 900);
+        hintFor(p, 'GET CLOSER TO SLAM THEM!');
         fired = false;
       }
       break;
@@ -2128,14 +2153,12 @@ function playerSpecial() {
       // Royal Suplex needs the opponent within grabbing distance
       const d = TMP.v.subVectors(e.pos, p.pos).setY(0).length();
       if (e.roll) {
-        subhint('THEY\u2019RE UNSTOPPABLE MID-ROLL!');
-        setTimeout(() => updateHints(), 900);
+        hintFor(p, 'THEY\u2019RE UNSTOPPABLE MID-ROLL!');
         fired = false;
       } else if (e.state === 'fight' && d < 2.5) {
-        fired = combatAPI.doSuplex(p, e, crosshairGroundPoint()) !== false;
+        fired = combatAPI.doSuplex(p, e, aim || crosshairGroundPoint()) !== false;
       } else {
-        subhint('GET CLOSER TO SUPLEX!');
-        setTimeout(() => updateHints(), 900);
+        hintFor(p, 'GET CLOSER TO SUPLEX!');
         fired = false;
       }
     }
@@ -2429,7 +2452,7 @@ const combatAPI = {
   doHoundSpin(b, tgt, steer = false) {
     b.roll = {
       time: 8, hitCd: 0.6, angle: 0, upright: true, steer,
-      dmg: b.isPlayer ? 20 : 35,   // the boss's whirl is the threat, not his HP bar
+      dmg: (b.isPlayer || b.remote) ? 20 : 35,   // the boss's whirl is the threat, not his HP bar
       spinDir: Math.random() < 0.5 ? -1 : 1, orbitAngle: null,
       phase: 'charge', phaseT: 8, targetFn: () => tgt.pos
     };
@@ -2768,7 +2791,7 @@ function dealDamage(attacker, defender, dmg, dir, big, allowDown) {
   if (!defender || game.matchOver) return 0;
   if (!allowDown && defender.state !== 'fight') return 0;
   // difficulty only ever touches what the ENEMY hits you for
-  if (attacker && !attacker.isPlayer) dmg *= difficulty().enemyDmg;
+  if (attacker && !attacker.isPlayer && !game.online) dmg *= difficulty().enemyDmg;
   if (attacker && attacker.rage) dmg *= 1.5;   // a raging wrestler hits harder
 
   // RISING TIDE: the hit heals him and hurls the attacker away
@@ -2927,7 +2950,7 @@ function resolvePunches(attacker, defender, dt) {
     }
     world.crowd.excitement = Math.min(1, world.crowd.excitement + 0.12);
     // you earn your special by landing clean punches — flurries don't count
-    if (attacker.isPlayer && !isBarrage && dealt > 0 && attacker.meter < 1) {
+    if ((attacker.isPlayer || attacker.remote) && !isBarrage && dealt > 0 && attacker.meter < 1) {
       // Five clean punches to charge, unless the wrestler's card says otherwise.
       // Counted as whole punches: adding 1/6 six times lands on 0.9999... and
       // silently cost an extra punch.
@@ -2935,8 +2958,8 @@ function resolvePunches(attacker, defender, dt) {
       attacker.meterHits = (attacker.meterHits || 0) + 1;
       attacker.meter = Math.min(1, attacker.meterHits / need);
       if (attacker.meter >= 1) {
-        announce(attacker.cfg.specialName + ' READY!', '#ffd94d');
-        AudioFX.charged();
+        if (attacker.remote) Online.toGuest(['ann', attacker.cfg.specialName + ' READY!', '#ffd94d'], ['snd', 'charged', []]);
+        else { announce(attacker.cfg.specialName + ' READY!', '#ffd94d'); AudioFX.charged(); }
       }
     }
     // Vicious drinks the damage back
@@ -3479,15 +3502,17 @@ function frame(now) {
 
   // pause when unlocked mid-fight
   const fighting = game.state === 'fight';
-  if (fighting && !game.locked && !game.matchOver) sdt = 0;
+  if (fighting && !game.locked && !game.matchOver && !game.online) sdt = 0;   // online never pauses
 
-  if (fighting && sdt > 0) {
+  if (fighting && game.online === 'guest') {
+    Online.guestFrame(dt, t);
+  } else if (fighting && sdt > 0) {
     if (game.fightIntro > 0) game.fightIntro -= sdt;
 
     updatePlayerInput(sdt);
     checkPlayerRollBreak();
     checkPlayerRage();
-    game.ai.update(sdt, t);
+    if (game.online === 'host') Online.hostInput(sdt); else game.ai.update(sdt, t);
 
     updateSuplexes(sdt);
     updatePiledrivers(sdt);
@@ -3510,6 +3535,7 @@ function frame(now) {
     checkRingOut(game.enemy);
 
     updateHUD();
+    if (game.online === 'host') Online.hostSend(dt);
 
     if (game.endTimer > 0) {
       game.endTimer -= dt;
