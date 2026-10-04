@@ -366,9 +366,9 @@ const U = {
   hitslime:{nm:'HIT MAN SLIME', traits:['normal'], team:-1, hp:5, dmg:25, rate:0.7, spd:0, rng:9999, r:27, wide:1,
           swT:0.2, hitP:0.5, hitman:1, hitslime:1, hitCap:1, kbStep:0.2,
           c:['#e2f5c4','#8fcf5a','#3f6e2a']},          // the Hit Man Blob's stats, for the other side: rides dynamite behind your lines and shoots back
-  tophit:{nm:'TOP HIT MAN SLIME', traits:['normal'], team:-1, hp:80, dmg:33, rate:0.7, spd:0, rng:9999, r:32, wide:1.05,
+  tophit:{nm:'TOP HIT MAN SLIME', traits:['normal'], team:-1, hp:150, dmg:33, rate:0.7, spd:0, rng:9999, r:32, wide:1.05,
           swT:0.2, hitP:0.5, hitman:1, hitslime:1, hitCap:1, noKB:1, boss:1, doom:1, gold:1,
-          c:['#eef9d4','#9ad860','#3f6e2a']},          // 80 hits to drop, never knocked back — and if nobody is left to shoot, he turns round
+          c:['#eef9d4','#9ad860','#3f6e2a']},          // 150 hits to drop, never knocked back — and if nobody is left to shoot, he turns round
   iceblow:{nm:'ICE BLOWER', traits:['ice'], abil:[{t:'freeze', chance:0.10, time:1}, {t:'slow', chance:1, time:2}], team:-1, hp:480, dmg:0, rate:2.0, spd:70, rng:80, r:26, wide:1.05,
           swT:0.90, hitP:0.45, icebreath:1, iceSlime:1, aoe:55, aoeOff:60, kbStep:0.5,
           c:['#f2fbff','#9fd8f2','#3f7fa6']},          // a slime frozen half-solid: quick, and its breath does no damage — it just might freeze you
@@ -495,6 +495,10 @@ const TEAM_SLOTS = 10, FREE_SLOTS = 5;                     // squad size: five f
 const SLOT_COST = [1200, 1800, 2750, 3500, 5000];          // slots 6, 7, 8, 9, 10
 const WEALTH_COST = [150, 250, 380, 540, 730];     // in-battle WEALTHY BLOB upgrade (flatter scaling)
 const BASE_HP0 = 100, CANNON_DMG0 = 25;
+// what each BASE ARMOUR / CANNON POWER level gives before REINFORCE (x1.5) and FINALIZE (x1.3) —
+// levels 0-10. Near the old numbers early on, then a steep climb: maxed and finalized = 5000 HP / 800 dmg
+const ARMOUR_HP  = [100, 180, 280, 400, 560, 760, 1000, 1300, 1700, 2150, 2564];
+const CANNON_DMG = [25, 30, 36, 44, 54, 66, 100, 150, 210, 300, 410];
 const REINFORCE_XP = 5000;                  // the end-game tier, once a track is maxed
 const ECO_MAX = 10;                         // ...and past that, five more levels at double price
 const FINALIZE_XP = 12000;                  // ...and then one last +30%
@@ -506,7 +510,7 @@ function ecoMax(k){ return (isEco(k) && reinfOn(k)) ? ECO_MAX : UPG[k].max; }
 function reinfAvail(k){ return isEco(k) && save.lv[k] >= UPG[k].max && !reinfOn(k); }
 function finAvail(k){ return isEco(k) && reinfOn(k) && save.lv[k] >= ECO_MAX && !finOn(k); }
 function finMul(k){ return finOn(k)? 1.3 : 1; }
-function baseHP(){ return Math.round((BASE_HP0 + 80*(save.lv.armour||0)) * (reinfOn('armour')?1.5:1) * finMul('armour')); }
+function baseHP(){ return Math.round(ARMOUR_HP[Math.min(10, save.lv.armour||0)] * (reinfOn('armour')?1.5:1) * finMul('armour')); }
 // the beam's colour tells you how far the cannon has come: blue, then violet, then red
 function cannonTone(){
   if(finOn('cannon')) return {
@@ -526,7 +530,7 @@ function cannonTone(){
     glow0:'rgba(180,240,255,.95)', glow1:'rgba(90,190,255,0)',
     ring:'#cdf3ff', part:'#bfeaff', spark:'#8fe4ff', hit:'#bff0ff', splat:'#c9f4ff'};
 }
-function cannonDmg(){ return Math.round(CANNON_DMG0 * (1 + 0.2*(save.lv.cannon||0)) * (reinfOn('cannon')?1.5:1) * finMul('cannon')); }
+function cannonDmg(){ return Math.round(CANNON_DMG[Math.min(10, save.lv.cannon||0)] * (reinfOn('cannon')?1.5:1) * finMul('cannon')); }
 
 /* evolutions — unlocked once a unit is fully upgraded, paid for with XP */
 const EVO = {
@@ -797,8 +801,8 @@ const LEVELS = [
    // hit man slimes ride dynamite over your army and shoot from behind it. Drop three and the TOP HIT MAN comes for you —
    // keep something on the field, because the moment he has nobody left to shoot, he turns round and ends it
    boss:'tophit', bossNeed:{kills:{k:'hitslime', n:3}}, bossPeons:0,
-   list:[[3,'hitslime'],[10,'hitslime'],[17,'hitslime']],
-   loop:10, pool:['hitslime']}                      // one every 10s: any faster and nobody ever reaches a base
+   list:[[3,'hitslime'],[12,'hitslime'],[21,'hitslime']],
+   loop:13, pool:['hitslime','hitslime','hitslime','assassin']}   // an assassin every 4th: a third as often                      // one every 13s: any faster and nobody ever reaches a base
 ];
 
 /* XP LEVELS — short farming stages with their own spawn rules, no campaign progress */
@@ -1743,7 +1747,7 @@ function drawAero(u, cx, cy, rx, ry, dir, flash){
 }
 function drawHitman(u, cx, cy, rx, ry, dir, flash){
   const d = U[u.k], tm = (u.team!=null) ? u.team : d.team;
-  const turned = (u.doomT||0) > 0.35;                // the top hit man swings round toward your base
+  const turned = (u.doomT||0) > 0.35 || (u.turnHold||0) > 0;   // swung round toward your base (and held after the shot)
   const face = u.mini ? dir : (u.fly || turned) ? tm : -tm, fz = u.flyZ||0, by = cy - fz;
   X.save();
   if(u.fly){ X.translate(cx, by); X.rotate(u.spin||0); X.translate(-cx, -by); }
@@ -5063,7 +5067,7 @@ function tryDeploy(k){
 /* ---- HIT MAN BLOB: lights a stick of dynamite, rides the blast to the far side, turns round and shoots ---- */
 function launchHitman(u){
   // clean over the other army, landing out in the field — well clear of their base and of where they deploy
-  const GAP = 240;
+  const GAP = 150;
   u.fly = {t:0, dur:1.3, x0:u.x, x1: u.team>0 ? Math.max(u.x+60, E_FRONT-GAP) : Math.min(u.x-60, P_FRONT+GAP), h:230};
   SFX.boom(); shake=Math.max(shake,10); flashScreen=Math.max(flashScreen,0.18);
   ring(u.x, GY-20, '#ffd08a', 10, 110, 0.4, 8); ring(u.x, GY-8, '#ff7a2f', 8, 140, 0.5, 6);
@@ -5096,13 +5100,29 @@ function hitmanTick(u, d, udt){
   // is anyone at all still on the other side? (behind his back counts — he just can't aim there)
   const anyFoe = B.units.some(o => o.team!==u.team && !o.dead && !o.dying && !o.fly);
   if(d.doom){                                        // TOP HIT MAN: everyone gone? he turns round
-    if(anyFoe || B.doom){ u.doomT = 0; }
+    if(anyFoe || doomPending()){ u.doomT = 0; }
     else {
       if(!u.doomT){ SFX.charge(); tone(90,1.4,'sawtooth',0.12,420); }
       u.doomT = (u.doomT||0) + udt;
-      if(u.doomT >= 1.6){ fireDoom(u); u.doomT = 0; }
+      if(u.doomT >= 1.6){ fireBig(u, Infinity, 1); u.doomT = 0; }
     }
   }
+  if(d.hitslime && !d.doom && (u.leaving || !t)){         // nobody directly in front of him: your base pays (upgrade that armour)
+    const nestX = u.team<0 ? E_BASE_X : P_BASE_X;
+    if(u.leaving){                                   // job done: back into the nest, and gone
+      if(u.turnHold > 0){ u.turnHold -= udt; return; }
+      u.moving = true; u.doomT = 0;
+      u.x += home*280*(u.slowT>0 ? 0.5 : 1)*udt;
+      if(Math.random()<0.25) puff(u.x - home*10, GY-6, '#cfc6ba', -30);
+      if((nestX - u.x)*home <= 0){ u.vanish = true; for(let i=0;i<8;i++) puff(nestX, GY-20, '#9fcf7a', -60); }
+      return;
+    }
+    if(!u.doomT){ tone(140,0.8,'sawtooth',0.08,420); }
+    u.doomT = (u.doomT||0) + udt;                    // turning round, taking aim at your base...
+    if(u.doomT >= 1.0){ fireBig(u, 200, 0.6); u.doomT = 0; u.leaving = true; u.turnHold = 0.45; }   // holds the pose a beat after the shot
+    return;
+  }
+  if(d.hitslime) u.doomT = 0;                        // someone stepped into his sights: back to work
   if(!t && !d.doom){
     // every enemy cleared: he sprints back to his own base and waits there — the moment anything
     // shows up again, he lights another stick and rides it back over. (Enemies only behind his
@@ -5133,23 +5153,27 @@ function hitmanTick(u, d, udt){
     life:0.25+Math.random()*0.2, t:0, col:'#ffe08a', g:500});
 }
 
-/* THE TOP HIT MAN's last word: one gigantic bullet into your base. Infinite damage — the base and every blob go. */
-function fireDoom(u){
+/* BIG BULLETS. The TOP HIT MAN's last word is infinite damage — the base and every blob go.
+   A plain hit man slime with nobody to shoot fires a smaller one: 200 into the base, then he heads home. */
+function fireBig(u, dmg, sc){
   const gx = u.x + u.team*U[u.k].r*1.4, gy = GY - U[u.k].r*0.85;
-  B.doom = {x:gx, y:gy, x1: u.team<0 ? P_BASE_X+20 : E_BASE_X-20, dir:u.team, t:0, team:u.team, hit:false};
+  if(!B.bigShots) B.bigShots = [];
+  B.bigShots.push({x:gx, y:gy, x1: u.team<0 ? P_BASE_X+20 : E_BASE_X-20, dir:u.team, t:0, team:u.team, hit:false, dmg, sc});
   u.recoil = 1.6;
-  SFX.boom(); noise(0.5,0.35,2400,300,0.8); shake=Math.max(shake,22); flashScreen=Math.max(flashScreen,0.5);
-  ring(gx, gy, '#fff1b0', 14, 120, 0.4, 9);
+  SFX.boom(); noise(0.4*sc+0.1,0.35*sc,2400,300,0.8); shake=Math.max(shake,22*sc); flashScreen=Math.max(flashScreen,0.5*sc);
+  ring(gx, gy, '#fff1b0', 14*sc, 120*sc, 0.4, 9*sc);
 }
-function updateDoom(dt){
-  const D = B.doom; if(!D) return;
-  D.t += dt;
-  if(!D.hit){
+function doomPending(){ return !!(B.bigShots && B.bigShots.some(s => s.dmg===Infinity && !s.hit)); }
+function updateBig(dt){
+  for(const D of B.bigShots){
+    D.t += dt;
+    if(D.hit) continue;
     D.x += D.dir*900*dt;
-    if(Math.random()<0.9) B.parts.push({x:D.x - D.dir*40, y:D.y+(Math.random()-0.5)*20, vx:-D.dir*(60+Math.random()*120), vy:(Math.random()-0.5)*80,
-      r:4+Math.random()*6, life:0.4+Math.random()*0.3, t:0, col: Math.random()<0.5?'#ffb35a':'#8d857c', g:-30});
-    if((D.x - D.x1)*D.dir >= 0){
-      D.hit = true; D.t = 0;
+    if(Math.random()<0.9) B.parts.push({x:D.x - D.dir*40*D.sc, y:D.y+(Math.random()-0.5)*20*D.sc, vx:-D.dir*(60+Math.random()*120), vy:(Math.random()-0.5)*80,
+      r:(4+Math.random()*6)*D.sc, life:0.4+Math.random()*0.3, t:0, col: Math.random()<0.5?'#ffb35a':'#8d857c', g:-30});
+    if((D.x - D.x1)*D.dir < 0) continue;
+    D.hit = true; D.t = 0;
+    if(D.dmg === Infinity){
       if(D.team<0) B.pbHP = 0; else B.ebHP = 0;                       // infinite damage: the wall is gone
       for(const o of B.units){                                       // and so is everyone on that side
         if(o.team===D.team || o.dead || o.dying) continue;
@@ -5158,25 +5182,33 @@ function updateDoom(dt){
       SFX.boom(); SFX.baseHit(); tone(50,1.2,'sine',0.35,24); noise(1.2,0.35,1600,120,0.6);
       shake = 34; flashScreen = 1; hitStop = 0.12;
       ring(D.x1, GY-80, '#fff1b0', 20, 320, 0.7, 14); ring(D.x1, GY-40, '#ff7a2f', 16, 420, 0.9, 10);
-      for(let q=0;q<60;q++){ const a=Math.random()*Math.PI*2;
-        B.parts.push({x:D.x1, y:GY-70, vx:Math.cos(a)*(150+Math.random()*520), vy:Math.sin(a)*(150+Math.random()*520)-120,
-          r:4+Math.random()*9, life:0.6+Math.random()*0.8, t:0, col: Math.random()<0.4?'#ffd08a':Math.random()<0.5?'#ff5a1f':'#6b625a', g:420}); }
+    } else {
+      if(D.team<0) B.pbHP = Math.max(0, B.pbHP - D.dmg); else B.ebHP = Math.max(0, B.ebHP - D.dmg);
+      SFX.boom(); SFX.baseHit(); shake = Math.max(shake, 18); flashScreen = Math.max(flashScreen, 0.35);
+      ring(D.x1, GY-70, '#fff1b0', 14, 170, 0.5, 9); ring(D.x1, GY-40, '#ff7a2f', 10, 210, 0.6, 7);
     }
-  } else if(D.t > 1.5) B.doom = null;
+    const n = D.dmg===Infinity ? 60 : 24, pw = D.dmg===Infinity ? 520 : 300;
+    for(let q=0;q<n;q++){ const a=Math.random()*Math.PI*2;
+      B.parts.push({x:D.x1, y:GY-70, vx:Math.cos(a)*(150+Math.random()*pw), vy:Math.sin(a)*(150+Math.random()*pw)-120,
+        r:(4+Math.random()*9)*(D.dmg===Infinity?1:0.7), life:0.6+Math.random()*0.8, t:0, col: Math.random()<0.4?'#ffd08a':Math.random()<0.5?'#ff5a1f':'#6b625a', g:420}); }
+  }
+  B.bigShots = B.bigShots.filter(D => !D.hit || D.t < 1.5);
 }
-function drawDoom(){
-  const D = B && B.doom; if(!D || D.hit) return;
-  X.save(); X.translate(D.x, D.y); X.scale(D.dir, 1);
-  const tg = X.createLinearGradient(-160, 0, 0, 0);                  // the vapour trail
-  tg.addColorStop(0, 'rgba(255,180,90,0)'); tg.addColorStop(1, 'rgba(255,230,160,.85)');
-  X.fillStyle = tg; X.beginPath(); X.moveTo(-160, -6); X.lineTo(-20, -22); X.lineTo(-20, 22); X.lineTo(-160, 6); X.closePath(); X.fill();
-  const bg = X.createLinearGradient(0, -24, 0, 24);                  // a brass shell the size of a blob
-  bg.addColorStop(0, '#fff0b0'); bg.addColorStop(0.45, '#e2a53a'); bg.addColorStop(1, '#7a4a12');
-  X.fillStyle = bg; X.strokeStyle='#4a2c08'; X.lineWidth=3;
-  X.beginPath(); X.moveTo(-30, -24); X.lineTo(26, -24); X.quadraticCurveTo(70, -20, 78, 0); X.quadraticCurveTo(70, 20, 26, 24); X.lineTo(-30, 24); X.closePath(); X.fill(); X.stroke();
-  X.fillStyle='#b9772a'; X.fillRect(-30, -24, 10, 48);
-  X.fillStyle='rgba(255,255,255,.55)'; X.fillRect(-14, -17, 60, 6);
-  X.restore();
+function drawBig(){
+  for(const D of B.bigShots){
+    if(D.hit) continue;
+    X.save(); X.translate(D.x, D.y); X.scale(D.dir*D.sc, D.sc);
+    const tg = X.createLinearGradient(-160, 0, 0, 0);                  // the vapour trail
+    tg.addColorStop(0, 'rgba(255,180,90,0)'); tg.addColorStop(1, 'rgba(255,230,160,.85)');
+    X.fillStyle = tg; X.beginPath(); X.moveTo(-160, -6); X.lineTo(-20, -22); X.lineTo(-20, 22); X.lineTo(-160, 6); X.closePath(); X.fill();
+    const bg = X.createLinearGradient(0, -24, 0, 24);                  // a brass shell
+    bg.addColorStop(0, '#fff0b0'); bg.addColorStop(0.45, '#e2a53a'); bg.addColorStop(1, '#7a4a12');
+    X.fillStyle = bg; X.strokeStyle='#4a2c08'; X.lineWidth=3/D.sc;
+    X.beginPath(); X.moveTo(-30, -24); X.lineTo(26, -24); X.quadraticCurveTo(70, -20, 78, 0); X.quadraticCurveTo(70, 20, 26, 24); X.lineTo(-30, 24); X.closePath(); X.fill(); X.stroke();
+    X.fillStyle='#b9772a'; X.fillRect(-30, -24, 10, 48);
+    X.fillStyle='rgba(255,255,255,.55)'; X.fillRect(-14, -17, 60, 6);
+    X.restore();
+  }
 }
 
 /* a worker slime lobs a barricade; it lands and becomes a unit */
@@ -5569,7 +5601,7 @@ function frontTarget(u){
 }
 
 function updateFX(dt){
-  if(B.doom) updateDoom(dt);
+  if(B.bigShots && B.bigShots.length) updateBig(dt);
   if(B.waves && B.waves.length) updateWaves(dt);
   for(const tr of (B.tracers||[])) tr.t += dt;
   if(B.tracers) B.tracers = B.tracers.filter(tr => tr.t < 0.14);
@@ -6095,7 +6127,7 @@ function updateBattle(dt){
       u.x = Math.max(P_FRONT-30, Math.min(E_FRONT+30, u.x));
     }
   }
-  B.units = B.units.filter(u=>!(u.dead && u.dt<=0));
+  B.units = B.units.filter(u=>!(u.dead && u.dt<=0) && !u.vanish);   // (a hit man who walked home is simply gone)
 
   // sweeping beam
   for(const s of B.shots){
@@ -6638,7 +6670,7 @@ function drawShot(s){
 
 function drawFX(){
   if(B.waves && B.waves.length) drawWaves();
-  if(B.doom) drawDoom();
+  if(B.bigShots && B.bigShots.length) drawBig();
   for(const tr of (B.tracers||[])){                  // revolver shots: a bright streak, gone in a blink
     const a = 1 - tr.t/0.14;
     X.save(); X.globalAlpha=a; X.lineCap='round';
@@ -7932,11 +7964,11 @@ function labStats(k){
     else if(k==='armour'){ now='base '+baseHP()+' HP'+tag;
                            next= reinfAvail(k)? '\u2605 REINFORCE:  +50% base HP, plated'
                                : finAvail(k)? '\u2605 FINALIZE:  +30% base HP'
-                               : Math.round((BASE_HP0+80*(lv+1))*mul)+' HP   (+80)'; }
+                               : Math.round((ARMOUR_HP[lv+1]||0)*mul)+' HP   (+'+Math.round(((ARMOUR_HP[lv+1]||0)-(ARMOUR_HP[lv]||0))*mul)+')'; }
     else {                 now='beam '+cannonDmg()+' dmg'+tag;
                            next= reinfAvail(k)? '\u2605 REINFORCE:  +50% beam, purple'
                                : finAvail(k)? '\u2605 FINALIZE:  +30% beam, red'
-                               : Math.round(CANNON_DMG0*(1+0.2*(lv+1))*mul)+' dmg   (+20%)'; }
+                               : Math.round((CANNON_DMG[lv+1]||0)*mul)+' dmg   (+'+Math.round(((CANNON_DMG[lv+1]||0)-(CANNON_DMG[lv]||0))*mul)+')'; }
   }
   return {now, next};
 }
