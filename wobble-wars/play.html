@@ -226,7 +226,7 @@ const HOOK =[
 /* Real tracks live next to the page. A kind with no file here — or a file that
    fails to load — falls back to the chiptune generator below. */
 const MUSIC_FILES = { menu:'menu.mp3', battle:'battle.mp3', boss:'boss.mp3', miniboss:'miniboss.mp3', victory:'victory.mp3', defeat:'defeat.mp3', casino:'casino.mp3' };
-const MUSIC_GAIN  = { menu:0.5, battle:0.42, boss:1, miniboss:1.1, victory:0.75, defeat:0.8, casino:0.6 };   // per-track trim: tracks are not mastered alike
+const MUSIC_GAIN  = { menu:0.5, battle:0.42, boss:1, miniboss:1.43, victory:0.75, defeat:0.8, casino:0.6 };   // per-track trim: tracks are not mastered alike
 const MUSIC_ONCE  = { victory:1, defeat:1 };      // a sting plays once; everything else loops
 function musElVol(){ return Math.max(0, Math.min(1, 0.55 * musVol() * (MUSIC_GAIN[musElKind] || 1))); }
 const musFail = {};
@@ -375,6 +375,12 @@ const U = {
   yeti:  {nm:'THE YETI', traits:['ice'], abil:[{t:'freeze', chance:0.60, time:2}, {t:'slow', chance:1, time:2}], team:-1, hp:4000, dmg:180, rate:2.2, spd:58, rng:120, r:56, wide:1.15,
           swT:1.20, hitP:0.50, icebreath:1, yeti:1, boss:1, aoe:100, aoeOff:100, kbStep:0.2,
           c:['#ffffff','#e6f1f8','#7d9bb3']},          // the same breath, much colder: 60% to freeze for 2s, and it hurts
+  snowman:{nm:'SNOWMAN', traits:['ice'], abil:[{t:'freeze', chance:0.40, time:1}], team:-1, hp:500, dmg:40, rate:2.5, spd:12, rng:460, r:34, wide:1,
+          swT:1.0, hitP:0.80, throwAt:0.40, snowman:1, spit:1, kbStep:0.5,
+          c:['#ffffff','#e6f1f8','#7d9bb3']},          // lobs snowballs from a long, long way off: 40 dmg, 40% to freeze
+  avalanche:{nm:'THE AVALANCHE', traits:['ice'], team:-1, hp:11500, dmg:300, rate:0.45, spd:32, rng:140, r:66, wide:1.2,
+          swT:0.55, hitP:0.60, avalanche:1, boss:1, aoe:140, aoeOff:110, kbStep:0.25,
+          c:['#e6f8ff','#8fcbe8','#2f6a92']},          // a walking mountain of ice: every second a foot comes down for 300, all around
   phoenix:{nm:'THE GODLY PHOENIX', traits:['fire','angelic'], abil:[{t:'kb', chance:0.50}], team:-1, hp:5000, dmg:10, rate:8, spd:43.9, rng:640, r:62, wide:1.22,
           swT:8, hitP:0.375, phoenix:1, boss:1, kbStep:0.1, beam:{t0:0.375, n:100, reach:Infinity},
           c:['#e6f6ff','#3fa9f5','#1b4d8c']},   // 3s charging in the sky, 5s of beam, 8s rest. It starts from 640 away,
@@ -465,7 +471,8 @@ const SHADOW_KEYS = SHADOW_OF.map(k => {
   return key;
 });
 function isShadow(k){ return !!(k && U[k] && U[k].shadowOf); }
-function owned(k){ return !!k && (save.lv[k] > 0 || (save.cheat && isShadow(k))); }
+const REMOVED_UNITS = ['boom'];                       // retired from the game (the user's call) — never fielded again
+function owned(k){ return !!k && REMOVED_UNITS.indexOf(k) < 0 && (save.lv[k] > 0 || (save.cheat && isShadow(k))); }
 
 const UPG = {
   // costs climb gently (~3x from first to last step) instead of the old ~6x
@@ -482,7 +489,6 @@ const UPG = {
   sword:  {nm:'SWORD BLOB',  kind:'unit', min:1, max:5, costs:[900, 1300, 1700, 2100], unlockCost:4000, gate:2},
   dino:   {nm:'DINO BLOB',   kind:'unit', min:1, max:5, costs:[1200, 1700, 2300, 2800], unlockCost:5000, gate:4},
   jumper: {nm:'JUMPER BLOB', kind:'unit', min:1, max:5, costs:[1400, 1900, 2500, 3200], unlockCost:2000, gate:7},
-  boom:   {nm:'BOOMERANG BLOB', kind:'unit', min:1, max:5, costs:[1300, 1800, 2400, 3000], unlockCost:4000, gate:10},
   fierce: {nm:'DEMIGOD BLOB', kind:'unit', min:1, max:5, costs:[2000, 3000, 4000, 5000], unlockCost:2000, gate:12},
   flow:   {nm:'JUICE FLOW',  kind:'eco',  min:1, max:5, costs:[800, 1100, 1500, 2000]},
   tank:   {nm:'JUICE TANK',  kind:'eco',  min:1, max:5, costs:[700, 1000, 1400, 1900]},
@@ -603,6 +609,16 @@ function canBuy(k){
   if(isGated(k)) return false;
   return save.xp >= c;
 }
+/* ---- TRY IT OUT: unlock BIG, SWORD or DINO BLOB and the next battle opens with a guided first deploy.
+   The fight waits (frozen, juice topped up) until you send the new blob in — then a quick word on what it's good at. ---- */
+const TRY_OUT = ['chonk','sword','dino'];
+function ensureInSquad(k){
+  if(!save.team) save.team = [];
+  const n = slotCount();
+  for(let i=0;i<n;i++) if(save.team[i]===k) return;
+  for(let i=0;i<n;i++) if(!save.team[i] || !owned(save.team[i])){ save.team[i] = k; persist(); return; }
+  save.team[n-1] = k; persist();                     // squad full: he takes the last seat (you can swap him out after)
+}
 function buyUpg(k){
   if(!canBuy(k)) { SFX.deny(); return; }
   if(evoAvail(k)){                       // EVOLVE instead of another level
@@ -623,6 +639,7 @@ function buyUpg(k){
   const wasLocked = (save.lv[k]||0)===0;
   save.xp -= upgCost(k); save.lv[k] = (save.lv[k]||0) + 1;
   if(wasLocked && UPG[k].kind==='unit') autoEquip(k);
+  if(wasLocked && TRY_OUT.indexOf(k)>=0){ save.tryOut = k; ensureInSquad(k); }   // you'll try him out next battle
   persist();
   (wasLocked || save.lv[k]===1)? SFX.unlock() : SFX.upgrade();
 }
@@ -638,21 +655,21 @@ const LEVELS = [
          [32,'slime'],[38,'slime'],[44,'slime'],[50,'slime'],[56,'slime']],
    loop:8, pool:['slime']},
 
-  {nm:'THE PURPLE PIT', bhp:500, xp:4200, size:'small', sky:['#c6b0f3','#f2eafd'], hill:'#8b6ac4',
+  {nm:'THE PURPLE PIT', bhp:500, xp:4200, size:'small', ease:0.7, sky:['#c6b0f3','#f2eafd'], hill:'#8b6ac4',
    enemy:{ blue:{hp:40, dmg:5, rs:0.66} },      // blue slimes are the common peon here — nerfed 3x
    boss:'brute', bossTime:12, bossPeons:2,      // the BRUTE walks in 12 seconds into the fight
    list:[[2,'blue'],[5,'slime'],[9,'blue'],[12,'blue'],[16,'slime'],[20,'blue'],
          [24,'blue'],[28,'slime'],[32,'blue'],[36,'blue'],[41,'slime'],[45,'blue']],
    loop:6, pool:['blue','blue','slime','blue']},
 
-  {nm:'THE CYAN DEEP', bhp:700, xp:4800, size:'big', sky:['#91cbe9','#e1f3fd'], hill:'#5fa2bf',
+  {nm:'THE CYAN DEEP', bhp:700, xp:4800, size:'big', ease:0.7, sky:['#91cbe9','#e1f3fd'], hill:'#5fa2bf',
    // green + cyan peons, then a chain of bosses: each wave lands the moment the last one dies
    bossTime:8, bossWaves:[ ['blue'], ['blue'], ['blue','brute'] ], bossPeons:2,
    list:[[2,'slime'],[4,'cyan'],[9,'slime'],[12,'cyan'],[16,'slime'],[20,'cyan'],
          [24,'slime'],[28,'cyan'],[33,'slime'],[37,'cyan'],[42,'slime'],[46,'cyan']],
    loop:7, pool:['slime','cyan','slime','cyan']},
 
-  {nm:'HOME SWEPT HOME', bhp:900, xp:6000, ticket:1, size:'medium', bossMusic:1,
+  {nm:'HOME SWEPT HOME', bhp:900, xp:6000, ticket:1, size:'medium', bossMusic:1, ease:0.7,
    sky:['#acabcc','#ebe8f3'], hill:'#857fa2',
    // magma slimes rush in and blow themselves up; THE BLOWER arrives once three of them are gone
    bossHits:{k:'magma', n:3}, boss:'blower', bossPeons:2,
@@ -700,7 +717,7 @@ const LEVELS = [
    list:[[1,'qb'],[2,'worker'],[11,'worker'],[21,'worker'],[32,'worker'],[44,'worker'],[57,'worker']],
    loop:13, pool:['worker']},
 
-  {nm:'THE BACK ALLEY', bhp:2200, xp:12000, size:'small', night:1,
+  {nm:'THE BACK ALLEY', bhp:2200, xp:12000, size:'small', night:1, ease:0.8,          // 20% softer: the breather after level 10
    sky:['#221d31','#4b3a4c'], hill:'#31293b',
    // he is already waiting for you when the lights come on, and nothing else comes but knives
    enemy:{ mib:{hp:2766, dmg:110} },          // the Midnight Man, 50% harder
@@ -744,7 +761,7 @@ const LEVELS = [
          [34,'cyan'],[40,'cyan'],[46,'angel']],
    loop:6, pool:['cyan','cyan','angel','cyan']},
 
-  {nm:'THE PURPLE SLUDGE', bhp:3600, xp:20000, rareTicket:1, size:'big',
+  {nm:'THE PURPLE SLUDGE', bhp:3600, xp:20000, rareTicket:1, size:'big', ease:1.15,   // 15% tougher, so 16-18 don't dip below 13-15
    sky:['#bba6da','#5b4474'], hill:'#55622c',
    // a swamp of green goop, and the plain green slimes here are ten times the slime — they burst into two more
    enemy:{ slime:{hp:175, dmg:70, rs:1.6, splitInto:{k:'slime', n:2, mul:4, rs:0.72}} },
@@ -753,7 +770,7 @@ const LEVELS = [
          [28,'goop'],[32,'slime'],[37,'goop'],[41,'goop'],[45,'slime']],
    loop:5, pool:['goop','goop','slime','goop']},
 
-  {nm:'FROG POND', bhp:3800, xp:22000, rareTicket:1, size:'big',
+  {nm:'FROG POND', bhp:3800, xp:22000, rareTicket:1, size:'big', ease:1.15,
    sky:['#7fb99a','#dcefc6'], hill:'#3f7d4a',
    // green goop and shielded frog elites; at half the nest the Toad King starts fishing for your back line
    boss:'toad', bossAt:1900, bossPeons:0,
@@ -761,7 +778,7 @@ const LEVELS = [
          [25,'frog'],[28,'goop'],[32,'goop'],[35,'frog'],[39,'goop'],[42,'frog']],
    loop:6, pool:['goop','goop','frog','goop','frog']},
 
-  {nm:'SPORE HOLLOW', bhp:4000, xp:24000, rareTicket:1, size:'big',
+  {nm:'SPORE HOLLOW', bhp:4000, xp:24000, rareTicket:1, size:'big', ease:1.15,
    sky:['#6f8f7a','#d9e6c6'], hill:'#4a5a36',
    // mushrooms that burst into slowing spores, green goop at twice the goop — and the old oak, grown into a monster
    enemy:{ goop:{hp:90, dmg:10},                                        // 100% boosted
@@ -779,7 +796,7 @@ const LEVELS = [
    list:[[3,'brute'],[10,'brute'],[17,'brute'],[23,'brute'],[29,'brute'],[35,'brute'],[41,'brute']],
    loop:6, pool:['brute']},
 
-  {nm:'THE TIDE', bhp:5000, xp:30000, rareTicket:1, size:'huge', bossMusic:1,
+  {nm:'THE TIDE', bhp:2000, xp:30000, rareTicket:1, size:'huge', bossMusic:1,
    sky:['#163231','#3f7f78'], hill:'#24433a',
    // a purple sludge (no bar, full strength, 30% smaller) 3s in; frog elites every 8s; another sludge every 50s.
    // The moment the first sludge falls, THE TIDE walks out of the storm.
@@ -798,11 +815,20 @@ const LEVELS = [
 
   {nm:"THE HIT MAN'S HOUSE", bhp:4000, xp:38000, size:'medium', night:1, unlock:'hitman',
    sky:['#1c1f30','#4b4664'], hill:'#2f2a3d',
-   // hit man slimes ride dynamite over your army and shoot from behind it. Drop three and the TOP HIT MAN comes for you —
+   // hit man slimes ride dynamite over your army and shoot from behind it. Five of them gone and the TOP HIT MAN comes for you —
    // keep something on the field, because the moment he has nobody left to shoot, he turns round and ends it
-   boss:'tophit', bossNeed:{kills:{k:'hitslime', n:3}}, bossPeons:0,
+   boss:'tophit', bossNeed:{kills:{k:'hitslime', n:5}}, bossPeons:0,
    list:[[3,'hitslime'],[12,'hitslime'],[21,'hitslime']],
-   loop:13, pool:['hitslime','hitslime','hitslime','assassin']}   // an assassin every 4th: a third as often                      // one every 13s: any faster and nobody ever reaches a base
+   loop:13, pool:['hitslime','hitslime','hitslime','assassin']},  // one every 13s (an assassin every 4th: a third as often)
+
+  {nm:'QUAKING BLIZZARD', bhp:4000, xp:42000, rareTicket:1, size:'big', snow:2,
+   sky:['#8ea6b8','#dfe9f0'], hill:'#d3e1ea',
+   // snowmen lob snowballs from far back while ice blowers come in close. Bring down a snowman and two YETIS come,
+   // eight seconds apart; when the first yeti falls, THE AVALANCHE walks out of the blizzard — and another yeti 12s behind it
+   boss:'yeti', bossNeed:{kills:{k:'snowman', n:1}}, bossMore:{k:'yeti', n:1, gap:8}, bossPeons:0,
+   finale:{after:'yeti', deaths:1, k:'avalanche', n:1, boss:1, then:{k:'yeti', t:12}},
+   list:[[2,'iceblow'],[5,'snowman'],[9,'iceblow'],[13,'iceblow'],[17,'snowman'],[22,'iceblow'],[27,'snowman']],
+   loop:7, pool:['iceblow','snowman','iceblow']}
 ];
 
 /* XP LEVELS — short farming stages with their own spawn rules, no campaign progress */
@@ -855,6 +881,14 @@ try{ const raw=JSON.parse(localStorage.getItem(SKEY)||'{}');
   save.vol = Object.assign({sfx:1, mus:0.5}, raw.vol||{});
   if(!save.volInit){ if(!save.vol.mus) save.vol.mus = 0.5; save.volInit = 1; }   // music on by default, once
   save.team = Array.isArray(raw.team)? raw.team.slice(0,TEAM_SLOTS) : ['blob'];
+  if(save.lv.boom > 0 && !save.boomRefund){        // BOOMERANG BLOB was retired: hand back everything spent on him
+    const lv = save.lv.boom, costs = [1300, 1800, 2400, 3000];
+    let back = 4000; for(let i=0;i<lv-1 && i<costs.length;i++) back += costs[i];
+    if(save.evo.boom) back += 7500;
+    if(!save.cheat) save.xp += back;
+    save.boomRefund = back; save.lv.boom = 0; save.evo.boom = 0;
+  }
+  save.team = save.team.map(k => REMOVED_UNITS.indexOf(k) >= 0 ? null : k);
 }catch(e){}
 while(save.team.length < TEAM_SLOTS) save.team.push(null);
 musOn = musVol()>0;
@@ -1747,14 +1781,14 @@ function drawAero(u, cx, cy, rx, ry, dir, flash){
 }
 function drawHitman(u, cx, cy, rx, ry, dir, flash){
   const d = U[u.k], tm = (u.team!=null) ? u.team : d.team;
-  const turned = (u.doomT||0) > 0.35 || (u.turnHold||0) > 0 || !!u.aimBack;   // swung round toward your base (charging, just fired, or shooting behind him)
+  const turned = (u.doomT||0) > 0.12 || (u.turnHold||0) > 0 || !!u.aimBack;   // swung round toward your base (charging, just fired, or shooting behind him)
   const face = u.mini ? dir : (u.fly || turned) ? tm : -tm, fz = u.flyZ||0, by = cy - fz;
   X.save();
   if(u.fly){ X.translate(cx, by); X.rotate(u.spin||0); X.translate(-cx, -by); }
   if(d.hitslime) drawSlime(u, cx, by, rx, ry, face, flash); else drawBlob(u, cx, by, rx, ry, face, flash);
   drawHitmanKit(cx, by, rx, ry, face, !!u.evo || !!d.gold, Math.min(1, u.recoil||0), u.seed);
   if(turned && !u.mini && !u.aimBack){              // charging the big one: the muzzle glows, and a warning over his hat
-    const ch = Math.min(1, ((u.doomT||0) - 0.35)/1.25), gx = cx + face*(rx*0.78 + rx*1.35*0.9), gy = by + ry*0.06;
+    const ch = (u.turnHold||0) > 0 ? 1 : Math.min(1, ((u.doomT||0) - 0.12)/(U[u.k].doom ? 0.48 : 0.88)), gx = cx + face*(rx*0.78 + rx*1.35*0.9), gy = by + ry*0.06;
     X.save(); X.globalCompositeOperation='lighter';
     const gg = X.createRadialGradient(gx, gy, 0, gx, gy, rx*(0.4 + 1.2*ch));
     gg.addColorStop(0, 'rgba(255,250,220,.95)'); gg.addColorStop(0.4, 'rgba(255,160,60,.7)'); gg.addColorStop(1, 'rgba(255,60,20,0)');
@@ -3543,6 +3577,126 @@ function drawYeti(u, cx, cy, rx, ry, dir, flash){
   if(!u.mini) drawIceBreath(u, mx + dir*fw*0.2, my, dir, (U[u.k].aoeOff + U[u.k].aoe)*1.0, ry*1.2);
 }
 
+/* ---- QUAKING BLIZZARD: the SNOWMAN (lobs snowballs from a long way off) and THE AVALANCHE
+   (a walking mountain of ice blocks; every second a foot comes down and the ground quakes). ---- */
+function snowBall(x, y, r){
+  const g = X.createRadialGradient(x - r*0.35, y - r*0.4, r*0.1, x, y, r*1.15);
+  g.addColorStop(0, '#ffffff'); g.addColorStop(0.6, '#eef6fc'); g.addColorStop(1, '#bcd3e6');
+  X.fillStyle = g; X.beginPath(); X.arc(x, y, r, 0, 7); X.fill();
+  X.strokeStyle = '#7d9bb3'; X.lineWidth = Math.max(1.5, r*0.07); X.stroke();
+}
+function drawSnowman(u, cx, cy, rx, ry, dir, flash){
+  const d = U[u.k], seed = u.seed||1, gy = u.mini ? cy + ry : GY;
+  const p = (u.sw>0 && !u.mini) ? 1 - u.sw/u.swT : -1, rel = d.throwAt || 0.4;
+  if(!u.mini) shadow(cx, rx*0.9, 0.24);
+  const R1 = rx*0.92, R2 = rx*0.66, R3 = rx*0.48;
+  const y1 = gy - R1*0.92, y2 = y1 - R1*0.62 - R2*0.62, y3 = y2 - R2*0.66 - R3*0.62;
+  const bob = Math.sin(T*2 + seed)*rx*0.02;
+  X.lineCap='round'; X.lineJoin='round';
+  // the back arm: a bare twig
+  X.strokeStyle='#6b4a2b'; X.lineWidth=Math.max(2, rx*0.07);
+  X.beginPath(); X.moveTo(cx - dir*R2*0.8, y2); X.lineTo(cx - dir*R2*1.7, y2 - R2*0.55); X.lineTo(cx - dir*R2*1.95, y2 - R2*0.75);
+  X.moveTo(cx - dir*R2*1.5, y2 - R2*0.42); X.lineTo(cx - dir*R2*1.62, y2 - R2*0.75); X.stroke();
+  snowBall(cx, y1, R1); snowBall(cx + bob, y2, R2); snowBall(cx + bob*1.5, y3, R3);
+  // coal buttons, a red scarf, a black top hat
+  X.fillStyle='#2b2f36'; for(const k of [-0.35, 0.05, 0.42]){ X.beginPath(); X.arc(cx + dir*R2*0.12 + bob, y2 + R2*k, R2*0.09, 0, 7); X.fill(); }
+  X.fillStyle='#d23b3b'; rr(cx - R2*0.8 + bob, y2 - R2*0.82, R2*1.6, R2*0.28, R2*0.12); X.fill();
+  X.fillStyle='#b02a2a'; rr(cx - dir*R2*0.45 + bob - R2*0.12, y2 - R2*0.62, R2*0.26, R2*0.62, R2*0.08); X.fill();
+  const hx = cx + bob*1.5;
+  X.fillStyle='#22252b'; rr(hx - R3*0.95, y3 - R3*0.86, R3*1.9, R3*0.20, R3*0.06); X.fill();
+  rr(hx - R3*0.62, y3 - R3*1.75, R3*1.24, R3*0.95, R3*0.12); X.fill();
+  X.fillStyle='#3f7fa6'; X.fillRect(hx - R3*0.62, y3 - R3*1.0, R3*1.24, R3*0.16);
+  // the face: coal eyes under an angry brow, a carrot nose pointing where he throws
+  X.fillStyle='#22252b';
+  for(const s of [-1,1]){ X.beginPath(); X.arc(hx + s*R3*0.3 + dir*R3*0.18, y3 - R3*0.12, R3*0.11, 0, 7); X.fill(); }
+  X.strokeStyle='#22252b'; X.lineWidth=Math.max(1.5, R3*0.09);
+  for(const s of [-1,1]){ const ex = hx + s*R3*0.3 + dir*R3*0.18;
+    X.beginPath(); X.moveTo(ex - s*R3*0.2, y3 - R3*0.42 - (s===dir? 0 : R3*0.08)); X.lineTo(ex + s*R3*0.14, y3 - R3*0.32); X.stroke(); }
+  X.fillStyle='#ff8a2a'; X.beginPath(); X.moveTo(hx + dir*R3*0.2, y3 + R3*0.02); X.lineTo(hx + dir*R3*1.05, y3 + R3*0.14); X.lineTo(hx + dir*R3*0.2, y3 + R3*0.22); X.closePath(); X.fill();
+  for(let i=-2;i<=2;i++){ X.beginPath(); X.arc(hx + dir*R3*0.15 + i*R3*0.14, y3 + R3*0.45 - Math.abs(i)*R3*0.06, R3*0.05, 0, 7); X.fill(); }
+  // the throwing arm: winds back over his head with a snowball, then whips it forward
+  let ang;                                           // 0 = held out in front, negative = back over the shoulder
+  if(p < 0) ang = -0.5;
+  else if(p < rel*0.8) ang = -0.5 - 1.6*(p/(rel*0.8));
+  else if(p < rel) ang = -2.1 + 2.5*((p - rel*0.8)/(rel*0.2));
+  else ang = 0.4 - 0.9*Math.min(1, (p-rel)/(1-rel));
+  const sx = cx + dir*R2*0.8 + bob, sy = y2 - R2*0.1, L = R2*1.3;
+  const exx = sx + dir*Math.cos(ang)*L, eyy = sy + Math.sin(ang)*L;
+  X.strokeStyle='#6b4a2b'; X.lineWidth=Math.max(2, rx*0.07);
+  X.beginPath(); X.moveTo(sx, sy); X.lineTo(exx, eyy); X.stroke();
+  if(p < rel || p < 0) snowBall(exx + dir*R3*0.12, eyy, R3*0.42);   // still in his hand
+  if(flash>0){ X.save(); X.globalCompositeOperation='lighter'; X.globalAlpha=flash*0.5; X.fillStyle='#ffffff';
+    for(const [yy,rr2] of [[y1,R1],[y2,R2],[y3,R3]]){ X.beginPath(); X.arc(cx, yy, rr2, 0, 7); X.fill(); } X.restore(); }
+}
+function iceBlock(x, y, w, h, light){
+  const g = X.createLinearGradient(x, y, x, y+h);
+  g.addColorStop(0, light? '#e6f8ff' : '#bfe6f8'); g.addColorStop(1, light? '#8fcbe8' : '#5fa6cf');
+  X.fillStyle = g; rr(x, y, w, h, Math.min(w,h)*0.18); X.fill();
+  X.strokeStyle = '#2f6a92'; X.lineWidth = 2.5; X.stroke();
+  X.strokeStyle = 'rgba(255,255,255,.6)'; X.lineWidth = 1.5;
+  X.beginPath(); X.moveTo(x + w*0.12, y + h*0.18); X.lineTo(x + w*0.55, y + h*0.12); X.stroke();
+}
+function drawAvalanche(u, cx, cy, rx, ry, dir, flash){
+  const d = U[u.k], seed = u.seed||1, gy = u.mini ? cy + ry*1.05 : GY, h = hitPoint(u, d);
+  const p = (u.sw>0 && !u.mini) ? 1 - u.sw/u.swT : -1, ss = x=>x*x*(3-2*x);
+  // the stomp: the front foot comes up, the body rears back... then everything comes down at once
+  let lift = 0, lean = 0;
+  if(p >= 0){
+    if(p < h){ const q = ss(p/h); lift = q; lean = -0.10*q; }
+    else { const q = Math.min(1, (p-h)/0.12); lift = 1 - q; lean = -0.10 + 0.18*q*(1 - Math.max(0,(p-h-0.12))/(1-h-0.12)); }
+  } else lean = Math.sin(T*1.6 + seed)*0.02;
+  const walk = u.moving && !u.mini ? Math.sin(T*5 + seed) : 0;
+  const S = rx/80;                                   // drawn at r=80 scale (a touch smaller than first drawn)
+  if(!u.mini) shadow(cx, rx*1.15, 0.32);
+  X.save(); X.translate(cx, gy); X.scale(dir*S, S); X.lineJoin='round';
+  const joint = (x, y, r) => {                       // a ball of ice where two pieces meet, so nothing floats
+    const g = X.createRadialGradient(x - r*0.3, y - r*0.3, r*0.1, x, y, r);
+    g.addColorStop(0, '#e6f8ff'); g.addColorStop(1, '#6fb2d8');
+    X.fillStyle = g; X.beginPath(); X.arc(x, y, r, 0, 7); X.fill(); X.strokeStyle = '#2f6a92'; X.lineWidth = 2.5; X.stroke(); };
+  // everything hangs off the hips (y = -70) and shoulders: the body leans, the limbs swing from their joints
+  const hipY = -70, backHip = -28, frontHip = 28;
+  // back leg: a pillar from the hip to the ground (it bends a little as he walks)
+  X.save(); X.translate(backHip, hipY - Math.max(0, -walk)*6); X.rotate(walk*0.10);
+  iceBlock(-18, -6, 36, 78 + Math.max(0, -walk)*6, false); X.restore();
+  // the body, leaning back on the lift and slamming forward on the stomp, pivoting at the hips
+  X.save(); X.translate(0, hipY); X.rotate(lean);
+  // back arm, from the back shoulder
+  X.save(); X.translate(-54, -92); X.rotate(0.12 + Math.sin(T*1.6 + seed)*0.04 + lift*0.25);
+  iceBlock(-14, -4, 28, 56, false); iceBlock(-19, 48, 38, 30, false); joint(0, 48, 11); X.restore();
+  joint(-54, -92, 15);
+  iceBlock(-60, -128, 120, 120, true);               // the torso, sitting down over the hips
+  X.strokeStyle='#2f6a92'; X.lineWidth=2.5;          // cracks between the blocks
+  X.beginPath(); X.moveTo(-60, -76); X.lineTo(-10, -70); X.lineTo(20, -82); X.lineTo(60, -74);
+  X.moveTo(-6, -128); X.lineTo(-12, -104); X.lineTo(4, -70); X.stroke();
+  // jagged ice spikes out of the back and shoulders
+  X.fillStyle='#e9f9ff'; X.strokeStyle='#4f8fb8'; X.lineWidth=2;
+  for(const [sx2, sh, tl] of [[-50,40,-0.5],[-30,54,-0.25],[-8,46,-0.05],[16,36,0.2]]){
+    X.save(); X.translate(sx2, -126); X.rotate(tl); X.beginPath(); X.moveTo(-9,0); X.lineTo(0,-sh); X.lineTo(9,0); X.closePath(); X.fill(); X.stroke(); X.restore(); }
+  // the head, sat on a thick neck of ice, with glowing eyes and a frosted brow
+  iceBlock(-14, -140, 34, 16, false);
+  iceBlock(-24, -176, 52, 44, true);
+  X.save(); X.globalCompositeOperation='lighter';
+  const eg = X.createRadialGradient(16, -156, 0, 16, -156, 22);
+  eg.addColorStop(0, 'rgba(200,250,255,.9)'); eg.addColorStop(1, 'rgba(120,220,255,0)');
+  X.fillStyle = eg; X.beginPath(); X.arc(16, -156, 22, 0, 7); X.fill(); X.restore();
+  X.fillStyle='#e9fdff'; for(const ex of [2, 20]){ rr(ex, -162, 10, 8, 2); X.fill(); }
+  X.fillStyle='#ffffff'; X.beginPath(); X.moveTo(-26, -174); X.lineTo(30, -178); X.lineTo(30, -166); X.lineTo(-26, -166); X.closePath(); X.fill();
+  X.fillStyle='#1d3f58'; rr(4, -144, 22, 5, 2); X.fill();                       // a hard line of a mouth
+  // snow piled on the shoulders
+  X.fillStyle='#ffffff';
+  for(const [sx2, sr] of [[-44,16],[-24,13],[30,15],[48,12]]){ X.beginPath(); X.arc(sx2, -128, sr, Math.PI, 0); X.fill(); }
+  // front arm, from the front shoulder: raised with the lift, slammed down with the stomp
+  X.save(); X.translate(54, -92); X.rotate(-0.25 - lift*0.9 + (p>=h && p<h+0.15 ? 0.5 : 0));
+  iceBlock(-14, -4, 28, 56, true); iceBlock(-20, 48, 40, 34, false); joint(0, 48, 11); X.restore();
+  joint(54, -92, 15);
+  X.restore();
+  // front leg: swings forward and up from the hip for the stomp (it never leaves the hip)
+  X.save(); X.translate(frontHip, hipY - Math.max(0, walk)*6); X.rotate(-lift*0.75 - walk*0.10);
+  iceBlock(-18, -6, 38, 78, true); X.restore();
+  joint(backHip, hipY, 14); joint(frontHip, hipY, 14);
+  X.restore();
+}
+
 /* ---- GREEN GOOP: a low toxic puddle that bubbles and drips ---- */
 function drawGoop(u, cx, cy, rx, ry, dir, flash){
   const c = U[u.k].c, seed=u.seed||1;
@@ -4646,22 +4800,54 @@ function drawPlayerBase(hp, maxhp, recoil, charge, aim){
   X.closePath(); X.fill();
 }
 
+// a jagged crack: a dark line with a pale lip, the same every frame (seeded)
+function nestCrack(x0, y0, len, ang, seed, w){
+  const pts=[[x0,y0]]; let x=x0, y=y0, a=ang;
+  for(let i=0;i<5;i++){ a += Math.sin(seed*7.3+i*2.1)*0.55; const l=len/5;
+    x += Math.cos(a)*l; y += Math.sin(a)*l; pts.push([x,y]); }
+  X.save(); X.lineCap='round'; X.lineJoin='round';
+  X.strokeStyle='rgba(230,255,190,.35)'; X.lineWidth=w+2.5; X.beginPath(); pts.forEach((p,i)=> i? X.lineTo(p[0]+1,p[1]+1.5) : X.moveTo(p[0]+1,p[1]+1.5)); X.stroke();
+  X.strokeStyle='#1c3514'; X.lineWidth=w; X.beginPath(); pts.forEach((p,i)=> i? X.lineTo(p[0],p[1]) : X.moveTo(p[0],p[1])); X.stroke();
+  // a little side split off the middle
+  const m=pts[2]; X.lineWidth=Math.max(1.5,w*0.6); X.beginPath(); X.moveTo(m[0],m[1]); X.lineTo(m[0]+Math.cos(ang+1.1)*len*0.28, m[1]+Math.sin(ang+1.1)*len*0.28); X.stroke();
+  X.restore();
+}
 function drawEnemyBase(hp, maxhp){
   const x=E_BASE_X, y=GY;
+  // how hurt is it? 0 = whole, 1 = cracked (under 2/3), 2 = breaking (under 1/3), 3 = destroyed
+  const p = maxhp>0 ? hp/maxhp : 1;
+  const stage = hp<=0 ? 3 : p < 1/3 ? 2 : p < 2/3 ? 1 : 0;
+  if(B && !B.isXpMenu){
+    if(B.nestStage==null) B.nestStage = stage;
+    if(stage > B.nestStage){                         // it just got worse: a crunch and a shower of chunks
+      B.nestStage = stage;
+      SFX.slam(); tone(80,0.3,'square',0.12,40); shake = Math.max(shake, stage===3? 20 : 9);
+      for(let q=0;q<(stage===3? 40 : 18);q++) B.parts.push({x:x+(Math.random()-0.5)*150, y:y-40-Math.random()*130,
+        vx:(Math.random()-0.5)*320, vy:-80-Math.random()*220, r:3+Math.random()*7, life:0.6+Math.random()*0.6, t:0,
+        col: Math.random()<0.5?'#79c355':'#3f6a2c', g:520});
+    }
+  }
+  // destroyed: it slumps down into the ooze over a second
+  const fall = (stage===3 && B && B.over) ? Math.min(1, (B.overT||0)/1.0) : 0;
   shadow(x, 74, 0.3);
   // ooze pool
   X.fillStyle='rgba(40,120,30,.45)';
   X.beginPath(); X.ellipse(x, y+2, 92, 16, 0,0,7); X.fill();
+  X.save();
+  if(fall>0){ X.translate(x, y); X.scale(1 + 0.25*fall, 1 - 0.62*fall); X.translate(-x, -y); }
   // layered gooey ziggurat
   const layers=[[92,42,0,0],[72,44,-56,-9],[54,38,-102,7],[33,30,-136,-4]];
   for(let i=0;i<layers.length;i++){
     const [rx,ry,oy,ox]=layers[i];
+    const slump = stage>=2 && i>=2 ? (i===3 ? 0.30 : 0.10) : 0;             // breaking: the top tiers lean off
+    if(slump){ X.save(); X.translate(x+ox, y+oy+ry*0.4); X.rotate(slump); X.translate(-(x+ox), -(y+oy+ry*0.4)); }
     gooPath(x+ox, y+oy-ry*0.4, rx, ry, 0.075, 5, T*0.8+i, i*2.3, true);
     const g=X.createLinearGradient(0,y+oy-ry,0,y+oy+ry);
     g.addColorStop(0,'#c6ec93'); g.addColorStop(0.5,'#79c355'); g.addColorStop(1,'#3f7f2c');
     X.fillStyle=g; X.fill(); X.lineWidth=4; X.strokeStyle='#3f6a2c'; X.stroke();
     X.save(); X.clip(); X.globalAlpha=0.3; X.fillStyle='#e6ffb0';
     X.beginPath(); X.ellipse(x-rx*0.4, y+oy-ry*0.8, rx*0.4, ry*0.2, -0.4,0,7); X.fill(); X.restore();
+    if(slump) X.restore();
   }
   // hanging drips from each layer
   X.fillStyle='#79c355';
@@ -4671,9 +4857,20 @@ function drawEnemyBase(hp, maxhp){
     X.beginPath(); X.moveTo(px-5,base); X.quadraticCurveTo(px, base+22+dl, px+5, base); X.closePath(); X.fill();
     X.beginPath(); X.arc(px, base+18+dl, 4.5,0,7); X.fill();
   }
+  // the damage: cracks spread as it weakens, and at a third a chunk is torn out of the top tier
+  if(stage>=1){
+    nestCrack(x-58, y-8, 64, -1.15, 1, 5); nestCrack(x+44, y-50, 58, -2.05, 2, 5); nestCrack(x-12, y-100, 44, -0.8, 3, 4.5);
+  }
+  if(stage>=2){
+    nestCrack(x+70, y-6, 70, -2.3, 4, 6); nestCrack(x-70, y-66, 60, -0.55, 5, 5.5); nestCrack(x+20, y-132, 38, 2.2, 6, 4.5);
+    nestCrack(x-30, y-46, 50, 0.35, 7, 5);
+    X.save(); X.globalAlpha=0.30; X.fillStyle='#1c3514';                    // bruised, sagging patches
+    for(const [bx,by,br] of [[x+36,y-30,22],[x-44,y-82,18],[x+10,y-120,14]]){ X.beginPath(); X.ellipse(bx, by, br*1.4, br, 0.3, 0, 7); X.fill(); }
+    X.restore();
+  }
   // cave mouth + glowing core
   X.fillStyle='#0e2f0b'; X.beginPath(); X.ellipse(x, y-24, 30, 26, 0,0,7); X.fill();
-  const pulse=0.7+Math.sin(T*3)*0.3;
+  const pulse = stage===3 ? 0 : stage===2 ? (Math.sin(T*11)>0.2 ? 0.9 : 0.25) : 0.7+Math.sin(T*3)*0.3;   // flickers when it's failing
   X.save(); X.globalCompositeOperation='lighter';
   const cg=X.createRadialGradient(x,y-26,2,x,y-26,34);
   cg.addColorStop(0,'rgba(190,255,120,'+(0.7*pulse)+')'); cg.addColorStop(1,'rgba(120,220,60,0)');
@@ -4684,11 +4881,25 @@ function drawEnemyBase(hp, maxhp){
   for(const [sx,sy,h] of [[x-64,y-46,26],[x+66,y-42,22],[x-40,y-118,18],[x+44,y-112,20]]){
     X.beginPath(); X.moveTo(sx-6,sy); X.lineTo(sx, sy-h); X.lineTo(sx+6,sy); X.closePath(); X.fill();
   }
-  // crown on top
-  X.fillStyle='#ffd84a';
-  X.beginPath(); X.moveTo(x-22,y-168); X.lineTo(x-22,y-188); X.lineTo(x-11,y-178); X.lineTo(x,y-194);
-  X.lineTo(x+11,y-178); X.lineTo(x+22,y-188); X.lineTo(x+22,y-168); X.closePath(); X.fill();
-  X.lineWidth=2.5; X.strokeStyle='#a97c0a'; X.stroke();
+  X.restore();
+  // crown on top: it slips as the nest cracks, hangs off the edge when it's breaking, and falls when it's gone
+  const crown = (cx2, cy2, ang) => { X.save(); X.translate(cx2, cy2); X.rotate(ang);
+    X.fillStyle='#ffd84a';
+    X.beginPath(); X.moveTo(-22,0); X.lineTo(-22,-20); X.lineTo(-11,-10); X.lineTo(0,-26);
+    X.lineTo(11,-10); X.lineTo(22,-20); X.lineTo(22,0); X.closePath(); X.fill();
+    X.lineWidth=2.5; X.strokeStyle='#a97c0a'; X.stroke(); X.restore(); };
+  if(stage===0) crown(x, y-168, 0);
+  else if(stage===1) crown(x+4, y-167, 0.16);
+  else if(stage===2) crown(x+34, y-150, 0.75 + Math.sin(T*2.4)*0.04);   // slid down the leaning top
+  else {                                              // tumbling off and landing in the ooze
+    const q = B && B.over ? Math.min(1, (B.overT||0)/0.8) : 1;
+    crown(x+34+q*50, (y-150) + q*q*140, 0.75 + q*1.8);
+  }
+  if(fall>0){                                         // a dust cloud as it goes down
+    X.save(); X.globalAlpha = 0.55*(1-fall*0.6); X.fillStyle='#cfe6b8';
+    for(let i=0;i<6;i++){ const dx=(i-2.5)*34, rr2=26+fall*30+(i%2)*8; X.beginPath(); X.arc(x+dx, y-14-fall*12, rr2, 0, 7); X.fill(); }
+    X.restore();
+  }
 }
 
 function basePanel(x, y, w, label, hp, max, col, kind, dir){
@@ -4706,6 +4917,27 @@ function basePanel(x, y, w, label, hp, max, col, kind, dir){
   X.fillStyle='rgba(255,255,255,.35)'; rr(x+62, y+29.5, Math.max(2,(w-78)*p), 4, 2); X.fill();
   X.fillStyle='#ffffff'; X.font='800 12px ui-rounded, Trebuchet MS, sans-serif'; X.textAlign='right';
   X.fillText(Math.ceil(hp)+' / '+max, x+w-16, y+39); X.textAlign='left';
+  X.restore();
+}
+
+/* GODLY units get a gold frame: a bright double rule with stars in the corners; in the lab a light sweeps across it */
+function godlyFrame(x, y, w, h, r, alpha, sweep){
+  X.save(); X.globalAlpha *= alpha;
+  const g = X.createLinearGradient(x, y, x+w, y+h);
+  g.addColorStop(0, '#fff3b0'); g.addColorStop(0.35, '#ffcf3a'); g.addColorStop(0.65, '#c8901a'); g.addColorStop(1, '#ffe27a');
+  X.strokeStyle = g; X.lineWidth = 4; rr(x+1.5, y+1.5, w-3, h-3, r); X.stroke();
+  X.strokeStyle = 'rgba(255,240,180,.55)'; X.lineWidth = 1.2; rr(x+5.5, y+5.5, w-11, h-11, Math.max(2, r-4)); X.stroke();
+  X.fillStyle = '#ffe58a';
+  for(const [sx,sy] of [[x+6,y+6],[x+w-6,y+6],[x+6,y+h-6],[x+w-6,y+h-6]]){
+    X.beginPath(); for(let i=0;i<8;i++){ const a=i*Math.PI/4, rad = i%2? 1.6 : 4.2; X.lineTo(sx+Math.cos(a)*rad, sy+Math.sin(a)*rad); } X.closePath(); X.fill();
+  }
+  if(sweep){                                          // the lab only: a slow glint sliding along the frame
+    const ph = (T*0.45)%1, gx = x - w*0.4 + ph*w*1.8;
+    X.save(); rr(x, y, w, h, r); X.clip(); X.globalCompositeOperation='lighter';
+    const sg = X.createLinearGradient(gx-40, y, gx+40, y+h);
+    sg.addColorStop(0, 'rgba(255,240,180,0)'); sg.addColorStop(0.5, 'rgba(255,240,180,.22)'); sg.addColorStop(1, 'rgba(255,240,180,0)');
+    X.fillStyle = sg; X.fillRect(x, y, w, h); X.restore();
+  }
   X.restore();
 }
 
@@ -4886,8 +5118,9 @@ function drawBG(L, dt){
   }
   if(L.snow){                          // snow drifting down the whole field, fixed by index so it never pops
     X.save(); X.fillStyle='#ffffff';
-    for(let i=0;i<Math.round(70*FW/W);i++){
-      const sp = 22 + (i%7)*7, x = ((i*131.7) + Math.sin(T*0.8+i)*18 + T*10) % FW, y = ((i*57.3) + T*sp) % (GY+20) - 10;
+    const storm = L.snow>=2;                          // a blizzard: twice the snow, and the wind drives it sideways
+    for(let i=0;i<Math.round((storm? 150 : 70)*FW/W);i++){
+      const sp = (22 + (i%7)*7)*(storm? 1.6 : 1), x = (((i*131.7) + Math.sin(T*0.8+i)*18 - T*(storm? 140 : -10)) % FW + FW) % FW, y = ((i*57.3) + T*sp) % (GY+20) - 10;
       X.globalAlpha = 0.55 + 0.35*((i*13)%10)/10;
       X.beginPath(); X.arc(x, y, 1.3 + (i%4)*0.6, 0, 7); X.fill();
     }
@@ -4919,7 +5152,7 @@ function newBattle(li, isXp){
   aiMode = 0;                   // ...and with you in charge: AI MODE never carries over
   B = {
     li, L,
-    pbHP:baseHP(), pbMax:baseHP(), ebHP:L.bhp, ebMax:L.bhp,
+    pbHP:baseHP(), pbMax:baseHP(), ebHP:Math.round(L.bhp*lvEase(L)), ebMax:Math.round(L.bhp*lvEase(L)),
     units:[], parts:[], shots:[], rings:[],
     juice:100, inc:income(), cap:juiceCap(), wealth:0,
     cd:{blob:0, golden:0, baby:0, doctor:0, hitman:0, mage:0, elder:0, reaper:0, aero:0, chonk:0, sword:0, dino:0, boom:0, jumper:0, fierce:0}, used:{},
@@ -4932,12 +5165,19 @@ function newBattle(li, isXp){
   };
   for(const k of teamUnits()) if(B.cd[k]==null) B.cd[k]=0;
   if(!isXp && li===0 && !save.tut) B.tut = {step:0, t:0};   // first time on level 1: show them the ropes
+  if(!isXp && !B.tut && save.tryOut && save.lv[save.tryOut] > 0){   // a freshly unlocked blob to try out
+    ensureInSquad(save.tryOut); B.cd[save.tryOut] = 0;
+    B.tryOut = {k:save.tryOut, step:0, t:0};
+  }
   startMusic('battle');
   if(L.bossMusic) musPreload('boss'); else if(L.boss || L.bossWaves) musPreload('miniboss');
 }
+// EASE: a level can be softened (<1) or toughened (>1) as a whole — every enemy's HP and damage (bosses too) and the nest
+function lvEase(L){ return (L && L.ease) || 1; }
 function espec(k, field){
   const o = B && B.L.enemy && B.L.enemy[k];
-  return (o && o[field]!==undefined) ? o[field] : U[k][field];
+  const v = (o && o[field]!==undefined) ? o[field] : U[k][field];
+  return (B && (field==='hp' || field==='dmg') && typeof v==='number') ? v*lvEase(B.L) : v;
 }
 function slotCount(){ return Math.min(TEAM_SLOTS, FREE_SLOTS + (save.slots||0)); }
 function slotCost(i){ return SLOT_COST[i-FREE_SLOTS]; }            // i is the slot index, 5..9
@@ -4974,7 +5214,6 @@ function unlockedUnits(){
   if(save.lv.chonk>0) out.push('chonk');
   if(save.lv.sword>0) out.push('sword');
   if(save.lv.dino>0) out.push('dino');
-  if(save.lv.boom>0) out.push('boom');
   if(save.lv.jumper>0) out.push('jumper');
   if(save.lv.fierce>0) out.push('fierce');
   return out;
@@ -4995,7 +5234,8 @@ function finaleWave(){
   const F=B.L.finale;
   B.finaleDone = 1;
   shockwave(E_FRONT-40, '#c9b8ff');             // his last word, the same blast he walked in on
-  for(let i=0;i<(F.n||3);i++) B.pendingK.push({t:i*(F.gap||1), k:F.k});
+  for(let i=0;i<(F.n||3);i++) B.pendingK.push({t:i*(F.gap||1), k:F.k, mark:F.boss?1:0});
+  if(F.then) B.pendingK.push({t:F.then.t, k:F.then.k, mark:1});            // ...and one more on its heels
 }
 function bossEntry(u){ shockwave(u.x, U[u.k].c[0]); }
 function shockwave(sx, col){
@@ -5053,6 +5293,7 @@ function buyWealth(){
 function tryDeploy(k){
   const d=U[k];
   if(B.over||B.paused) return;
+  if(B.tryOut && B.tryOut.step===0 && k!==B.tryOut.k){ SFX.deny(); return; }   // this one first
   if(d.once && B.used[k]){ SFX.deny(); return; }   // one of him a battle, and that is that
   if(B.cd[k]>0){ SFX.deny(); return; }
   if(B.juice < d.cost){ SFX.deny(); return; }
@@ -5061,9 +5302,64 @@ function tryDeploy(k){
   const u=spawnUnit(k);
   SFX.spawn();
   for(let i=0;i<10;i++) puff(u.x, GY-14, U[k].c[1]);
+  if(B.tryOut && B.tryOut.step===0 && k===B.tryOut.k){       // there he goes: the fight starts, and a word on him
+    B.tryOut.step = 1; B.tryOut.t = 0; delete save.tryOut; persist();
+    B.juice = Math.min(B.cap, B.juice + d.cost);           // and the juice really is on us
+  }
   if(d.hitman) launchHitman(u);
+  else if(d.aero || d.reap || d.elderCane) beginEntrance(u, d.aero? 'aero' : d.reap? 'reaper' : 'elder');
   if(B.tut && B.tut.step===0) tutNext();
 }
+/* ---- GODLY ENTRANCES. AERO rockets down out of the sky, the REAPER climbs up out of the ground,
+   the ELDERLY BLOB is lowered down a beam of gold light. Nothing can touch them until they've arrived. ---- */
+function beginEntrance(u, kind){
+  if(kind==='reaper'){                               // the existing "rising out of the dirt", plus a cold mist
+    u.rise = 1;
+    for(let i=0;i<16;i++) B.parts.push({x:u.x+(Math.random()-0.5)*60, y:GY-4, vx:(Math.random()-0.5)*60, vy:-20-Math.random()*60,
+      r:5+Math.random()*8, life:0.8+Math.random()*0.6, t:0, col: Math.random()<0.5?'#3d3950':'#6b6585', g:-20});
+    tone(70,0.8,'sine',0.14,40); noise(0.7,0.08,600,200,0.6);
+    return;
+  }
+  const land = u.x + (kind==='aero' ? 40 : 0);
+  u.fly = {entry:1, kind, t:0, dur: kind==='aero' ? 0.85 : 1.25, x0: kind==='aero' ? u.x-200 : u.x, x1: land, h: kind==='aero' ? 420 : 170};
+  u.flyZ = u.fly.h; u.x = u.fly.x0;
+  if(kind==='aero'){ noise(0.8,0.12,3000,600,0.8); tone(300,0.8,'sawtooth',0.06,900); }
+  else { tone(660,1.1,'sine',0.07,990); tone(990,1.1,'triangle',0.05,1320,0.2); }
+}
+function entranceTick(u, udt){
+  const e = u.fly; e.t += udt; const q = Math.min(1, e.t/e.dur);
+  u.moving = e.kind==='aero';                       // the rockets roar all the way down
+  if(e.kind==='aero'){
+    const ez = 1 - Math.pow(1-q, 2);
+    u.x = e.x0 + (e.x1-e.x0)*ez; u.flyZ = e.h*(1-ez);
+    if(Math.random()<0.8) B.parts.push({x:u.x-30, y:GY-40-u.flyZ, vx:-60-Math.random()*80, vy:60+Math.random()*80, r:4+Math.random()*6,
+      life:0.5+Math.random()*0.4, t:0, col: Math.random()<0.4?'#ffb35a':'#c9ced6', g:-30});
+  } else {
+    const ez = 1 - Math.pow(1-q, 3);
+    u.flyZ = e.h*(1-ez);
+    if(Math.random()<0.5) B.parts.push({x:u.x+(Math.random()-0.5)*50, y:GY-Math.random()*200, vx:0, vy:-30-Math.random()*40, r:2+Math.random()*2.5,
+      life:0.6+Math.random()*0.5, t:0, col: Math.random()<0.5?'#fff4c0':'#ffd63a', g:-10});
+  }
+  if(q >= 1){
+    const kind = e.kind; u.fly = null; u.flyZ = 0; u.x = e.x1;
+    if(kind==='aero'){                               // touchdown
+      SFX.boom(); shake = Math.max(shake, 10); ring(u.x, GY-6, '#ffd08a', 10, 120, 0.42, 7); ring(u.x, GY-6, '#ffffff', 8, 80, 0.3, 5);
+      for(let i=0;i<16;i++) puff(u.x+(Math.random()-0.5)*50, GY-6, '#d9dee6', -90);
+    } else {
+      SFX.ready(); ring(u.x, GY-30, '#fff1a8', 10, 110, 0.5, 6);
+      for(let i=0;i<12;i++) puff(u.x+(Math.random()-0.5)*40, GY-6, '#ffe7a0', -70);
+    }
+  }
+}
+function drawEntranceBeam(u){                        // the column of gold light the elder comes down
+  const e = u.fly, q = Math.min(1, e.t/e.dur), a = q < 0.8 ? 1 : (1-q)/0.2;
+  X.save(); X.globalCompositeOperation='lighter'; X.globalAlpha = 0.55*a;
+  const g = X.createLinearGradient(u.x-40, 0, u.x+40, 0);
+  g.addColorStop(0, 'rgba(255,220,120,0)'); g.addColorStop(0.5, 'rgba(255,240,180,.9)'); g.addColorStop(1, 'rgba(255,220,120,0)');
+  X.fillStyle = g; X.fillRect(u.x-40, -200, 80, GY+206);
+  X.restore();
+}
+
 /* ---- HIT MAN BLOB: lights a stick of dynamite, rides the blast to the far side, turns round and shoots ---- */
 function launchHitman(u){
   // clean over the other army, landing out in the field — well clear of their base and of where they deploy
@@ -5099,22 +5395,15 @@ function hitmanTick(u, d, udt){
   }
   // is anyone at all still on the other side? (behind his back counts — he just can't aim there)
   const anyFoe = B.units.some(o => o.team!==u.team && !o.dead && !o.dying && !o.fly);
-  // the TOP HIT MAN never stands idle: nobody in front? he swings round and shoots whoever is behind him
   u.aimBack = false;
-  if(d.doom && !t){
-    for(const o of B.units){
-      if(o.team===u.team || o.dead || o.dying || o.air || o.fly) continue;
-      const dd = Math.abs(o.x - u.x);
-      if(dd < bd){ bd=dd; t=o; u.aimBack = true; }
-    }
-  }
-  if(d.doom){                                        // TOP HIT MAN: everyone gone? he turns round
-    if(anyFoe || doomPending()){ u.doomT = 0; }
+  if(d.doom){                                        // TOP HIT MAN: nobody in front of him? he turns round and it's over
+    if(t || doomPending()){ u.doomT = 0; }
     else {
-      if(!u.doomT){ SFX.charge(); tone(90,1.4,'sawtooth',0.12,420); }
+      if(!u.doomT){ SFX.charge(); tone(90,0.6,'sawtooth',0.12,420); }
       u.doomT = (u.doomT||0) + udt;
-      if(u.doomT >= 1.6){ fireBig(u, Infinity, 1); u.doomT = 0; }
+      if(u.doomT >= 0.6){ fireBig(u, Infinity, 1); u.doomT = 0; u.turnHold = 0.6; }   // the giant bullet, the moment he's round
     }
+    if(u.turnHold > 0) u.turnHold -= udt;
   }
   if(d.hitslime && !d.doom && (u.leaving || !t)){         // nobody directly in front of him: your base pays (upgrade that armour)
     const nestX = u.team<0 ? E_BASE_X : P_BASE_X;
@@ -5123,7 +5412,10 @@ function hitmanTick(u, d, udt){
       u.moving = true; u.doomT = 0;
       u.x += home*280*(u.slowT>0 ? 0.5 : 1)*udt;
       if(Math.random()<0.25) puff(u.x - home*10, GY-6, '#cfc6ba', -30);
-      if((nestX - u.x)*home <= 0){ u.vanish = true; for(let i=0;i<8;i++) puff(nestX, GY-20, '#9fcf7a', -60); }
+      if((nestX - u.x)*home <= 0){
+        u.vanish = true; for(let i=0;i<8;i++) puff(nestX, GY-20, '#9fcf7a', -60);
+        B.killed[u.k] = (B.killed[u.k]||0) + 1;     // gone is gone: he still counts toward the three that bring the Top Hit Man
+      }
       return;
     }
     if(!u.doomT){ tone(140,0.8,'sawtooth',0.08,420); }
@@ -5650,6 +5942,9 @@ function updateFX(dt){
 
 function updateBattle(dt){
   const L=B.L;
+  if(B.tryOut && B.tryOut.step===0 && !B.over){     // the fight holds still until the new blob goes in
+    const k=B.tryOut.k; B.juice = Math.max(B.juice, U[k].cost); B.cd[k] = 0; return;
+  }
   if(B.over==='win' && B.winT!=null){            // VICTORY: confetti over the cheering squad, then the scoreboard
     const fans = B.units.filter(u => u.team>0 && !u.dead && !u.dying);
     if(fans.length && Math.random() < 0.55){
@@ -5725,6 +6020,8 @@ function updateBattle(dt){
       B.ekT -= dt;
       if(B.ekT<=0){ B.ekT = L.everyK.t; spawnUnit(L.everyK.k); }
     }
+    if(!L.bossWaves && L.finale && !B.finaleDone && L.finale.after
+       && (B.killed[L.finale.after]||0) >= (L.finale.deaths||2)) finaleWave();
     if(L.bossWaves){
       if(L.finale && !B.finaleDone && L.finale.after
          && (B.killed[L.finale.after]||0) >= (L.finale.deaths||2)) finaleWave();
@@ -5813,6 +6110,7 @@ function updateBattle(dt){
     if(u.freezeT>0){ u.freezeT -= dt; u.moving=false; continue; }   // frozen solid: nothing ticks
     let udt = dt;
     if(u.slowT>0) u.slowT -= dt;                                       // slowed: it walks at half speed (attacks stay at full speed)
+    if(u.fly && u.fly.entry){ entranceTick(u, udt); continue; }   // a godly blob still arriving
     if(d.hitman){ hitmanTick(u, d, udt); continue; }
 
     if(d.heal && !u.air){              // menders work to their own clock
@@ -5929,7 +6227,7 @@ function updateBattle(dt){
           } else {
             dmgUnit(t2, dmg, u.team, u);
           }
-          const icy = U[u.k].icebreath;                      // frost, not goo
+          const icy = U[u.k].icebreath || U[u.k].snowman || U[u.k].avalanche;   // frost, not goo
           ring(ix, iy, icy? '#e6f7ff' : u.team>0?'#bfefff':'#d8ff9a', 4, 26+d.r*0.5, 0.26, 4);
           splat(ix, iy, icy? '#dff4ff' : u.team>0?'#9fdcff':'#b6ee6a', u.k==='chonk'?12:7, u.k==='chonk'?200:120);
           if(u.k==='chonk'){
@@ -6014,6 +6312,17 @@ function updateBattle(dt){
             for(let q=0;q<10;q++) B.parts.push({x:ix+(Math.random()-0.5)*30, y:GY-4,
               vx:(Math.random()-0.5)*260, vy:-40-Math.random()*140, r:3+Math.random()*4,
               life:0.35+Math.random()*0.35, t:0, col:'#dbeeff', g:420});
+          } else if(U[u.k].avalanche){                 // THE STOMP: the ground quakes under the whole area
+            SFX.slam(); tone(55,0.45,'sine',0.30,28); noise(0.45,0.22,900,120,0.7);
+            shake=Math.max(shake,16); hitStop=Math.max(hitStop,0.05);
+            ring(ix, GY-6, '#e6f8ff', 16, d.aoe*1.7, 0.5, 10); ring(ix, GY-6, '#8fcbe8', 12, d.aoe*2.3, 0.7, 7);
+            for(let q=0;q<26;q++) B.parts.push({x:ix+(Math.random()-0.5)*d.aoe*1.8, y:GY-4,
+              vx:(Math.random()-0.5)*300, vy:-120-Math.random()*260, r:3+Math.random()*6,
+              life:0.5+Math.random()*0.5, t:0, col: Math.random()<0.5?'#ffffff':'#bfe6f8', g:560});
+          } else if(U[u.k].snowman){                   // splat: a burst of powder
+            noise(0.12,0.10,2600,800,1.4); tone(420,0.08,'sine',0.06,200);
+            for(let q=0;q<12;q++) B.parts.push({x:ix, y:iy+(Math.random()-0.5)*20, vx:(Math.random()-0.5)*220, vy:-60-Math.random()*160,
+              r:2+Math.random()*4, life:0.35+Math.random()*0.3, t:0, col:'#ffffff', g:420});
           } else if(U[u.k].icebreath){                 // a gust of frost rolls over them
             noise(0.35, U[u.k].yeti? 0.16 : 0.08, 3000, 900, 0.7); tone(U[u.k].yeti? 300 : 520, 0.25, 'sine', 0.06, U[u.k].yeti? 160 : 260);
             ring(ix, iy, '#e6f7ff', 8, d.aoe*1.3, 0.35, 5);
@@ -6123,9 +6432,14 @@ function updateBattle(dt){
           SFX.charge(); tone(180,0.5,'sawtooth',0.12,900);
         }
         if(d.spit && tgt && tgt!=='base'){            // lob the goo so it lands on the hit
+          if(d.throwAt!=null){                          // a snowball leaves the hand early and lands right on the hit
+            B.spits.push({x0:u.x+u.team*U[u.k].r*0.5, y0:GY-U[u.k].r*2.0,
+                          x1:tgt.x, y1:GY-U[tgt.k].r*0.9, t:-u.swT*d.throwAt, dur:u.swT*(hitPoint(u,d)-d.throwAt), col:'#ffffff', snow:1});
+          } else {
           const fly = u.swT*(1-hitPoint(u,d));
           B.spits.push({x0:u.x+u.team*U[u.k].r*0.6, y0:GY-U[u.k].r*1.1,
                         x1:tgt.x, y1:GY-U[tgt.k].r*0.9, t:-u.swT*hitPoint(u,d), dur:fly, col:d.c[1]});
+          }
         }
       }
     } else if(tgt && d.summon){
@@ -6274,6 +6588,7 @@ function cheerHop(u){
   return {hop: Math.sin(q*Math.PI)*30*(u.rs||1), sq: Math.max(0, 1 - q/0.14)*0.22};
 }
 function drawUnit(u){
+  if(u.fly && u.fly.entry && u.fly.kind==='elder') drawEntranceBeam(u);
   const d=U[u.k], dir=u.team;
   const wf=(d.wide||1)*(u.rs||1), vf=(u.rs||1);
   let rx=d.r*wf, ry=d.r*1.02*vf, cx=u.x, cy=GY-d.r*0.98*vf, rot=0;
@@ -6388,7 +6703,7 @@ function drawUnit(u){
                cx+=dir*(-6*e*e + 8*gust*e); rot=dir*0.14*gust*e; }                                         // and it leans into the blow
         cy = GY - ry*0.98;
       }
-      else if(d.phoenix || d.aero){ cy = GY - ry*0.98; }
+      else if(d.phoenix || d.aero || d.snowman || d.avalanche){ cy = GY - ry*0.98; }   // these animate inside their own drawing
       else if(d.elderCane || d.reap){ cy = GY - ry*0.98; }
       else if(d.hammer){
         // heave the hammer up over his head, then bring it down with everything he has
@@ -6489,6 +6804,7 @@ function drawUnit(u){
       lift += 120 * (pp<0.14 ? ss(pp/0.14) : pp>0.95 ? 1-ss((pp-0.95)/0.05) : 1); }
     cy -= lift;
   }
+  if(u.fly && u.fly.entry) cy -= (u.flyZ||0);          // a godly entrance, still on its way down
   if(u.rise>0) cy += ry*2.3*u.rise*u.rise;             // climbing up out of the dirt
   X.save(); X.globalAlpha=a*(u.undead? 0.92 : 1);
   if(u.rise>0){ X.beginPath(); X.rect(-1e4, -1e4, 3e4, GY+6+1e4); X.clip(); }
@@ -6533,6 +6849,8 @@ function drawUnit(u){
   else if(d.lord) drawLord(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.shroom) drawShroom(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.yeti) drawYeti(u,cx,cy,rx,ry,dir,u.flash);
+  else if(d.snowman) drawSnowman(u,cx,cy,rx,ry,dir,u.flash);
+  else if(d.avalanche) drawAvalanche(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.iceSlime) drawIceBlower(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.spear) drawFrog(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.goop) drawGoop(u,cx,cy,rx,ry,dir,u.flash);
@@ -6590,7 +6908,7 @@ function drawUnit(u){
   if(d.hpbar && !u.dead && !u.dying)
     hpBarSmall(cx, cy - ry*1.35, 46, u.hp/u.max, '#ff9a4a');
   if(!u.dead && !u.dying && !u.rise && u.team<0 && d.traits){               // what it is, at a glance
-    const tr=d.traits, iy = cy - ry*(d.lord? 2.75 : d.phoenix||d.devil? 1.6 : 1.30) - 8;
+    const tr=d.traits, iy = cy - ry*(d.lord? 2.75 : d.snowman? 3.0 : d.avalanche? 2.9 : d.phoenix||d.devil? 1.6 : 1.30) - 8;   // tall ones wear it over the head
     tr.forEach((t,i)=> traitIcon(t, cx + (i-(tr.length-1)/2)*15, iy, 6));
   }
   if(u.freezeT>0 && !u.dead){                            // frozen: an ice shell over it
@@ -6759,6 +7077,15 @@ function drawFX(){
   }
   for(const sp of B.spits){                  // brine arcing toward its mark
     if(sp.t<0) continue;
+    if(sp.snow){                              // a snowball: a high lob with a little powder trail
+      const q=Math.min(1, sp.t/sp.dur), arc=Math.max(90, Math.abs(sp.x1-sp.x0)*0.35);
+      const x=sp.x0+(sp.x1-sp.x0)*q, y=sp.y0+(sp.y1-sp.y0)*q - Math.sin(q*Math.PI)*arc;
+      X.save(); X.globalAlpha=0.45; X.fillStyle='#ffffff';
+      for(let i=1;i<=3;i++){ const qq=Math.max(0,q-i*0.05); X.beginPath();
+        X.arc(sp.x0+(sp.x1-sp.x0)*qq, sp.y0+(sp.y1-sp.y0)*qq - Math.sin(qq*Math.PI)*arc, 6-i*1.4, 0, 7); X.fill(); }
+      X.globalAlpha=1; snowBall(x, y, 8); X.restore();
+      continue;
+    }
     const q=Math.min(1, sp.t/sp.dur);
     const x=sp.x0+(sp.x1-sp.x0)*q, y=sp.y0+(sp.y1-sp.y0)*q - Math.sin(q*Math.PI)*70;
     X.save();
@@ -6881,6 +7208,7 @@ function drawBar(){
   list.forEach((k,i)=>{
     const d=U[k], h=82, x=302+i*(w+gapC), y=BAR_Y+12;
     if(i===0) TUT_AT.card = {x, y, w, h};
+    TUT_AT.cards[k] = {x, y, w, h};
     const spent = !!(d.once && B.used[k]);
     const cdp = B.cd[k]/ucd(k), afford = B.juice>=d.cost && B.cd[k]<=0 && !B.over && !spent;
     const hov = mouse.x>=x&&mouse.x<=x+w&&mouse.y>=y&&mouse.y<=y+h;
@@ -6891,6 +7219,7 @@ function drawBar(){
     cg.addColorStop(0, afford? shade(d.c[1], hov?24:6) : '#3a4c5c'); cg.addColorStop(1, afford? d.c[2] : '#222e39');
     X.fillStyle=cg; rr(x,y-(hov&&afford?2:0),w,h,12); X.fill();
     X.strokeStyle=afford? shade(d.c[2],-24):'#18222b'; X.lineWidth=3; X.stroke();
+    if(UPG[k] && UPG[k].godly) godlyFrame(x, y-(hov&&afford?2:0), w, h, 12, afford? 1 : 0.55, false);   // GODLY: a gold frame (it holds still on the cards)
     const lift=(hov&&afford?2:0), nm=uname(k);
     const pr = Math.min(1, d.r/26);            // a tiny unit gets a tiny portrait
     if(tiny){
@@ -7006,7 +7335,9 @@ function drawMini(k, cx, cy, r, dir, seed){
                      [ 'knife', drawAssassin, 0.88, 0.90],
                      [ 'yeti',  drawYeti,  0.80, 0.80],
                      [ 'iceSlime', drawIceBlower, 0.86, 0.86],
-                     [ 'hitslime', drawHitman, 0.90, 0.92]];
+                     [ 'hitslime', drawHitman, 0.90, 0.92],
+                     [ 'snowman', drawSnowman, 0.80, 0.80],
+                     [ 'avalanche', drawAvalanche, 0.42, 0.42]];
     for(const [flag, fn, fx, fy] of SPECIAL){
       if(!d[flag]) continue;
       const u2={k, seed:seed||1, sw:0, swT:1, blink:0, ph:0, mini:1, armA:0, golemA:0, hold:1, lockX:null};
@@ -7105,7 +7436,7 @@ function drawMini(k, cx, cy, r, dir, seed){
 }
 
 /* ---- LEVEL 1 TUTORIAL: a few pointers, the first time only ---- */
-const TUT_AT = {card:null};
+const TUT_AT = {card:null, cards:{}};
 const TUT_STEPS = [
   {title:'TAP A BLOB TO DEPLOY IT', sub:'each blob costs blob juice (\u00a4)'},
   {title:'BLOB JUICE BUILDS UP OVER TIME', sub:'spend it on more blobs \u00b7 WEALTHY BLOB speeds it up', ok:1, auto:7},
@@ -7166,6 +7497,58 @@ function drawTut(dt){
   btn(bx+bw-74, by+8, 62, 26, 'SKIP', ()=>{ tutDone(); }, {fs:12, r:8, c1:'#5f7d94', c2:'#2b3f52'});
   if(st.ok) btn(bx+bw/2-60, by+bh-30, 120, 26, 'GOT IT', ()=>{ tutNext(); }, {fs:13, r:8, c1:'#8affc9', c2:'#2f9b3f'});
 }
+const TRY_TIPS = {
+  chonk: ['BIG BLOB \u2014 A HEAVY HITTER', 'his belly-flop squashes a whole crowd at once \u00b7 put him in front of groups'],
+  sword: ['SWORD BLOB \u2014 FAST AND SHARP', 'a long, quick slash and fast feet \u00b7 great for cutting down single slimes'],
+  dino:  ['DINO BLOB \u2014 LONG REACH', 'one big bite from a long way back \u00b7 keep him behind your front line']
+};
+function drawTryOut(dt){
+  const to = B.tryOut; to.t += dt;
+  const k = to.k, d = U[k], card = TUT_AT.cards[k] || {x:302, y:BAR_Y+12, w:120, h:82};
+  const pop = Math.min(1, to.t/0.3), sc = 0.85 + 0.15*(1 - Math.pow(1-pop, 3));
+  if(to.step===1 && to.t > 7){ B.tryOut = null; return; }
+  X.save();
+  if(to.step===0){                                    // the field waits, dimmed, while the card glows
+    X.fillStyle='rgba(4,14,24,.45)'; X.fillRect(0, 0, W, BAR_Y);
+    const pul = 0.5 + 0.5*Math.sin(T*6);
+    X.strokeStyle = 'rgba(255,227,106,'+(0.6+0.4*pul)+')'; X.lineWidth = 4 + pul*3;
+    rr(card.x-6, card.y-6, card.w+12, card.h+12, 16); X.stroke();
+  }
+  const bw = 520, bh = to.step===0 ? 150 : 120, tcx = card.x + card.w/2;
+  const bx = Math.max(14, Math.min(W-14-bw, tcx - bw/2)), by = to.step===0 ? BAR_Y - bh - 50 : 128;
+  X.translate(bx+bw/2, by+bh/2); X.scale(sc, sc); X.translate(-(bx+bw/2), -(by+bh/2));
+  X.globalAlpha = pop;
+  X.fillStyle='rgba(4,14,24,.45)'; rr(bx+4, by+6, bw, bh, 16); X.fill();
+  X.fillStyle='rgba(8,26,44,.96)'; rr(bx, by, bw, bh, 16); X.fill();
+  X.strokeStyle='#ffe36a'; X.lineWidth=3; X.stroke();
+  // his portrait on the left of the bubble
+  X.save(); X.beginPath(); X.arc(bx+62, by+bh/2, 40, 0, 7); X.fillStyle='rgba(255,227,106,.12)'; X.fill(); X.restore();
+  stillMini(k, bx+62, by+bh/2+4, k==='chonk'? 26 : 30, 1, 3);
+  X.textAlign='left';
+  if(to.step===0){
+    X.fillStyle='rgba(255,233,168,.95)'; X.font='800 12px ui-rounded, Trebuchet MS, sans-serif';
+    X.fillText('\u2605 NEW BLOB UNLOCKED', bx+120, by+28);
+    X.fillStyle='#ffffff'; X.font='900 24px ui-rounded, Trebuchet MS, sans-serif';
+    X.fillText('TRY OUT YOUR '+d.nm+'!', bx+120, by+62);
+    X.fillStyle='#cfeeff'; X.font='700 14px ui-rounded, Trebuchet MS, sans-serif';
+    X.fillText('tap its card to send it in \u2014 the battle waits for you', bx+120, by+88);
+    X.fillStyle='rgba(207,238,255,.7)'; X.font='700 12px ui-rounded, Trebuchet MS, sans-serif';
+    X.fillText('(the juice is on us this time)', bx+120, by+110);
+    // the arrow, bobbing down at the card
+    const bob = Math.sin(T*6)*6, ax = Math.max(bx+30, Math.min(bx+bw-30, tcx));
+    X.fillStyle='#ffe36a'; X.beginPath();
+    X.moveTo(ax-16, by+bh-2); X.lineTo(ax+16, by+bh-2); X.lineTo(ax, by+bh+30+bob); X.closePath(); X.fill();
+  } else {
+    const tip = TRY_TIPS[k] || [d.nm, ''];
+    X.fillStyle='#ffffff'; X.font='900 21px ui-rounded, Trebuchet MS, sans-serif';
+    X.fillText(tip[0], bx+120, by+46);
+    X.fillStyle='#cfeeff'; X.font='700 13px ui-rounded, Trebuchet MS, sans-serif';
+    const words = tip[1].split(' \u00b7 ');
+    words.forEach((w,i)=> X.fillText(w, bx+120, by+72+i*19));
+  }
+  X.restore();
+  if(to.step===1 && pop>=1) btn(bx+bw-110, by+bh-36, 96, 26, 'GOT IT', ()=>{ B.tryOut = null; }, {fs:13, r:8, c1:'#8affc9', c2:'#2f9b3f'});
+}
 function drawBattle(dt){
   X.save();
   X.translate(-Math.round(B.camX), 0);
@@ -7221,6 +7604,7 @@ function drawBattle(dt){
   btn(W-190, 72, 88, 40, muted?'MUTED':'SOUND', ()=>{ setMute(!muted); }, {fs:14, c1:'#2f5f80', c2:'#173447', r:10});
   btn(W-96, 72, 84, 40, B.paused?'RESUME':'PAUSE', ()=>{ B.paused=!B.paused; }, {fs:14, c1:'#2f5f80', c2:'#173447', r:10});
   if(B.tut && !B.over && !B.paused) drawTut(dt);
+  if(B.tryOut && !B.over && !B.paused) drawTryOut(dt);
 
   if(B.paused && !B.over){
     X.fillStyle='rgba(4,14,24,.72)'; X.fillRect(0,0,W,BAR_Y);
@@ -7616,7 +8000,7 @@ function chunkyBtn(x, y, w, h, label, fn, o){
 let cheatArm = 0;
 const CHEAT_XP = 99999999;
 function cheatAll(){
-  const order = ['blob','chonk','sword','dino','boom','jumper','fierce','golden','baby','mage','doctor','hitman','elder','reaper','aero'];
+  const order = ['blob','chonk','sword','dino','jumper','fierce','golden','baby','mage','doctor','hitman','elder','reaper','aero'];
   for(const k of order.concat(Object.keys(UPG)))           // the main blobs get first claim on the squad
     if(UPG[k] && UPG[k].kind==='unit' && !(save.lv[k]>0)){ save.lv[k]=1; autoEquip(k); }
   save.best  = LEVELS.length;                     // every level open
@@ -7930,7 +8314,7 @@ function pips(x, y, lv, max, col){
 }
 
 const LAB_TABS = [
-  {nm:'BLOBS',      keys:['blob','chonk','sword','dino','boom','jumper','fierce']},
+  {nm:'BLOBS',      keys:['blob','chonk','sword','dino','jumper','fierce']},
   {nm:'RARE BLOBS', keys:['golden','baby','mage','doctor','hitman']},
   {nm:'GODLY BLOBS', keys:['elder','reaper','aero']},
   {nm:'UPGRADES',   keys:['flow','tank','armour','cannon']}
@@ -8022,6 +8406,7 @@ function labCard(k, cx, f){
   X.save(); X.globalAlpha = al;
   X.fillStyle='rgba(6,22,38,.92)'; rr(x, y, w, h, 18*sc); X.fill();
   X.strokeStyle = focus? accent : 'rgba(140,200,240,.22)'; X.lineWidth = focus?3.5:2; X.stroke();
+  if(UPG[k] && UPG[k].godly) godlyFrame(x, y, w, h, 18*sc, al, focus);
   if(focus && canEvo){ X.save(); X.globalAlpha=0.10+0.06*Math.sin(T*4);
     X.fillStyle=accent; rr(x,y,w,h,18*sc); X.fill(); X.restore(); }
 
@@ -8738,8 +9123,9 @@ function drawSelect(dt){
     X.fillText(L.nm, x+cw/2, y-lift+sh+42);
     X.font='800 '+Math.round(10*Math.max(0.82,k))+'px ui-rounded, Trebuchet MS, sans-serif';
     X.fillStyle= locked?'#54687a':'#cfeeff';
-    X.fillText((!selTab && i<save.best)? 'NEST '+L.bhp+'  ·  REWARD CLAIMED'
-                                       : 'NEST '+L.bhp+'  ·  +'+L.xp.toLocaleString()+' XP', x+cw/2, y-lift+sh+58);
+    const nestHP = Math.round(L.bhp*lvEase(L));
+    X.fillText((!selTab && i<save.best)? 'NEST '+nestHP+'  ·  REWARD CLAIMED'
+                                       : 'NEST '+nestHP+'  ·  +'+L.xp.toLocaleString()+' XP', x+cw/2, y-lift+sh+58);
     if(selTab){
       X.fillStyle='#ffd86a'; X.font='800 '+Math.round(10*Math.max(0.82,k))+'px ui-rounded, Trebuchet MS, sans-serif';
       X.fillText('FARM  ·  NO PROGRESS', x+cw/2, y-lift+sh+74);
@@ -8797,7 +9183,7 @@ function drawHow(dt){
   const lines=[
     ['#7ef3ff', 'BLOB JUICE fills on its own — spend it to deploy. WEALTHY BLOB (button, or W) raises'],
     ['',        'your flow and your cap mid-battle. Permanent upgrades live in the BLOB LAB.'],
-    unitLine('blob'), unitLine('chonk'), unitLine('sword'), unitLine('dino'), unitLine('boom'), unitLine('jumper'),
+    unitLine('blob'), unitLine('chonk'), unitLine('sword'), unitLine('dino'), unitLine('jumper'),
     unitLine('fierce'), unitLine('golden'), unitLine('baby'), unitLine('mage'),
     ['#ffd86a', 'Max a blob at LV 5, then EVOLVE it. EQUIP picks the five (or ten) you take in.'],
     ['#8ce03e', 'SLIME '+f1(U.slime.hp)+' · CYAN '+f1(U.cyan.hp)+' wall · MAGMA '+f1(U.magma.hp)+
