@@ -3,7 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Anime Card Clash</title>
+<title>Pirates Clash</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Russo+One&family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 @import url('https://fonts.googleapis.com/css2?family=Russo+One&family=Inter:wght@400;600;700;800;900&display=swap');
@@ -18,6 +21,69 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;heigh
 .screen.active{display:flex;animation:screenIn 0.25s ease;}
 @keyframes screenIn{from{opacity:0;transform:scale(0.97);}to{opacity:1;transform:scale(1);}}
 @keyframes flicker{0%{opacity:0.4;transform:scaleY(0.95);}100%{opacity:1;transform:scaleY(1.05);}}
+
+
+/* ===== PIRATES CLASH main menu: a moonlit sea, a ship on the horizon, wooden plank buttons ===== */
+#menu{background:#071022;overflow:hidden;justify-content:center;}
+#menu .pc-scene{position:absolute;inset:0;z-index:0;pointer-events:none;}
+#menu .pc-scene svg{position:absolute;inset:0;width:100%;height:100%;}
+#menu .pc-ship{animation:pcBob 6s ease-in-out infinite;transform-origin:1180px 560px;transform-box:view-box;}
+@keyframes pcBob{0%,100%{transform:translateY(0) rotate(-1.2deg)}50%{transform:translateY(7px) rotate(1.2deg)}}
+#menu .pc-wave{animation:pcWave linear infinite;}
+#menu .pc-wave.w1{animation-duration:16s} #menu .pc-wave.w2{animation-duration:11s;animation-direction:reverse} #menu .pc-wave.w3{animation-duration:8s}
+@keyframes pcWave{from{transform:translateX(0)}to{transform:translateX(-400px)}}
+#menu .pc-glint{animation:pcGlint 3s ease-in-out infinite}
+@keyframes pcGlint{0%,100%{opacity:.35}50%{opacity:.8}}
+#menu .pc-flag{animation:pcFlag 1.4s ease-in-out infinite;transform-box:fill-box;transform-origin:left center}
+@keyframes pcFlag{0%,100%{transform:skewY(0)}50%{transform:skewY(-6deg)}}
+#menu .pc-vignette{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 42%,transparent 40%,rgba(3,6,16,.75) 100%);}
+#menu > div[style*="z-index:1"]{gap:.75rem !important;padding:0 16px;}
+#menu .pc-emblem{width:clamp(70px,11vh,104px);height:clamp(70px,11vh,104px);filter:drop-shadow(0 6px 18px rgba(0,0,0,.6));animation:pcFloat 4s ease-in-out infinite}
+@keyframes pcFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+#menu .menu-title{font-family:'Pirata One','Russo One',serif;font-size:clamp(2.6rem,9vw,4.6rem);line-height:.95;letter-spacing:.02em;text-align:center;
+  color:#ffe9b0;background:none;text-shadow:0 2px 0 #7a4a12,0 4px 0 #5a320a,0 6px 14px rgba(0,0,0,.7),0 0 34px rgba(255,190,80,.25);}
+#menu .menu-title b{display:block;font-weight:400;font-size:1.25em;color:#ffc534;
+  text-shadow:0 -1px 0 #fff3b8,0 2px 0 #b8600c,0 4px 0 #8a4206,0 6px 0 #5e2a04,0 9px 16px rgba(0,0,0,.65),0 0 40px rgba(255,170,40,.35);}
+#menu .menu-btns .btn:last-child{grid-column:1 / -1;}
+#moon-banner:empty{display:none;}
+/* shorter screens: everything tightens up so the whole menu fits */
+@media (max-height:820px){
+  #menu > div[style*="z-index:1"]{gap:.5rem !important;}
+  #menu .pc-emblem{width:62px;height:62px;}
+  #menu .menu-title{font-size:clamp(2.2rem,7vh,3.6rem);}
+  #menu .menu-btns .btn{padding:.55rem .6rem;}
+  #menu .menu-btns .btn.pc-story{padding:.72rem;font-size:1.1rem;}
+}
+@media (max-height:640px){
+  #menu .pc-emblem{display:none;}
+  #menu .menu-btns .btn{padding:.45rem .5rem;font-size:.78rem;}
+  #menu .btn-dark.btn-sm{margin-top:4px !important;padding:.3rem .8rem;}
+}
+#menu .menu-subtitle{position:relative;margin-top:0;padding:.38rem 2.2rem;font-family:'Russo One',sans-serif;font-size:.72rem;letter-spacing:.32em;color:#fff3dc;
+  background:linear-gradient(180deg,#c8343a,#8e1c22);box-shadow:0 3px 0 #5a0e12,0 6px 14px rgba(0,0,0,.45);}
+#menu .menu-subtitle::before,#menu .menu-subtitle::after{content:"";position:absolute;top:6px;width:18px;height:100%;background:#7a161b;z-index:-1}
+#menu .menu-subtitle::before{left:-12px;clip-path:polygon(0 0,100% 0,100% 100%,0 100%,40% 50%)}
+#menu .menu-subtitle::after{right:-12px;clip-path:polygon(0 0,100% 0,60% 50%,100% 100%,0 100%)}
+#menu .menu-btns{grid-template-columns:1fr 1fr;gap:.6rem;width:min(92vw,400px);}
+#menu .menu-btns .btn{position:relative;display:flex;align-items:center;justify-content:center;gap:.45rem;padding:.72rem .6rem;
+  font-family:'Russo One',sans-serif;font-size:.86rem;letter-spacing:.08em;color:#ffeccb !important;text-shadow:0 2px 0 rgba(0,0,0,.55);
+  background:repeating-linear-gradient(90deg,rgba(0,0,0,.06) 0 3px,transparent 3px 11px),linear-gradient(180deg,#9a6532,#6b4120 55%,#553216) !important;
+  border:2px solid #2e1a0a !important;border-radius:9px;box-shadow:inset 0 2px 0 rgba(255,220,170,.25),inset 0 -3px 0 rgba(0,0,0,.25),0 4px 0 #2a1608,0 7px 14px rgba(0,0,0,.45) !important;}
+#menu .menu-btns .btn::before,#menu .menu-btns .btn::after{content:"";position:absolute;top:50%;width:6px;height:6px;margin-top:-3px;border-radius:50%;
+  background:radial-gradient(circle at 35% 35%,#e8e0d0,#7a7468);box-shadow:0 1px 0 rgba(0,0,0,.5)}
+#menu .menu-btns .btn::before{left:9px} #menu .menu-btns .btn::after{right:9px}
+#menu .menu-btns .btn:hover{filter:brightness(1.12);transform:translateY(-2px)}
+#menu .menu-btns .btn:active{transform:translateY(2px);box-shadow:inset 0 2px 0 rgba(255,220,170,.2),0 1px 0 #2a1608 !important}
+#menu .menu-btns .btn .pc-i{font-size:1.05em;filter:drop-shadow(0 1px 0 rgba(0,0,0,.4))}
+#menu .menu-btns .btn.pc-story{grid-column:1 / -1;padding:.95rem;font-size:1.25rem;letter-spacing:.12em;color:#3a1f00 !important;text-shadow:0 1px 0 rgba(255,255,255,.45);
+  background:linear-gradient(180deg,#ffe48a,#ffc23a 45%,#f09a14) !important;border:2px solid #7a4a08 !important;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.6),inset 0 -3px 0 rgba(160,90,0,.35),0 5px 0 #8a5208,0 9px 18px rgba(0,0,0,.5) !important;}
+#menu .menu-btns .btn.pc-story::before,#menu .menu-btns .btn.pc-story::after{background:radial-gradient(circle at 35% 35%,#fff8d8,#b8862a)}
+#menu .menu-info{padding:.32rem .9rem;border-radius:99px;font-size:.78rem;color:#4a2f12;font-weight:700;
+  background:linear-gradient(180deg,#f6e3b8,#e2c48a);box-shadow:0 2px 0 #8a6a3a,0 4px 10px rgba(0,0,0,.35);}
+#menu .menu-info:empty{display:none}
+#menu .btn-dark.btn-sm{background:rgba(10,16,30,.55) !important;border:1px solid #ffffff1f !important;color:#c8d0e0 !important;}
+#menu .menu-particle{text-shadow:0 0 6px #ffe7a0 !important;}
 
 /* MENU */
 #menu{align-items:center;justify-content:center;gap:1.2rem;background:radial-gradient(ellipse at 50% 30%,#1a1f35,var(--bg));}
@@ -625,22 +691,88 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;heigh
 
 <!-- MENU -->
 <div id="menu" class="screen active">
+  <div class="pc-scene" aria-hidden="true">
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice">
+      <defs>
+        <linearGradient id="pc-sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#060c1f"/><stop offset=".55" stop-color="#15244a"/><stop offset=".8" stop-color="#3b3a5e"/><stop offset="1" stop-color="#b8664a"/></linearGradient>
+        <radialGradient id="pc-moonglow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff2c8" stop-opacity=".55"/><stop offset="1" stop-color="#fff2c8" stop-opacity="0"/></radialGradient>
+        <linearGradient id="pc-sea1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c3a66"/><stop offset="1" stop-color="#0e2142"/></linearGradient>
+        <linearGradient id="pc-sea2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#14305a"/><stop offset="1" stop-color="#0a1830"/></linearGradient>
+        <linearGradient id="pc-sea3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d2446"/><stop offset="1" stop-color="#050d1c"/></linearGradient>
+      </defs>
+      <rect width="1600" height="900" fill="url(#pc-sky)"/>
+      <g fill="#fff8e0">
+        <circle cx="120" cy="80" r="1.6" opacity=".8"/><circle cx="260" cy="150" r="1.2" opacity=".6"/><circle cx="380" cy="60" r="1.8" opacity=".9"/><circle cx="520" cy="190" r="1.1" opacity=".5"/>
+        <circle cx="690" cy="90" r="1.5" opacity=".7"/><circle cx="840" cy="40" r="1.2" opacity=".6"/><circle cx="980" cy="140" r="1.6" opacity=".8"/><circle cx="1500" cy="70" r="1.4" opacity=".7"/>
+        <circle cx="1420" cy="200" r="1.1" opacity=".5"/><circle cx="1560" cy="260" r="1.5" opacity=".6"/><circle cx="60" cy="260" r="1.3" opacity=".6"/><circle cx="760" cy="230" r="1" opacity=".5"/>
+      </g>
+      <circle cx="1230" cy="210" r="190" fill="url(#pc-moonglow)"/>
+      <circle cx="1230" cy="210" r="74" fill="#fff0c6"/>
+      <circle cx="1205" cy="190" r="13" fill="#ead8a8" opacity=".6"/><circle cx="1258" cy="236" r="9" fill="#ead8a8" opacity=".5"/><circle cx="1250" cy="182" r="6" fill="#ead8a8" opacity=".5"/>
+      <!-- far islands -->
+      <path d="M0 560 C80 530 140 520 210 540 C260 500 330 495 380 535 C420 528 460 540 500 560 Z" fill="#101c35"/>
+      <path d="M1380 560 C1430 520 1480 510 1530 530 C1560 515 1590 520 1600 525 L1600 560 Z" fill="#101c35"/>
+      <rect x="0" y="558" width="1600" height="342" fill="url(#pc-sea1)"/>
+      <!-- moonlight on the water -->
+      <g class="pc-glint" fill="#ffe8b0">
+        <rect x="1180" y="575" width="110" height="4" rx="2" opacity=".7"/><rect x="1160" y="600" width="150" height="4" rx="2" opacity=".55"/>
+        <rect x="1195" y="628" width="90" height="4" rx="2" opacity=".5"/><rect x="1140" y="660" width="190" height="5" rx="2.5" opacity=".4"/>
+        <rect x="1185" y="700" width="120" height="5" rx="2.5" opacity=".3"/>
+      </g>
+      <!-- the ship on the horizon -->
+      <g class="pc-ship" fill="#0a1222">
+        <path d="M1050 548 L1310 548 L1280 584 L1080 584 Z"/>
+        <path d="M1060 540 L1300 540 L1310 548 L1050 548 Z" fill="#141f36"/>
+        <rect x="1128" y="402" width="6" height="140"/><rect x="1196" y="372" width="7" height="170"/><rect x="1258" y="420" width="5" height="122"/>
+        <path d="M1096 418 Q1131 410 1166 418 L1162 470 Q1131 462 1100 470 Z" fill="#d8cfb8" opacity=".92"/>
+        <path d="M1102 476 Q1131 468 1160 476 L1157 520 Q1131 512 1105 520 Z" fill="#cfc4aa" opacity=".9"/>
+        <path d="M1160 388 Q1199 378 1238 388 L1234 446 Q1199 436 1164 446 Z" fill="#e4dcc6" opacity=".95"/>
+        <path d="M1166 452 Q1199 444 1232 452 L1228 506 Q1199 498 1170 506 Z" fill="#d8cfb8" opacity=".92"/>
+        <path d="M1234 432 Q1260 426 1286 432 L1283 478 Q1260 472 1237 478 Z" fill="#cfc4aa" opacity=".9"/>
+        <g class="pc-flag"><rect x="1203" y="360" width="34" height="22" fill="#111"/>
+          <circle cx="1220" cy="369" r="5" fill="#eee"/><path d="M1212 377 L1228 377 M1214 380 L1226 380" stroke="#eee" stroke-width="1.6"/></g>
+        <path d="M1310 548 L1352 520" stroke="#0a1222" stroke-width="4"/>
+      </g>
+      <!-- rolling waves, three layers -->
+      <g class="pc-wave w1"><path d="M0 600 Q50 588 100 600 T200 600 T300 600 T400 600 T500 600 T600 600 T700 600 T800 600 T900 600 T1000 600 T1100 600 T1200 600 T1300 600 T1400 600 T1500 600 T1600 600 T1700 600 T1800 600 T1900 600 T2000 600 L2000 900 L0 900 Z" fill="url(#pc-sea1)" opacity=".9"/></g>
+      <g class="pc-wave w2"><path d="M0 690 Q60 672 120 690 T240 690 T360 690 T480 690 T600 690 T720 690 T840 690 T960 690 T1080 690 T1200 690 T1320 690 T1440 690 T1560 690 T1680 690 T1800 690 T1920 690 T2040 690 L2040 900 L0 900 Z" fill="url(#pc-sea2)"/>
+        <path d="M0 690 Q60 672 120 690 T240 690 T360 690 T480 690 T600 690 T720 690 T840 690 T960 690 T1080 690 T1200 690 T1320 690 T1440 690 T1560 690 T1680 690 T1800 690 T1920 690 T2040 690" fill="none" stroke="#5d86c0" stroke-opacity=".35" stroke-width="3"/></g>
+      <g class="pc-wave w3"><path d="M0 790 Q100 760 200 790 T400 790 T600 790 T800 790 T1000 790 T1200 790 T1400 790 T1600 790 T1800 790 T2000 790 L2000 900 L0 900 Z" fill="url(#pc-sea3)"/>
+        <path d="M0 790 Q100 760 200 790 T400 790 T600 790 T800 790 T1000 790 T1200 790 T1400 790 T1600 790 T1800 790 T2000 790" fill="none" stroke="#e8f2ff" stroke-opacity=".25" stroke-width="4"/></g>
+    </svg>
+    <div class="pc-vignette"></div>
+  </div>
   <div id="menu-particles" style="position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0;"></div>
   <div style="position:absolute;top:12px;right:12px;z-index:10;cursor:pointer;font-size:1.5rem;opacity:0.6;transition:opacity 0.2s;" onclick="initAudio();goSettings()" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6">⚙️</div>
   <div style="position:absolute;top:12px;right:52px;z-index:10;cursor:pointer;font-size:1.5rem;opacity:0.6;transition:opacity 0.2s;" onclick="initAudio();showSaveSlots()" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6" title="Save files">💾</div>
   <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:1.2rem;">
-  <div class="menu-icon">⚔️</div>
-  <div class="menu-title">ANIME CARD CLASH</div>
+  <svg class="pc-emblem" viewBox="0 0 120 120" aria-hidden="true">
+    <defs><radialGradient id="pc-em" cx=".5" cy=".4" r=".6"><stop offset="0" stop-color="#2a3a5a"/><stop offset="1" stop-color="#0c1428"/></radialGradient>
+      <linearGradient id="pc-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe9a0"/><stop offset="1" stop-color="#d89a20"/></linearGradient></defs>
+    <circle cx="60" cy="60" r="55" fill="url(#pc-em)" stroke="url(#pc-gold)" stroke-width="5"/>
+    <circle cx="60" cy="60" r="47" fill="none" stroke="#ffd56a" stroke-opacity=".35" stroke-width="1.5" stroke-dasharray="3 5"/>
+    <g stroke-linecap="round">
+      <path d="M26 92 L92 26" stroke="#cfd6e0" stroke-width="6"/><path d="M28 26 L94 92" stroke="#cfd6e0" stroke-width="6"/>
+      <path d="M22 96 L32 86 M24 84 L34 94" stroke="#8a5a20" stroke-width="5"/><path d="M98 96 L88 86 M96 84 L86 94" stroke="#8a5a20" stroke-width="5"/>
+    </g>
+    <path d="M60 30 C44 30 36 41 36 53 C36 62 41 67 46 70 L46 78 L74 78 L74 70 C79 67 84 62 84 53 C84 41 76 30 60 30 Z" fill="#f4ecd8" stroke="#1a1208" stroke-width="2"/>
+    <ellipse cx="50" cy="55" rx="7" ry="8" fill="#1a1208"/><ellipse cx="70" cy="55" rx="7" ry="8" fill="#1a1208"/>
+    <path d="M60 62 L56 69 L64 69 Z" fill="#1a1208"/>
+    <path d="M50 78 L50 72 M55 78 L55 72 M60 78 L60 72 M65 78 L65 72 M70 78 L70 72" stroke="#1a1208" stroke-width="2"/>
+    <path d="M34 46 C38 32 50 24 60 24 C70 24 82 32 86 46 C76 40 44 40 34 46 Z" fill="#c8343a" stroke="#1a1208" stroke-width="2"/>
+  </svg>
+  <div class="menu-title">PIRATES<b>CLASH</b></div>
   <div class="menu-subtitle">ONE PIECE EDITION</div>
   <div id="moon-banner" style="margin:0.4rem 0;padding:0.3rem 0.8rem;border:2px solid #888;border-radius:14px;font-size:0.78rem;background:rgba(20,10,40,0.7);text-align:center;min-width:240px;"></div>
   <div class="menu-btns">
-    <button class="btn btn-gold" onclick="initAudio();goStorySelect()">STORY</button>
-    <button class="btn btn-blue" onclick="initAudio();goDeckBuilder()">DECK</button>
-    <button class="btn btn-green" onclick="initAudio();goRoll()">ROLL</button>
-    <button class="btn" style="background:linear-gradient(180deg,#8a3030,#4a1010);color:#ffc940;border:2px solid #ff6030;" onclick="initAudio();goTower()">TOWERS <span id="chaos-ticket-badge-menu" style="display:none;background:#ffd700;color:#000;border-radius:10px;padding:1px 7px;font-size:0.65rem;margin-left:4px;">0</span></button>
-    <button class="btn" style="background:linear-gradient(180deg,#6a5a10,#3a3008);color:#ffd700;border:2px solid #c8a040;" onclick="initAudio();goCraft()">CRAFT</button>
-    <button class="btn" style="background:linear-gradient(180deg,#4a1040,#2a0820);color:#ff60c0;border:2px solid #c040a0;" onclick="initAudio();goChallenges()">CHALLENGES</button>
-    <button class="btn" style="background:linear-gradient(180deg,#2a6040,#103020);color:#50ff90;border:2px solid #40c070;" onclick="initAudio();goTraits()">EVOLUTION</button>
+    <button class="btn btn-gold pc-story" onclick="initAudio();goStorySelect()"><span class="pc-i">🗺️</span>STORY</button>
+    <button class="btn btn-blue" onclick="initAudio();goDeckBuilder()"><span class="pc-i">🃏</span>DECK</button>
+    <button class="btn btn-green" onclick="initAudio();goRoll()"><span class="pc-i">🎲</span>ROLL</button>
+    <button class="btn" style="background:linear-gradient(180deg,#8a3030,#4a1010);color:#ffc940;border:2px solid #ff6030;" onclick="initAudio();goTower()"><span class="pc-i">🗼</span>TOWERS <span id="chaos-ticket-badge-menu" style="display:none;background:#ffd700;color:#000;border-radius:10px;padding:1px 7px;font-size:0.65rem;margin-left:4px;">0</span></button>
+    <button class="btn" style="background:linear-gradient(180deg,#6a5a10,#3a3008);color:#ffd700;border:2px solid #c8a040;" onclick="initAudio();goCraft()"><span class="pc-i">⚒️</span>CRAFT</button>
+    <button class="btn" style="background:linear-gradient(180deg,#4a1040,#2a0820);color:#ff60c0;border:2px solid #c040a0;" onclick="initAudio();goChallenges()"><span class="pc-i">⚔️</span>CHALLENGES</button>
+    <button class="btn" style="background:linear-gradient(180deg,#2a6040,#103020);color:#50ff90;border:2px solid #40c070;" onclick="initAudio();goTraits()"><span class="pc-i">🧬</span>EVOLUTION</button>
     <button class="btn" style="background:linear-gradient(180deg,#5a4a10,#2a2008);color:#ffe080;border:2px solid #c8a040;" onclick="initAudio();goQuests()">📜 QUESTS <span id="quest-badge" style="display:none;background:#ff3060;color:#fff;border-radius:10px;padding:1px 7px;font-size:0.65rem;margin-left:4px;">!</span></button>
   </div>
   <div class="menu-info" id="menu-packs"></div>
@@ -9513,8 +9645,8 @@ function popConfirm(msg,icon){return showPopup(msg,icon||'⚠️',[{text:'Cancel
 // ========== VISUAL POLISH ==========
 function spawnMenuParticles(){
   const c=$('menu-particles');if(!c)return;c.innerHTML='';
-  const colors=['#ffc940','#ff8c60','#4f8aff','#a855f7','#2ed573','#ff4757'];
-  const shapes=['●','★','◆','▲','✦'];
+  const colors=['#ffe7a0','#ffc940','#fff4d8','#9cc4ff'];   // sea-spray and starlight
+  const shapes=['✦','●','✧'];
   for(let i=0;i<22;i++){
     const p=document.createElement('div');
     p.className='menu-particle';
