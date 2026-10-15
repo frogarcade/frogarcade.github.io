@@ -354,54 +354,58 @@
 
       <a class="card" href="anime-card-clash/">
         <div class="thumb">
-          <span class="badge"><i>🃏</i>Cards</span>
+          <span class="badge"><i>🏴‍☠️</i>Cards</span>
           <svg viewBox="0 0 640 400" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
   <defs>
-    <radialGradient id="ac-bg" cx=".65" cy=".4" r=".8"><stop offset="0" stop-color="#4b2488"/><stop offset="1" stop-color="#0d0819"/></radialGradient>
-    <radialGradient id="ac-glow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ff7ad9" stop-opacity=".55"/><stop offset="1" stop-color="#ff7ad9" stop-opacity="0"/></radialGradient>
-    <linearGradient id="ac-red" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff7b88"/><stop offset="1" stop-color="#a3123a"/></linearGradient>
-    <linearGradient id="ac-gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe98a"/><stop offset="1" stop-color="#d27a09"/></linearGradient>
-    <linearGradient id="ac-blue" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7fc4ff"/><stop offset="1" stop-color="#2346b8"/></linearGradient>
+    <linearGradient id="pc-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#070f24"/><stop offset=".6" stop-color="#1a2b55"/><stop offset="1" stop-color="#a65a46"/></linearGradient>
+    <radialGradient id="pc-moon" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff2c8" stop-opacity=".55"/><stop offset="1" stop-color="#fff2c8" stop-opacity="0"/></radialGradient>
+    <linearGradient id="pc-sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1b3864"/><stop offset="1" stop-color="#06101f"/></linearGradient>
+    <linearGradient id="pc-paper" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f8e8bd"/><stop offset="1" stop-color="#d9bb7c"/></linearGradient>
+    <linearGradient id="pc-red" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e2474f"/><stop offset="1" stop-color="#7a1018"/></linearGradient>
+    <linearGradient id="pc-navy" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3f6bc4"/><stop offset="1" stop-color="#12285e"/></linearGradient>
   </defs>
-  <rect width="640" height="400" fill="url(#ac-bg)"/>
-  <g stroke="#ffffff10" stroke-width="2">
-    <path d="M430,160 L0,0 M430,160 L220,0 M430,160 L640,0 M430,160 L640,220 M430,160 L0,260 M430,160 L640,400"/>
+  <rect width="640" height="260" fill="url(#pc-sky)"/>
+  <g fill="#fff6dc"><circle cx="40" cy="40" r="1.4" opacity=".8"/><circle cx="120" cy="90" r="1" opacity=".6"/><circle cx="210" cy="30" r="1.5" opacity=".8"/><circle cx="300" cy="70" r="1" opacity=".5"/>
+    <circle cx="380" cy="24" r="1.3" opacity=".7"/><circle cx="460" cy="110" r="1" opacity=".5"/><circle cx="90" cy="160" r=".9" opacity=".4"/><circle cx="330" cy="140" r="1.1" opacity=".5"/></g>
+  <circle cx="330" cy="70" r="70" fill="url(#pc-moon)"/><circle cx="330" cy="70" r="26" fill="#fff0c6"/>
+  <circle cx="322" cy="63" r="5" fill="#ead8a8" opacity=".6"/><circle cx="338" cy="80" r="3.5" fill="#ead8a8" opacity=".5"/>
+  <path d="M0 256 C40 238 80 236 120 248 C150 228 190 230 220 252 L220 258 L0 258 Z" fill="#0f1b34"/>
+  <rect y="256" width="640" height="144" fill="url(#pc-sea)"/>
+  <g fill="#ffe8b0" opacity=".55"><rect x="306" y="266" width="50" height="3" rx="1.5"/><rect x="296" y="282" width="70" height="3" rx="1.5" opacity=".7"/><rect x="310" y="298" width="44" height="3" rx="1.5" opacity=".5"/></g>
+  <!-- the ship on the horizon -->
+  <g transform="translate(176,256) scale(.62)" fill="#0a1222">
+    <path d="M-120 -10 L120 -10 L95 26 L-95 26 Z"/>
+    <rect x="-54" y="-150" width="5" height="142"/><rect x="2" y="-178" width="6" height="170"/><rect x="58" y="-128" width="4" height="120"/>
+    <path d="M-84 -136 Q-52 -144 -20 -136 L-23 -86 Q-52 -94 -81 -86 Z" fill="#d8cfb8"/><path d="M-80 -80 Q-52 -88 -24 -80 L-27 -38 Q-52 -46 -77 -38 Z" fill="#cfc4aa"/>
+    <path d="M-32 -166 Q5 -176 42 -166 L38 -108 Q5 -118 -28 -108 Z" fill="#e4dcc6"/><path d="M-26 -102 Q5 -110 36 -102 L32 -50 Q5 -58 -22 -50 Z" fill="#d8cfb8"/>
+    <path d="M34 -118 Q60 -124 86 -118 L83 -74 Q60 -80 37 -74 Z" fill="#cfc4aa"/>
+    <rect x="8" y="-196" width="34" height="20" fill="#111"/><circle cx="25" cy="-187" r="5" fill="#eee"/>
   </g>
-  <circle cx="470" cy="150" r="200" fill="url(#ac-glow)"/>
-  <g transform="translate(470,262) scale(.92) rotate(-22)">
-      <g transform="translate(0,-200)">
-        <rect x="-66" y="0" width="132" height="184" rx="14" fill="url(#ac-red)" stroke="#ffffff55" stroke-width="2"/>
-        <rect x="-56" y="10" width="112" height="164" rx="9" fill="none" stroke="#ffffff60" stroke-width="2"/>
-        <rect x="-56" y="10" width="112" height="60" rx="9" fill="#ffffff18"/>
-        <path transform="translate(0,86) scale(2.2)" d="M0,-16 L4.7,-6.5 L15.2,-4.9 L7.6,2.5 L9.4,12.9 L0,8 L-9.4,12.9 L-7.6,2.5 L-15.2,-4.9 L-4.7,-6.5Z" fill="#fff"/>
-        <rect x="-40" y="142" width="80" height="8" rx="4" fill="#ffffff55"/>
-        <rect x="-28" y="156" width="56" height="6" rx="3" fill="#ffffff35"/>
-      </g>
-    </g>
-  <g transform="translate(470,262) scale(.92) rotate(22)">
-      <g transform="translate(0,-200)">
-        <rect x="-66" y="0" width="132" height="184" rx="14" fill="url(#ac-blue)" stroke="#ffffff55" stroke-width="2"/>
-        <rect x="-56" y="10" width="112" height="164" rx="9" fill="none" stroke="#ffffff60" stroke-width="2"/>
-        <rect x="-56" y="10" width="112" height="60" rx="9" fill="#ffffff18"/>
-        <circle cx="0" cy="86" r="26" fill="none" stroke="#fff" stroke-width="6"/><circle cx="0" cy="86" r="9" fill="#fff"/>
-        <rect x="-40" y="142" width="80" height="8" rx="4" fill="#ffffff55"/>
-        <rect x="-28" y="156" width="56" height="6" rx="3" fill="#ffffff35"/>
-      </g>
-    </g>
-  <g transform="translate(470,262) scale(.92) rotate(0)">
-      <g transform="translate(0,-200)">
-        <rect x="-66" y="0" width="132" height="184" rx="14" fill="url(#ac-gold)" stroke="#ffffff55" stroke-width="2"/>
-        <rect x="-56" y="10" width="112" height="164" rx="9" fill="none" stroke="#ffffff60" stroke-width="2"/>
-        <rect x="-56" y="10" width="112" height="60" rx="9" fill="#ffffff18"/>
-        <g transform="translate(0,86)" stroke-linecap="round">
-          <path d="M-30,-30 L30,30 M30,-30 L-30,30" stroke="#fff8dc" stroke-width="7"/>
-          <path d="M-36,14 L-14,36 M36,14 L14,36" stroke="#5a3200" stroke-width="7"/>
-          <circle r="16" fill="none" stroke="#fff8dc" stroke-width="4"/></g>
-        <rect x="-40" y="142" width="80" height="8" rx="4" fill="#ffffff55"/>
-        <rect x="-28" y="156" width="56" height="6" rx="3" fill="#ffffff35"/>
-      </g>
-    </g>
-  <path transform="translate(250,90) scale(1.4)" d="M0,-10 L2.5,-2.5 L10,0 L2.5,2.5 L0,10 L-2.5,2.5 L-10,0 L-2.5,-2.5Z" fill="#fff" opacity="0.9"/><path transform="translate(600,70) scale(1)" d="M0,-10 L2.5,-2.5 L10,0 L2.5,2.5 L0,10 L-2.5,2.5 L-10,0 L-2.5,-2.5Z" fill="#fff" opacity="0.9"/><path transform="translate(560,300) scale(0.8)" d="M0,-10 L2.5,-2.5 L10,0 L2.5,2.5 L0,10 L-2.5,2.5 L-10,0 L-2.5,-2.5Z" fill="#fff" opacity="0.7"/><path transform="translate(300,220) scale(0.6)" d="M0,-10 L2.5,-2.5 L10,0 L2.5,2.5 L0,10 L-2.5,2.5 L-10,0 L-2.5,-2.5Z" fill="#fff" opacity="0.6"/><path transform="translate(470,24) scale(0.8)" d="M0,-10 L2.5,-2.5 L10,0 L2.5,2.5 L0,10 L-2.5,2.5 L-10,0 L-2.5,-2.5Z" fill="#fff" opacity="0.9"/>
+  <path d="M0 300 Q40 290 80 300 T160 300 T240 300 T320 300 T400 300 T480 300 T560 300 T640 300" fill="none" stroke="#5d86c0" stroke-opacity=".35" stroke-width="3"/>
+  <path d="M0 340 Q60 326 120 340 T240 340 T360 340 T480 340 T600 340 T720 340" fill="none" stroke="#e8f2ff" stroke-opacity=".18" stroke-width="3"/>
+  <!-- a fanned hand: an anchor card, a crossed-swords card, and a WANTED poster on top -->
+  <g transform="translate(500,330) scale(1.12) rotate(-20)"><g transform="translate(0,-196)">
+    <rect x="-64" y="0" width="128" height="180" rx="12" fill="url(#pc-navy)" stroke="#ffd56a" stroke-width="3"/>
+    <rect x="-54" y="10" width="108" height="160" rx="8" fill="none" stroke="#ffffff55" stroke-width="2"/>
+    <g transform="translate(0,86)" stroke="#ffe08a" stroke-width="7" fill="none" stroke-linecap="round"><circle cy="-30" r="9"/><path d="M0 -20 L0 34 M-22 -8 L22 -8 M-34 14 Q-28 38 0 34 Q28 38 34 14"/></g>
+  </g></g>
+  <g transform="translate(500,330) scale(1.12) rotate(20)"><g transform="translate(0,-196)">
+    <rect x="-64" y="0" width="128" height="180" rx="12" fill="url(#pc-red)" stroke="#ffd56a" stroke-width="3"/>
+    <rect x="-54" y="10" width="108" height="160" rx="8" fill="none" stroke="#ffffff55" stroke-width="2"/>
+    <g transform="translate(0,86)" stroke-linecap="round"><path d="M-30 -30 L30 30 M30 -30 L-30 30" stroke="#f2f4f8" stroke-width="7"/>
+      <path d="M-38 16 L-16 38 M38 16 L16 38" stroke="#5a3200" stroke-width="8"/></g>
+  </g></g>
+  <g transform="translate(500,330) scale(1.12)"><g transform="translate(0,-204)">
+    <rect x="-66" y="0" width="132" height="186" rx="6" fill="url(#pc-paper)" stroke="#6a4a1a" stroke-width="3"/>
+    <path d="M-66 12 L-58 0 M66 30 L58 40 M-66 150 L-56 160" stroke="#b89a5a" stroke-width="2"/>
+    <text x="0" y="34" text-anchor="middle" font-family="Georgia, serif" font-weight="700" font-size="24" textLength="104" lengthAdjust="spacingAndGlyphs" fill="#3a2410">WANTED</text>
+    <rect x="-46" y="44" width="92" height="84" fill="#e9d3a0" stroke="#5a3a14" stroke-width="2"/>
+    <g transform="translate(0,88)"><path d="M0 -26 C-16 -26 -22 -14 -22 -4 C-22 4 -18 9 -12 12 L-12 20 L12 20 L12 12 C18 9 22 4 22 -4 C22 -14 16 -26 0 -26 Z" fill="#f6eedc" stroke="#2a1a08" stroke-width="2"/>
+      <ellipse cx="-8" cy="-4" rx="5" ry="6" fill="#2a1a08"/><ellipse cx="8" cy="-4" rx="5" ry="6" fill="#2a1a08"/><path d="M0 3 L-3 9 L3 9 Z" fill="#2a1a08"/>
+      <path d="M-24 -18 C-20 -30 -8 -36 0 -36 C8 -36 20 -30 24 -18 C14 -23 -14 -23 -24 -18 Z" fill="#c8343a" stroke="#2a1a08" stroke-width="2"/></g>
+    <text x="0" y="152" text-anchor="middle" font-family="Georgia, serif" font-weight="700" font-size="12" letter-spacing="1" fill="#3a2410">DEAD OR ALIVE</text>
+    <text x="0" y="172" text-anchor="middle" font-family="Georgia, serif" font-weight="700" font-size="15" fill="#7a1810">฿ 1,000,000</text>
+  </g></g>
 </svg>
           <div class="cap"><small>Card battler</small><strong>Pirates Clash</strong></div>
         </div>

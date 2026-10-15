@@ -645,13 +645,49 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;heigh
 .popup-btns{display:flex;gap:0.6rem;justify-content:center;}
 .popup-btns .btn{min-width:90px;font-size:0.85rem;padding:0.5rem 1.2rem;}
 </style>
+<style id="pc-theme">
+/* ===== PIRATES CLASH theme for every screen: a night sea behind, a wooden beam on top,
+   wooden planks and gold for buttons, dark-wood rows with gold coins. Only looks — nothing moves. ===== */
+:root{--bg:#081426;--card-bg:#15213a;--card-border:#4a3a2a;--panel:#0e1a30;--muted:#8a91ac;}
+body{background:#081426;}
+.screen:not(#menu){background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='140' viewBox='0 0 600 140'%3E%3Cpath d='M0 40 Q75 20 150 40 T300 40 T450 40 T600 40 V140 H0Z' fill='%2312284a' fill-opacity='.55'/%3E%3Cpath d='M0 80 Q50 64 100 80 T200 80 T300 80 T400 80 T500 80 T600 80 V140 H0Z' fill='%230c1d38' fill-opacity='.8'/%3E%3Cpath d='M0 80 Q50 64 100 80 T200 80 T300 80 T400 80 T500 80 T600 80' fill='none' stroke='%235d86c0' stroke-opacity='.25' stroke-width='2'/%3E%3C/svg%3E") repeat-x left bottom / 600px 140px,url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='260'%3E%3Cg fill='%23fff6dc'%3E%3Ccircle cx='30' cy='40' r='1.2' opacity='.7'/%3E%3Ccircle cx='140' cy='18' r='1' opacity='.5'/%3E%3Ccircle cx='250' cy='70' r='1.4' opacity='.6'/%3E%3Ccircle cx='370' cy='30' r='1' opacity='.55'/%3E%3Ccircle cx='90' cy='150' r='.9' opacity='.4'/%3E%3Ccircle cx='320' cy='190' r='1.1' opacity='.45'/%3E%3Ccircle cx='200' cy='230' r='.8' opacity='.35'/%3E%3C/g%3E%3C/svg%3E") repeat left top / 420px 260px,
+  radial-gradient(ellipse at 50% -15%,rgba(255,190,90,.13),transparent 55%),linear-gradient(180deg,#0c1c38 0%,#091630 55%,#060f20 100%);}
+#battle{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='140' viewBox='0 0 600 140'%3E%3Cpath d='M0 40 Q75 20 150 40 T300 40 T450 40 T600 40 V140 H0Z' fill='%2312284a' fill-opacity='.55'/%3E%3Cpath d='M0 80 Q50 64 100 80 T200 80 T300 80 T400 80 T500 80 T600 80 V140 H0Z' fill='%230c1d38' fill-opacity='.8'/%3E%3Cpath d='M0 80 Q50 64 100 80 T200 80 T300 80 T400 80 T500 80 T600 80' fill='none' stroke='%235d86c0' stroke-opacity='.25' stroke-width='2'/%3E%3C/svg%3E") repeat-x left bottom / 600px 140px,radial-gradient(ellipse at 50% 35%,#13284a,#081426 75%) !important;}
+/* the top bar: a wooden beam with the screen's name burned in gold */
+.header-bar{position:sticky;top:0;z-index:5;padding:.7rem 1rem;
+  background:repeating-linear-gradient(90deg,rgba(0,0,0,.07) 0 3px,transparent 3px 13px),linear-gradient(180deg,#704626,#4a2c15);
+  border-bottom:3px solid #2a170a;box-shadow:inset 0 1px 0 rgba(255,220,170,.22),0 5px 16px rgba(0,0,0,.5);}
+.header-bar > div[style*="Russo"]{font-family:'Pirata One','Russo One',serif !important;font-size:1.75rem !important;letter-spacing:.04em;line-height:1;
+  color:#ffd35a !important;text-shadow:0 2px 0 #6a3a08,0 4px 10px rgba(0,0,0,.55);}
+/* buttons */
+.screen:not(#battle) .btn{font-family:'Russo One',sans-serif;font-weight:400;letter-spacing:.07em;}
+.btn-dark{color:#ffe9c8 !important;text-shadow:0 1px 0 rgba(0,0,0,.5);border:2px solid #2e1a0a !important;
+  background:repeating-linear-gradient(90deg,rgba(0,0,0,.06) 0 3px,transparent 3px 11px),linear-gradient(180deg,#8a5a2c,#5e3a1c) !important;
+  box-shadow:inset 0 1px 0 rgba(255,220,170,.25),0 3px 0 #2a1608,0 5px 10px rgba(0,0,0,.35) !important;}
+.btn-gold{color:#3a1f00 !important;border:2px solid #7a4a08;background:linear-gradient(180deg,#ffe48a,#ffc23a 45%,#f09a14) !important;
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.55),0 4px 0 #8a5208,0 7px 14px rgba(0,0,0,.4) !important;}
+.btn-blue{border:2px solid #17306e;background:linear-gradient(180deg,#5b93ff,#2f5fd0) !important;box-shadow:inset 0 2px 0 rgba(255,255,255,.3),0 4px 0 #1a3478,0 7px 14px rgba(0,0,0,.4) !important;}
+.btn-green{border:2px solid #0f5a2c;background:linear-gradient(180deg,#3fe08a,#1fa857) !important;box-shadow:inset 0 2px 0 rgba(255,255,255,.3),0 4px 0 #126b35,0 7px 14px rgba(0,0,0,.4) !important;}
+.btn:active:not(:disabled){transform:translateY(2px);}
+/* story / stage rows: dark wood with a gold coin for the number */
+.stage-row{background:repeating-linear-gradient(90deg,rgba(255,255,255,.015) 0 2px,transparent 2px 12px),linear-gradient(180deg,#2c1e12,#1e140b);
+  border:2px solid #5c3d1f;box-shadow:inset 0 1px 0 rgba(255,220,170,.12),0 3px 0 #120b05,0 6px 12px rgba(0,0,0,.35);}
+.stage-num{min-width:38px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:1.05rem;
+  color:#5a3200 !important;background:radial-gradient(circle at 35% 30%,#fff2b0,#ffc940 55%,#c88a10);border:2px solid #8a5a08;box-shadow:0 2px 0 #5a3a04,inset 0 -2px 0 rgba(0,0,0,.15);}
+.stage-row.locked .stage-num{filter:grayscale(.7) brightness(.8);}
+.stage-enemies{color:#b8a888;}
+/* deck slots: a rope-dashed outline on old wood */
+.deck-slot,.sup-slot{background:rgba(44,30,18,.55);border-color:#7a5530;color:#b88a50;}
+/* tabs, headings and small text pick up the warmer palette */
+.deck-hint,.menu-info{color:#c8b896;}
+</style>
 </head>
 <body>
 
 <!-- SETTINGS -->
 <div id="settings" class="screen">
   <div style="width:90%;max-width:400px;margin:auto;display:flex;flex-direction:column;gap:1.2rem;padding:1.5rem 0;">
-    <h2 style="color:var(--gold);text-align:center;font-family:var(--ff);margin:0;">⚙️ SETTINGS</h2>
+    <h2 style="color:var(--gold);text-align:center;font-family:'Pirata One','Russo One',serif;font-weight:400;font-size:2.4rem;letter-spacing:.03em;text-shadow:0 2px 0 #6a3a08,0 4px 10px rgba(0,0,0,.55);margin:0;">⚙️ Settings</h2>
     <div style="background:var(--card-bg);border:2px solid var(--card-border);border-radius:12px;padding:1rem;">
       <label style="color:#ccc;font-size:0.85rem;display:block;margin-bottom:0.4rem;">🔊 Sound Effects</label>
       <input type="range" id="sfx-slider" min="0" max="100" value="80" style="width:100%;accent-color:var(--gold);" oninput="setSfxVol(this.value)">
