@@ -1033,7 +1033,7 @@ function fire() {
   S.queue = flockQueue().map((t, i) => ({ t, champ: i === 0 })); S.phase = 'fire'; S.fireT = 0; S.fireTime = 0; S.speed = 1; S.path = null; S.cleared = false;
   if (S.tip && S.tip.id === 'aim') closeTip();
 }
-const POW_COST = [40, 70, 110, 160, 230], LIFE_COST = [120, 250, 450, 750, 1200], POW_MAX = 5;
+const POW_COST = [20, 35, 55, 80, 115], LIFE_COST = [60, 125, 225, 375, 600], POW_MAX = 5;
 const powLv = t => ((save.upg && save.upg.pow) || {})[t] || 0;
 const pwr = t => 1 + .2 * powLv(t);                         // +20% damage per shop level
 function spawnPeng(q) {
@@ -1151,7 +1151,7 @@ function freezeFrame() {
 }
 function knockUp(o) {                                         // african bray: push the seal back a row if there's room
   if (o.boss || o.row <= 0 || occupant(o.col, o.row - 1)) return;
-  o.row--; o.pushT = 1; const c = objCenter(o); puff(c.x, c.y + 60, 8, '#fff', 180, 10); tone(220, .12, { type: 'sawtooth', to: 160, vol: .05 }); popTxt(c.x, c.y - 40, 'PUSHED!', '#ffe45a', 22);
+  o.row--; o.pushT = 1; const c = objCenter(o); puff(c.x, c.y + 60, 8, '#fff', 180, 10); tone(220, .12, { type: 'sawtooth', to: 160, vol: .05 });
 }
 function tryFreeze(o) {
   if (o.frozen > 0 || o.frzTurn === S.turn) return;
@@ -1564,11 +1564,8 @@ function revive() {
   const n = run.revives || 0, cost = reviveCost();
   if (n >= 2 || save.fish < cost) return;
   save.fish -= cost;
-  if (n === 0) {                                             // 1st revive: the whole wave starts over
-    if (!save.run) return; restoreRun(); run.revives = 1; run.hearts = maxHearts(); snapshot(); SFX.egg(); return;
-  }
-  // 2nd revive: carry on right where you are, with full hearts; seals at the line get blasted back
-  run.revives = 2; run.hearts = maxHearts(); SFX.egg();
+  // revive: carry on right where you are with full hearts; seals at the line get blasted back
+  run.revives = n + 1; run.hearts = maxHearts(); SFX.egg();
   for (const o of S.objs) if (o.cat === 'seal' && !o.dead && !o.boss && o.row + o.h >= ROWS - 2) { o.dead = true; const c = objCenter(o); puff(c.x, c.y, 14, '#fff', 260, 14); shards(c.x, c.y, 8, '#bff0ff'); }
   ring(W / 2, DANGER, 520, '#8fe3ff', .7, 18); shake = 14;
   S.phase = sealsLeft() ? 'aim' : 'waveClear'; S.wcT = 0; persist();
@@ -1804,12 +1801,12 @@ function drawPenguinsTab() {
 let penScroll = 0, penScrollMax = 0, drag = null;
 // ---------------- ROOKERY: every penguin you've unlocked lives here; decorate it with fish
 const DECOR = [
-  { id: 'nest',   name: 'Pebble Nest', cost: 80,  x: 470, y: 665, desc: 'Adélies steal its pebbles' },
-  { id: 'snowman', name: 'Snowman',    cost: 60,  x: 610, y: 820, desc: 'A frosty friend' },
-  { id: 'igloo',  name: 'Igloo',       cost: 150, x: 175, y: 590, desc: 'A cosy home' },
-  { id: 'pond',   name: 'Fish Pond',   cost: 200, x: 395, y: 900, desc: 'Catches 1 fish every 90 sec (max 10)' },
-  { id: 'slide',  name: 'Ice Slide',   cost: 250, x: 150, y: 905, desc: 'Penguins go belly-sliding' },
-  { id: 'light',  name: 'Lighthouse',  cost: 400, x: 622, y: 615, desc: 'Lights up the colony at night' },
+  { id: 'nest',   name: 'Pebble Nest', cost: 40,  x: 470, y: 665, desc: 'Adélies steal its pebbles' },
+  { id: 'snowman', name: 'Snowman',    cost: 30,  x: 610, y: 820, desc: 'A frosty friend' },
+  { id: 'igloo',  name: 'Igloo',       cost: 75, x: 175, y: 590, desc: 'A cosy home' },
+  { id: 'pond',   name: 'Fish Pond',   cost: 100, x: 395, y: 900, desc: 'Catches 1 fish every 90 sec (max 10)' },
+  { id: 'slide',  name: 'Ice Slide',   cost: 125, x: 150, y: 905, desc: 'Penguins go belly-sliding' },
+  { id: 'light',  name: 'Lighthouse',  cost: 200, x: 622, y: 615, desc: 'Lights up the colony at night' },
 ];
 const POND_EVERY = 90000, POND_MAX = 10;
 const rook = { birds: [], info: null };
@@ -1949,7 +1946,7 @@ function drawRookery() {
 
 }
 let shopPage = 0;
-const FROZEN_HEART_COST = 600;
+const FROZEN_HEART_COST = 300;
 function buy(cost, fn) { if (save.fish < cost) { SFX.arf(); return; } save.fish -= cost; fn(); persist(); SFX.recruit(); }
 function drawShopTab() {
   txt('SHOP', W / 2, 200, 46, '#ffe45a');
@@ -2244,8 +2241,8 @@ function drawPick3() {
   txt('FLOCK', 84, 900, 24, '#ffe45a');
   const n = run.flock.length, sp = Math.min(40, 540 / n); run.flock.forEach((tp, i) => drawPenguin(tp, 150 + i * sp, 900, 16, 0, { crown: i === 0 }));
   if (!S.picked) {
-    const can = save.fish >= 10;
-    button('reroll', W / 2, 1000, 330, 80, 'REFRESH  10', 'purple', () => { if (!can) return; save.fish -= 10; persist(); SFX.click(); S.choices = rollChoices(); S.pickT = .15; }, { disabled: !can, icon: (x, y) => fishIcon(x + 110, y, 28), size: 32 });
+    const can = save.fish >= 5;
+    button('reroll', W / 2, 1000, 330, 80, 'REFRESH  5', 'purple', () => { if (!can) return; save.fish -= 5; persist(); SFX.click(); S.choices = rollChoices(); S.pickT = .15; }, { disabled: !can, icon: (x, y) => fishIcon(x + 110, y, 28), size: 32 });
   }
 }
 function drawTip() {
@@ -2280,7 +2277,7 @@ function drawFail() {
   if (t > .9) {
     const used = run.revives || 0, cost = reviveCost(), can = used < 2 && save.fish >= cost;
     button('revive', W / 2, 760, 420, 92, `REVIVE  ${cost}`, 'green', () => { if (can) revive(); }, { disabled: !can, icon: (x, y) => fishIcon(x + 120, y, 30), pulse: can, size: 38 });
-    txt(used >= 2 ? 'No revives left this chapter' : save.fish < cost ? `Need ${cost} fish (you have ${save.fish})` : used === 0 ? 'Restarts this wave with full hearts (1 of 2)' : 'Full hearts and keep going right here (2 of 2)', W / 2, 818, 22, '#fff');
+    txt(used >= 2 ? 'No revives left this chapter' : save.fish < cost ? `Need ${cost} fish (you have ${save.fish})` : `Full hearts and keep going right here (${used + 1} of 2)`, W / 2, 818, 22, '#fff');
     button('giveup', W / 2, 870, 320, 80, 'GIVE UP', 'red', () => { SFX.click(); finishRun(false); });
   }
 }
