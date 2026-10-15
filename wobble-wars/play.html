@@ -413,8 +413,8 @@ const U = {
   sludge:{nm:'THE PURPLE SLUDGE', traits:['toxic'], team:-1, hp:4500, dmg:200, rate:0.01, spd:12, rng:50, r:64, wide:1.25,
           swT:1.0, hitP:0.88, sludge:1, boss:1, noKB:1,
           c:['#e2c2f6','#9a5cc6','#4a2268']},          // the jaw opens far too high, then slams: every 1s, no knockback ever
-  drice: {nm:'DOCTOR ICE', traits:['ice'], team:-1, hp:6000, dmg:0, rate:40, spd:22, rng:380, r:40, wide:1.05,
-          swT:1.6, hitP:0.62, drIce:1, summon:'reincarnate', boss:1, kbStep:0.25,
+  drice: {nm:'DOCTOR ICE', traits:['ice'], team:-1, hp:6000, dmg:0, rate:40, spd:22, rng:380, r:60, wide:1,
+          swT:1.6, hitP:0.62, drIce:1, summon:'reincarnate', boss:1, bossTrack:1, kbStep:0.25,
           c:['#eefaff','#8fd0f2','#2f6f9a']},          // never attacks: every 40s he raises something dead (80% yeti, 20% sludge; the first is always the sludge)
   rsludge:{nm:'REINCARNATED SLUDGE', traits:['toxic'], team:-1, hp:9000, dmg:100, rate:0.005, spd:96, rng:50, r:64, wide:1.25,
           swT:0.5, hitP:0.88, sludge:1, iceKing:1, noKB:1,
@@ -847,6 +847,7 @@ const LEVELS = [
 
   {nm:'REINCARNATED', bhp:4500, xp:50000, rareTicket:1, size:'big', snow:2,
    sky:['#8ea6b8','#dfe9f0'], hill:'#d3e1ea',
+   enemy:{ avalanche:{hp:5750, dmg:150} },            // only the decoy here: half HP, half damage
    // ice blowers and snowmen again. 8s in, THE AVALANCHE stomps out wearing the boss bar — a decoy — and 8s
    // later (30s in) a frozen, crowned sludge (no bar). Bring the Avalanche down and the real boss shows himself:
    // DOCTOR ICE, who never strikes; every 40s he raises something dead out of the ground (sludge first, then mostly yetis)
@@ -3722,55 +3723,111 @@ function drawAvalanche(u, cx, cy, rx, ry, dir, flash){
   X.restore();
 }
 
-/* ---- DOCTOR ICE: an icy slime in a frosted doctor's coat, round frozen spectacles, and a staff
-   topped with a glowing ice crystal. He never attacks: every 40s he raises the staff and something
-   that already died climbs back out of the ground for him. ---- */
+/* ---- DOCTOR ICE: a big icy slime dressed up as a human doctor — trousers, shoes, a long white lab coat,
+   spectacles, a head mirror, and an absurdly long frosted beard down to his knees. He never attacks:
+   every 40s he lifts his crystal staff and something dead climbs back out of the ground for him. ---- */
 function drawDrIce(u, cx, cy, rx, ry, dir, flash){
   const d = U[u.k], seed = u.seed||1;
   const p = (u.sw>0 && !u.mini) ? 1-u.sw/u.swT : -1, h = hitPoint(u, d);
-  const raise = p<0 ? 0 : p < h ? Math.min(1, p/(h*0.8)) : Math.max(0, 1-(p-h)/(1-h));   // staff up, hold, down
-  // the staff, behind the body: a pale shaft topped with a crystal that blazes when he casts
-  const sx = cx + dir*rx*0.95, sTop = cy - ry*(1.15 + raise*0.55), sBot = (u.mini? cy+ry : GY) - 2;
-  X.save(); X.lineCap='round';
-  X.strokeStyle='#5f87a6'; X.lineWidth=Math.max(3, rx*0.12); X.beginPath(); X.moveTo(sx, sBot); X.lineTo(sx, sTop); X.stroke();
-  X.strokeStyle='#dff3ff'; X.lineWidth=Math.max(1.5, rx*0.05); X.beginPath(); X.moveTo(sx-rx*0.03, sBot-4); X.lineTo(sx-rx*0.03, sTop+4); X.stroke();
+  const raise = p<0 ? 0 : p < h ? Math.min(1, p/(h*0.8)) : Math.max(0, 1-(p-h)/(1-h));
+  const S = u.mini ? rx/60*0.52 : rx/60, gy = u.mini ? cy + ry*1.05 : GY;
+  const walk = (u.moving && !u.mini) ? Math.sin(T*6 + seed) : 0;
+  const bob = Math.abs(walk)*2.5;
+  if(!u.mini) shadow(cx, rx*0.95, 0.30);
+  X.save(); X.translate(cx, gy); X.scale(dir*S, S); X.lineJoin='round'; X.lineCap='round';
+  const ink = '#1f3550';
+  // ---- the staff, in the back hand: a pale shaft, a cluster of ice crystals, and a glow that blazes when he casts
+  const sy = -raise*34;
+  X.save(); X.translate(-46, sy);
+  X.strokeStyle='#5f87a6'; X.lineWidth=7; X.beginPath(); X.moveTo(0, -2); X.lineTo(0, -214); X.stroke();
+  X.strokeStyle='#e4f6ff'; X.lineWidth=2.5; X.beginPath(); X.moveTo(-1.5, -8); X.lineTo(-1.5, -208); X.stroke();
   const glow = 0.35 + 0.65*raise + 0.12*Math.sin(T*4+seed);
   X.globalCompositeOperation='lighter';
-  const gg = X.createRadialGradient(sx, sTop-rx*0.25, 0, sx, sTop-rx*0.25, rx*(0.6+raise*1.1));
-  gg.addColorStop(0, 'rgba(220,250,255,'+(0.9*glow)+')'); gg.addColorStop(1, 'rgba(90,190,255,0)');
-  X.fillStyle=gg; X.beginPath(); X.arc(sx, sTop-rx*0.25, rx*(0.6+raise*1.1), 0, 7); X.fill();
-  X.globalCompositeOperation='source-over'; X.restore();
-  iceCrystal(sx, sTop+rx*0.08, rx*0.62, rx*0.30, 0);
-  iceCrystal(sx-rx*0.16, sTop+rx*0.10, rx*0.34, rx*0.18, -0.5);
-  iceCrystal(sx+rx*0.16, sTop+rx*0.10, rx*0.34, rx*0.18, 0.5);
-  // the body: a frozen slime (drawSlime gives the goo, the glare, the frown)
-  drawSlime(u, cx, cy, rx, ry, dir, flash);
-  // his coat: white, buttoned, with an ice-blue cross on the chest, cut to the slime's outline
-  gooPath(cx, cy, rx, ry, 0.075, 5, T, u.seed, true); X.save(); X.clip();
-  X.fillStyle='#f4fbff';
-  X.beginPath(); X.moveTo(cx-rx*1.2, cy+ry*0.10); X.lineTo(cx-rx*0.20, cy+ry*0.10); X.lineTo(cx, cy+ry*0.55);
-  X.lineTo(cx+rx*0.20, cy+ry*0.10); X.lineTo(cx+rx*1.2, cy+ry*0.10); X.lineTo(cx+rx*1.2, cy+ry*1.2); X.lineTo(cx-rx*1.2, cy+ry*1.2); X.closePath(); X.fill();
-  X.strokeStyle='#9fc6e0'; X.lineWidth=Math.max(1.5, rx*0.05);
-  X.beginPath(); X.moveTo(cx-rx*0.20, cy+ry*0.10); X.lineTo(cx, cy+ry*0.55); X.lineTo(cx+rx*0.20, cy+ry*0.10); X.moveTo(cx, cy+ry*0.55); X.lineTo(cx, cy+ry*1.1); X.stroke();
-  X.fillStyle='#7fb2d6'; for(const k of [0.70, 0.88]){ X.beginPath(); X.arc(cx+rx*0.07, cy+ry*k, rx*0.04, 0, 7); X.fill(); }
-  const crx = cx - dir*rx*0.48, cry = cy + ry*0.42;
-  X.fillStyle='#4fb3ff'; X.fillRect(crx-rx*0.05, cry-rx*0.15, rx*0.10, rx*0.30); X.fillRect(crx-rx*0.15, cry-rx*0.05, rx*0.30, rx*0.10);
+  const gg = X.createRadialGradient(0, -232, 0, 0, -232, 34 + raise*60);
+  gg.addColorStop(0, 'rgba(225,250,255,'+(0.9*glow)+')'); gg.addColorStop(1, 'rgba(90,190,255,0)');
+  X.fillStyle=gg; X.beginPath(); X.arc(0, -232, 34 + raise*60, 0, 7); X.fill();
+  X.globalCompositeOperation='source-over';
+  iceCrystal(0, -210, 40, 18, 0); iceCrystal(-10, -208, 24, 11, -0.5); iceCrystal(10, -208, 24, 11, 0.5);
   X.restore();
-  // a stethoscope round the neck
-  X.save(); X.strokeStyle='#3d5a72'; X.lineWidth=Math.max(1.5, rx*0.05); X.lineCap='round';
-  X.beginPath(); X.moveTo(cx-rx*0.38, cy+ry*0.08); X.quadraticCurveTo(cx-rx*0.30, cy+ry*0.55, cx+dir*rx*0.30, cy+ry*0.62); X.stroke();
-  X.fillStyle='#c9d8e4'; X.beginPath(); X.arc(cx+dir*rx*0.30, cy+ry*0.62, rx*0.08, 0, 7); X.fill(); X.restore();
-  // round frosted spectacles over the eyes
-  const ey = cy - ry*0.14;
-  X.save(); X.strokeStyle='#2c4458'; X.lineWidth=Math.max(1.5, rx*0.05);
-  for(const s of [-1,1]){ const ex = cx + s*rx*0.34 + dir*rx*0.10;
-    X.fillStyle='rgba(210,240,255,.28)'; X.beginPath(); X.arc(ex, ey, rx*0.27, 0, 7); X.fill(); X.stroke();
-    X.strokeStyle='rgba(255,255,255,.7)'; X.beginPath(); X.arc(ex, ey, rx*0.19, Math.PI*1.1, Math.PI*1.45); X.stroke(); X.strokeStyle='#2c4458'; }
-  X.beginPath(); X.moveTo(cx-rx*0.07+dir*rx*0.10, ey); X.lineTo(cx+rx*0.07+dir*rx*0.10, ey); X.stroke();
+  // ---- legs: dark trousers and black shoes, stepping as he walks
+  for(const s of [-1, 1]){
+    const lx = s*13, sw = s*walk*5;
+    X.fillStyle='#24344d'; X.strokeStyle='#121c2c'; X.lineWidth=2;
+    X.beginPath(); X.moveTo(lx-9+sw, -64); X.lineTo(lx+9+sw, -64); X.lineTo(lx+8+sw*1.6, -8); X.lineTo(lx-8+sw*1.6, -8); X.closePath(); X.fill(); X.stroke();
+    X.fillStyle='#14161c'; X.beginPath(); X.ellipse(lx+4+sw*1.6, -5, 14, 6.5, 0, 0, 7); X.fill();
+    X.fillStyle='rgba(255,255,255,.25)'; X.beginPath(); X.ellipse(lx+8+sw*1.6, -8, 5, 1.8, 0, 0, 7); X.fill();
+  }
+  // ---- back arm (white sleeve) reaching to the staff
+  X.save(); X.translate(-26, -150 - bob); X.rotate(0.55 - raise*0.5);
+  X.fillStyle='#e8f2f8'; X.strokeStyle='#9fb8cc'; X.lineWidth=2; rr(-9, 0, 18, 56, 8); X.fill(); X.stroke();
+  X.fillStyle='#8fd0f2'; X.beginPath(); X.arc(0, 60, 9, 0, 7); X.fill(); X.restore();
+  // ---- the lab coat: long, white, open at the bottom, buttoned, a pocket with an ice-blue cross
+  X.save(); X.translate(0, -bob);
+  X.fillStyle='#f4fbff'; X.strokeStyle='#9fb8cc'; X.lineWidth=2.5;
+  X.beginPath(); X.moveTo(-30, -158); X.quadraticCurveTo(0, -168, 30, -158);
+  X.lineTo(40, -50); X.quadraticCurveTo(20, -42, 4, -48); X.lineTo(0, -80); X.lineTo(-4, -48); X.quadraticCurveTo(-20, -42, -40, -50); X.closePath(); X.fill(); X.stroke();
+  X.strokeStyle='#c6d9e6'; X.lineWidth=2; X.beginPath(); X.moveTo(0, -150); X.lineTo(0, -80); X.stroke();
+  X.fillStyle='#9fc3dc'; for(const by of [-136, -116, -96]){ X.beginPath(); X.arc(4, by, 2.6, 0, 7); X.fill(); }
+  X.strokeStyle='#c6d9e6'; rr(12, -124, 18, 16, 3); X.stroke();
+  X.fillStyle='#4fb3ff'; X.fillRect(19, -122, 4, 12); X.fillRect(15, -118, 12, 4);
   X.restore();
-  // icicle hair along the top of his head
-  for(const [ox, hh, tl] of [[-0.46,0.40,-0.5],[-0.20,0.62,-0.2],[0.06,0.74,0.05],[0.32,0.55,0.3],[0.55,0.36,0.6]])
-    iceCrystal(cx + rx*ox, cy - ry*0.80 + Math.abs(ox)*ry*0.28, ry*0.45*hh, rx*0.20, tl);
+  // ---- the head: a big icy slime
+  const hx = 2, hy = -190 - bob, hr = 34;
+  gooPath(hx, hy, hr*1.06, hr, 0.05, 5, T, seed, true);
+  const hg = X.createRadialGradient(hx-12, hy-14, 4, hx, hy, hr*1.3);
+  hg.addColorStop(0, '#f2fcff'); hg.addColorStop(0.5, '#9ad8f6'); hg.addColorStop(1, '#5aa8d6');
+  X.fillStyle=hg; X.fill(); X.strokeStyle='#2f6f9a'; X.lineWidth=3; X.stroke();
+  X.fillStyle='rgba(255,255,255,.55)'; X.beginPath(); X.ellipse(hx-14, hy-18, 9, 5, -0.6, 0, 7); X.fill();
+  // icicle hair along the top
+  for(const [ox, hh, tl] of [[-24,13,-0.6],[-12,19,-0.25],[2,22,0.05],[16,17,0.35],[27,11,0.7]]) iceCrystal(hx+ox, hy-hr*0.78+Math.abs(ox)*0.3, hh, 8, tl);
+  // a doctor's head mirror on its band
+  X.strokeStyle='#5c6b7a'; X.lineWidth=3; X.beginPath(); X.ellipse(hx, hy-12, hr*0.98, 9, 0, Math.PI, Math.PI*2); X.stroke();
+  X.fillStyle='#cfd9e2'; X.strokeStyle='#5c6b7a'; X.lineWidth=2; X.beginPath(); X.arc(hx+4, hy-24, 9, 0, 7); X.fill(); X.stroke();
+  X.fillStyle='#ffffff'; X.beginPath(); X.arc(hx+2, hy-26, 3, 0, 7); X.fill();
+  // eyes behind round frosted spectacles
+  X.save(); X.scale(1/dir, 1);                       // eyes() handles its own facing, so draw it unmirrored
+  eyes((hx+6)*dir, hy+2, hr*0.95, dir, 'slit', u.blink>0, true);
+  X.restore();
+  X.strokeStyle=ink; X.lineWidth=2.5;
+  for(const s of [-1,1]){ const ex = hx + 6 + s*hr*0.34*0.95 + hr*0.10;
+    X.fillStyle='rgba(210,240,255,.25)'; X.beginPath(); X.arc(ex, hy+2, 10.5, 0, 7); X.fill(); X.stroke(); }
+  X.beginPath(); X.moveTo(hx+6+hr*0.10-3, hy+2); X.lineTo(hx+6+hr*0.10+3, hy+2); X.stroke();
+  // ---- the beard: absurdly long, frosted, wavy, icicle tips, from under the nose down past the coat
+  const bw = 34, bTop = hy + 12, bBot = -40 + Math.sin(T*1.6+seed)*3;
+  const beardPath = () => {
+    X.beginPath(); X.moveTo(hx - bw, bTop);
+    for(let i=1;i<=6;i++){ const f=i/6, y=bTop+(bBot-bTop)*f, x=hx-bw*(1-f*0.55) - Math.sin(f*9+T*1.4+seed)*4; X.lineTo(x, y); }
+    for(let i=0;i<=8;i++){ const f=i/8, x=hx-bw*0.45 + bw*0.9*f, tip = (i%2===0) ? 12 : 0; X.lineTo(x, bBot + tip - Math.abs(f-0.5)*10); }
+    for(let i=6;i>=1;i--){ const f=i/6, y=bTop+(bBot-bTop)*f, x=hx+bw*(1-f*0.55) + Math.sin(f*9+T*1.4+seed+1)*4; X.lineTo(x, y); }
+    X.lineTo(hx + bw, bTop); X.quadraticCurveTo(hx, bTop + 12, hx - bw, bTop); X.closePath(); };
+  beardPath();
+  const bg = X.createLinearGradient(0, bTop, 0, bBot);
+  bg.addColorStop(0, '#ffffff'); bg.addColorStop(0.6, '#e2f3fc'); bg.addColorStop(1, '#a9d6ef');
+  X.fillStyle=bg; X.fill(); X.strokeStyle='#8fb6cf'; X.lineWidth=2.5; X.stroke();
+  X.save(); beardPath(); X.clip();
+  X.strokeStyle='rgba(120,170,205,.55)'; X.lineWidth=2;
+  for(let i=0;i<7;i++){ const x0 = hx - bw*0.8 + i*bw*0.27;
+    X.beginPath(); X.moveTo(x0, bTop+10); X.bezierCurveTo(x0 + 8, bTop+50, x0 - 8, bTop+90, x0 + 2*Math.sin(T+i), bBot); X.stroke(); }
+  X.restore();
+  // a curled moustache on top of it
+  X.fillStyle='#ffffff'; X.strokeStyle='#8fb6cf'; X.lineWidth=2;
+  for(const s of [-1,1]){
+    X.beginPath(); X.moveTo(hx + 6, bTop - 2);
+    X.quadraticCurveTo(hx + 6 + s*22, bTop - 10, hx + 6 + s*32, bTop + 2);
+    X.quadraticCurveTo(hx + 6 + s*36, bTop - 10, hx + 6 + s*26, bTop - 14);
+    X.quadraticCurveTo(hx + 6 + s*12, bTop - 14, hx + 6, bTop - 6); X.closePath(); X.fill(); X.stroke();
+  }
+  // ---- front arm: a white sleeve and a slimy hand that lifts when he raises the dead
+  X.save(); X.translate(28, -150 - bob); X.rotate(-0.3 - raise*1.9);
+  X.fillStyle='#eef6fb'; X.strokeStyle='#9fb8cc'; X.lineWidth=2; rr(-9, 0, 18, 56, 8); X.fill(); X.stroke();
+  X.fillStyle='#8fd0f2'; X.strokeStyle='#2f6f9a'; X.beginPath(); X.arc(0, 60, 10, 0, 7); X.fill(); X.stroke();
+  if(raise > 0.2){ const hg2 = X.createRadialGradient(0, 62, 0, 0, 62, 10 + raise*10);
+    hg2.addColorStop(0, 'rgba(120,210,255,'+(0.7*raise)+')'); hg2.addColorStop(1, 'rgba(120,210,255,0)');
+    X.fillStyle=hg2; X.beginPath(); X.arc(0, 62, 10 + raise*10, 0, 7); X.fill(); }
+  X.restore();
+  X.restore();
+  if(flash>0 && !u.mini){ X.save(); X.globalCompositeOperation='lighter'; X.globalAlpha=flash*0.4; X.fillStyle='#ffffff';
+    X.beginPath(); X.ellipse(cx, gy - 110*S, 46*S, 112*S, 0, 0, 7); X.fill(); X.restore(); }
 }
 
 /* ---- GREEN GOOP: a low toxic puddle that bubbles and drips ---- */
@@ -5265,6 +5322,7 @@ function newBattle(li, isXp){
   }
   startMusic('battle');
   if(L.bossMusic) musPreload('boss'); else if(L.boss || L.bossWaves) musPreload('miniboss');
+  if(L.finale && U[L.finale.k] && U[L.finale.k].bossTrack) musPreload('boss');
 }
 // EASE: a level can be softened (<1) or toughened (>1) as a whole — every enemy's HP and damage (bosses too) and the nest
 function lvEase(L){ return (L && L.ease) || 1; }
@@ -6173,6 +6231,7 @@ function updateBattle(dt){
   if(musOn && !B.over){                        // the headline bosses (5, 10, 13, 15) get the big track, every
     if(B.units.some(u=>u.isBoss && !u.dead))   // other boss the mini-boss one — and it plays out to the end
       B.bossMus = B.L.bossMusic ? 'boss' : (B.bossMus || 'miniboss');
+    if(B.units.some(u=>u.isBoss && !u.dead && U[u.k].bossTrack)) B.bossMus = 'boss';   // a headline boss mid-level (Doctor Ice)
     const want = B.bossMus || 'battle';
     if(musKind!==want){ stopMusic(); startMusic(want); }
   }
@@ -6266,16 +6325,18 @@ function updateBattle(dt){
             SFX.whoosh(0);
           }
         } else if(d.summon==='reincarnate'){       // DOCTOR ICE: something dead climbs back out of the ground
-          const kk = !u.raisedOnce ? 'rsludge' : (Math.random() < 0.8 ? 'yeti' : 'rsludge');
-          u.raisedOnce = 1;
+          for(let n=0;n<2;n++){                        // two at once
+          const kk = (!u.raisedOnce && n===0) ? 'rsludge' : (Math.random() < 0.8 ? 'yeti' : 'rsludge');   // the very first is always the sludge
           const r = spawnUnit(kk, false, true);
           r.isBoss = false;                            // no bar for the risen
-          r.x = Math.max(P_FRONT+60, u.x + u.team*110); r.rise = 1; r.spawnA = 1;
+          r.x = Math.max(P_FRONT+60, u.x + u.team*(110 + n*120)); r.rise = 1; r.spawnA = 1;
           SFX.spawn(); tone(140,0.9,'sawtooth',0.10,70); noise(0.8,0.14,900,200,0.7);
           shake = Math.max(shake, 10);
           ring(r.x, GY-6, '#bfe8ff', 10, 140, 0.6, 8); ring(r.x, GY-6, '#4fb3ff', 8, 90, 0.5, 5);
           for(let q=0;q<22;q++) B.parts.push({x:r.x+(Math.random()-0.5)*90, y:GY-4, vx:(Math.random()-0.5)*160, vy:-60-Math.random()*200,
             r:2+Math.random()*4, life:0.6+Math.random()*0.6, t:0, col: Math.random()<0.5?'#e6f8ff':'#7fc8f0', g:300});
+          }
+          u.raisedOnce = 1;
         } else {
         const r = spawnUnit(d.summon);
         r.x = u.x + u.team*76;          // clear of the hat so both read
@@ -7015,7 +7076,7 @@ function drawUnit(u){
   if(d.hpbar && !u.dead && !u.dying)
     hpBarSmall(cx, cy - ry*1.35, 46, u.hp/u.max, '#ff9a4a');
   if(!u.dead && !u.dying && !u.rise && u.team<0 && d.traits){               // what it is, at a glance
-    const tr=d.traits, iy = cy - ry*(d.lord? 2.75 : d.snowman? 3.0 : d.avalanche? 2.9 : d.phoenix||d.devil? 1.6 : 1.30) - 8;   // tall ones wear it over the head
+    const tr=d.traits, iy = cy - ry*(d.lord? 2.75 : d.snowman? 3.0 : d.avalanche? 2.9 : d.drIce? 3.55 : d.phoenix||d.devil? 1.6 : 1.30) - 8;   // tall ones wear it over the head
     tr.forEach((t,i)=> traitIcon(t, cx + (i-(tr.length-1)/2)*15, iy, 6));
   }
   if(u.freezeT>0 && !u.dead){                            // frozen: an ice shell over it
