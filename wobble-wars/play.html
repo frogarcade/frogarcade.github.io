@@ -342,7 +342,7 @@ const U = {
   elder: {nm:'ELDERLY BLOB', abil:[{t:'kb', chance:0.80, vs:['normal']}, {t:'slow', chance:0.40, time:2}], team:1, hp:360, dmg:320, rate:1.6, spd:14, rng:324, r:40, cost:1250, cd:40,
           hpUp:72, dmgUp:64, wide:1.18, swT:2.0, hitP:0.72, elderCane:1, kbStep:0.34, aoe:110, aoeOff:204,   // the cane's shockwave rolls out to 314
           tier:'godly', c:['#eef0f6','#a9b1c6','#5b6378']},   // slow, old, and the cane comes down hard
-  reaper:{nm:'REAPER BLOB', abil:[{t:'massive', vs:['normal']}], team:1, hp:1250, dmg:500, rate:1.6, spd:20, rng:180, r:40, cost:1400, cd:40,
+  reaper:{nm:'REAPER BLOB', abil:[{t:'massive', vs:['normal']}], team:1, hp:1250, dmg:500, rate:1.6, spd:40, rng:180, r:40, cost:1400, cd:40,
           hpUp:250, dmgUp:100, wide:1.10, swT:1.4, hitP:0.62, reap:{chance:0.45, mul:0.40}, kbStep:0.34,
           tier:'godly', c:['#8a86a0','#3d3950','#16141e']},   // what it kills may get back up — for you
   aero:  {nm:'AERO BLOB', team:1, hp:400, dmg:1500, rate:2.0, spd:420, rng:84, r:34, cost:1750, cd:120,
@@ -378,8 +378,8 @@ const U = {
   snowman:{nm:'SNOWMAN', traits:['ice'], abil:[{t:'freeze', chance:0.40, time:1}], team:-1, hp:500, dmg:40, rate:2.5, spd:12, rng:460, r:34, wide:1,
           swT:1.0, hitP:0.80, throwAt:0.40, snowman:1, spit:1, kbStep:0.5,
           c:['#ffffff','#e6f1f8','#7d9bb3']},          // lobs snowballs from a long, long way off: 40 dmg, 40% to freeze
-  avalanche:{nm:'THE AVALANCHE', traits:['ice'], team:-1, hp:11500, dmg:300, rate:0.45, spd:32, rng:140, r:66, wide:1.2,
-          swT:0.55, hitP:0.60, avalanche:1, boss:1, aoe:140, aoeOff:110, kbStep:0.25,
+  avalanche:{nm:'THE AVALANCHE', traits:['ice'], team:-1, hp:11500, dmg:300, rate:0.375, spd:38.4, rng:140, r:66, wide:1.2,
+          swT:0.458, hitP:0.60, avalanche:1, boss:1, aoe:140, aoeOff:110, kbStep:0.25,
           c:['#e6f8ff','#8fcbe8','#2f6a92']},          // a walking mountain of ice: every second a foot comes down for 300, all around
   phoenix:{nm:'THE GODLY PHOENIX', traits:['fire','angelic'], abil:[{t:'kb', chance:0.50}], team:-1, hp:5000, dmg:10, rate:8, spd:43.9, rng:640, r:62, wide:1.22,
           swT:8, hitP:0.375, phoenix:1, boss:1, kbStep:0.1, beam:{t0:0.375, n:100, reach:Infinity},
@@ -413,6 +413,12 @@ const U = {
   sludge:{nm:'THE PURPLE SLUDGE', traits:['toxic'], team:-1, hp:4500, dmg:200, rate:0.01, spd:12, rng:50, r:64, wide:1.25,
           swT:1.0, hitP:0.88, sludge:1, boss:1, noKB:1,
           c:['#e2c2f6','#9a5cc6','#4a2268']},          // the jaw opens far too high, then slams: every 1s, no knockback ever
+  drice: {nm:'DOCTOR ICE', traits:['ice'], team:-1, hp:6000, dmg:0, rate:40, spd:22, rng:380, r:40, wide:1.05,
+          swT:1.6, hitP:0.62, drIce:1, summon:'reincarnate', boss:1, kbStep:0.25,
+          c:['#eefaff','#8fd0f2','#2f6f9a']},          // never attacks: every 40s he raises something dead (80% yeti, 20% sludge; the first is always the sludge)
+  rsludge:{nm:'REINCARNATED SLUDGE', traits:['toxic'], team:-1, hp:9000, dmg:100, rate:0.005, spd:96, rng:50, r:64, wide:1.25,
+          swT:0.5, hitP:0.88, sludge:1, iceKing:1, noKB:1,
+          c:['#e6f7ff','#6fb8e6','#1f4f7a']},          // the purple sludge, brought back frozen and crowned: 2x HP, 8x speed, 2x attack speed, half damage
   shroom:{nm:'MUSHROOM SLIME', traits:['toxic'], team:-1, hp:60, dmg:14, rate:1.2, spd:30, rng:50, r:26, wide:1.05,
           swT:0.45, hitP:0.55, shroom:1, kbStep:0.5, spores:{r:72, t:4},
           c:['#fbf1dc','#e8d3ad','#8a6a44']},           // pops into a spore cloud when it dies: blobs inside are slowed
@@ -827,6 +833,25 @@ const LEVELS = [
    // eight seconds apart; when the first yeti falls, THE AVALANCHE walks out of the blizzard — and another yeti 12s behind it
    boss:'yeti', bossNeed:{kills:{k:'snowman', n:1}}, bossMore:{k:'yeti', n:1, gap:8}, bossPeons:0,
    finale:{after:'yeti', deaths:1, k:'avalanche', n:1, boss:1, then:{k:'yeti', t:12}},
+   list:[[2,'iceblow'],[5,'snowman'],[9,'iceblow'],[13,'iceblow'],[17,'snowman'],[22,'iceblow'],[27,'snowman']],
+   loop:7, pool:['iceblow','snowman','iceblow']},
+
+  {nm:'FROZEN BOG', bhp:4400, xp:45000, rareTicket:1, size:'big', snow:1,
+   sky:['#4f7480','#d3e6e8'], hill:'#7f9c90',
+   // a swamp half frozen over: green goop, ice blowers and frog elites. At half the nest THE PURPLE SLUDGE heaves out
+   // of the ice — and when it finally drops, a YETI comes for whoever is left. (Everything Doctor Ice will bring back.)
+   boss:'sludge', bossAt:2200, bossPeons:0,
+   finale:{after:'sludge', deaths:1, k:'yeti', n:1, boss:1},
+   list:[[2,'goop'],[5,'iceblow'],[8,'goop'],[11,'frog'],[15,'iceblow'],[19,'goop'],[23,'frog'],[27,'iceblow']],
+   loop:6, pool:['goop','iceblow','goop','frog','iceblow']},
+
+  {nm:'REINCARNATED', bhp:4500, xp:50000, rareTicket:1, size:'big', snow:2,
+   sky:['#8ea6b8','#dfe9f0'], hill:'#d3e1ea',
+   // ice blowers and snowmen again. 8s in, THE AVALANCHE stomps out wearing the boss bar — a decoy — and 8s
+   // behind it a frozen, crowned sludge (no bar). Bring the Avalanche down and the real boss shows himself:
+   // DOCTOR ICE, who never strikes; every 40s he raises something dead out of the ground (sludge first, then mostly yetis)
+   boss:'avalanche', bossTime:8, bossThen:{k:'rsludge', t:8, bar:false}, bossPeons:0,
+   finale:{after:'avalanche', deaths:1, k:'drice', n:1, boss:1},
    list:[[2,'iceblow'],[5,'snowman'],[9,'iceblow'],[13,'iceblow'],[17,'snowman'],[22,'iceblow'],[27,'snowman']],
    loop:7, pool:['iceblow','snowman','iceblow']}
 ];
@@ -3697,6 +3722,57 @@ function drawAvalanche(u, cx, cy, rx, ry, dir, flash){
   X.restore();
 }
 
+/* ---- DOCTOR ICE: an icy slime in a frosted doctor's coat, round frozen spectacles, and a staff
+   topped with a glowing ice crystal. He never attacks: every 40s he raises the staff and something
+   that already died climbs back out of the ground for him. ---- */
+function drawDrIce(u, cx, cy, rx, ry, dir, flash){
+  const d = U[u.k], seed = u.seed||1;
+  const p = (u.sw>0 && !u.mini) ? 1-u.sw/u.swT : -1, h = hitPoint(u, d);
+  const raise = p<0 ? 0 : p < h ? Math.min(1, p/(h*0.8)) : Math.max(0, 1-(p-h)/(1-h));   // staff up, hold, down
+  // the staff, behind the body: a pale shaft topped with a crystal that blazes when he casts
+  const sx = cx + dir*rx*0.95, sTop = cy - ry*(1.15 + raise*0.55), sBot = (u.mini? cy+ry : GY) - 2;
+  X.save(); X.lineCap='round';
+  X.strokeStyle='#5f87a6'; X.lineWidth=Math.max(3, rx*0.12); X.beginPath(); X.moveTo(sx, sBot); X.lineTo(sx, sTop); X.stroke();
+  X.strokeStyle='#dff3ff'; X.lineWidth=Math.max(1.5, rx*0.05); X.beginPath(); X.moveTo(sx-rx*0.03, sBot-4); X.lineTo(sx-rx*0.03, sTop+4); X.stroke();
+  const glow = 0.35 + 0.65*raise + 0.12*Math.sin(T*4+seed);
+  X.globalCompositeOperation='lighter';
+  const gg = X.createRadialGradient(sx, sTop-rx*0.25, 0, sx, sTop-rx*0.25, rx*(0.6+raise*1.1));
+  gg.addColorStop(0, 'rgba(220,250,255,'+(0.9*glow)+')'); gg.addColorStop(1, 'rgba(90,190,255,0)');
+  X.fillStyle=gg; X.beginPath(); X.arc(sx, sTop-rx*0.25, rx*(0.6+raise*1.1), 0, 7); X.fill();
+  X.globalCompositeOperation='source-over'; X.restore();
+  iceCrystal(sx, sTop+rx*0.08, rx*0.62, rx*0.30, 0);
+  iceCrystal(sx-rx*0.16, sTop+rx*0.10, rx*0.34, rx*0.18, -0.5);
+  iceCrystal(sx+rx*0.16, sTop+rx*0.10, rx*0.34, rx*0.18, 0.5);
+  // the body: a frozen slime (drawSlime gives the goo, the glare, the frown)
+  drawSlime(u, cx, cy, rx, ry, dir, flash);
+  // his coat: white, buttoned, with an ice-blue cross on the chest, cut to the slime's outline
+  gooPath(cx, cy, rx, ry, 0.075, 5, T, u.seed, true); X.save(); X.clip();
+  X.fillStyle='#f4fbff';
+  X.beginPath(); X.moveTo(cx-rx*1.2, cy+ry*0.10); X.lineTo(cx-rx*0.20, cy+ry*0.10); X.lineTo(cx, cy+ry*0.55);
+  X.lineTo(cx+rx*0.20, cy+ry*0.10); X.lineTo(cx+rx*1.2, cy+ry*0.10); X.lineTo(cx+rx*1.2, cy+ry*1.2); X.lineTo(cx-rx*1.2, cy+ry*1.2); X.closePath(); X.fill();
+  X.strokeStyle='#9fc6e0'; X.lineWidth=Math.max(1.5, rx*0.05);
+  X.beginPath(); X.moveTo(cx-rx*0.20, cy+ry*0.10); X.lineTo(cx, cy+ry*0.55); X.lineTo(cx+rx*0.20, cy+ry*0.10); X.moveTo(cx, cy+ry*0.55); X.lineTo(cx, cy+ry*1.1); X.stroke();
+  X.fillStyle='#7fb2d6'; for(const k of [0.70, 0.88]){ X.beginPath(); X.arc(cx+rx*0.07, cy+ry*k, rx*0.04, 0, 7); X.fill(); }
+  const crx = cx - dir*rx*0.48, cry = cy + ry*0.42;
+  X.fillStyle='#4fb3ff'; X.fillRect(crx-rx*0.05, cry-rx*0.15, rx*0.10, rx*0.30); X.fillRect(crx-rx*0.15, cry-rx*0.05, rx*0.30, rx*0.10);
+  X.restore();
+  // a stethoscope round the neck
+  X.save(); X.strokeStyle='#3d5a72'; X.lineWidth=Math.max(1.5, rx*0.05); X.lineCap='round';
+  X.beginPath(); X.moveTo(cx-rx*0.38, cy+ry*0.08); X.quadraticCurveTo(cx-rx*0.30, cy+ry*0.55, cx+dir*rx*0.30, cy+ry*0.62); X.stroke();
+  X.fillStyle='#c9d8e4'; X.beginPath(); X.arc(cx+dir*rx*0.30, cy+ry*0.62, rx*0.08, 0, 7); X.fill(); X.restore();
+  // round frosted spectacles over the eyes
+  const ey = cy - ry*0.14;
+  X.save(); X.strokeStyle='#2c4458'; X.lineWidth=Math.max(1.5, rx*0.05);
+  for(const s of [-1,1]){ const ex = cx + s*rx*0.34 + dir*rx*0.10;
+    X.fillStyle='rgba(210,240,255,.28)'; X.beginPath(); X.arc(ex, ey, rx*0.27, 0, 7); X.fill(); X.stroke();
+    X.strokeStyle='rgba(255,255,255,.7)'; X.beginPath(); X.arc(ex, ey, rx*0.19, Math.PI*1.1, Math.PI*1.45); X.stroke(); X.strokeStyle='#2c4458'; }
+  X.beginPath(); X.moveTo(cx-rx*0.07+dir*rx*0.10, ey); X.lineTo(cx+rx*0.07+dir*rx*0.10, ey); X.stroke();
+  X.restore();
+  // icicle hair along the top of his head
+  for(const [ox, hh, tl] of [[-0.46,0.40,-0.5],[-0.20,0.62,-0.2],[0.06,0.74,0.05],[0.32,0.55,0.3],[0.55,0.36,0.6]])
+    iceCrystal(cx + rx*ox, cy - ry*0.80 + Math.abs(ox)*ry*0.28, ry*0.45*hh, rx*0.20, tl);
+}
+
 /* ---- GREEN GOOP: a low toxic puddle that bubbles and drips ---- */
 function drawGoop(u, cx, cy, rx, ry, dir, flash){
   const c = U[u.k].c, seed=u.seed||1;
@@ -3745,8 +3821,8 @@ function sludgeOpen(u){
   const q=(p-0.88)/0.12; return 0.10*Math.sin(q*Math.PI)*(1-q);         // a little rebound
 }
 function drawSludge(u, cx, cy, rx, ry, dir, flash){
-  const c = U[u.k].c, seed=u.seed||1, op = sludgeOpen(u);
-  const dark = 'rgba(58,18,86,.58)', lipC = shade(c[1],-34);
+  const c = U[u.k].c, seed=u.seed||1, op = sludgeOpen(u), icy = !!U[u.k].iceKing;
+  const dark = icy ? 'rgba(18,58,96,.55)' : 'rgba(58,18,86,.58)', lipC = shade(c[1],-34);
   const wavy = (x0,y0,x1,y1,amp,ph)=>{ X.beginPath(); for(let i=0;i<=10;i++){ const f=i/10;
       const x=x0+(x1-x0)*f, y=y0+(y1-y0)*f + Math.sin(f*Math.PI*2+ph)*amp; if(i) X.lineTo(x,y); else X.moveTo(x,y); } X.stroke(); };
   shadow(cx, rx*1.30, 0.32);
@@ -3766,9 +3842,9 @@ function drawSludge(u, cx, cy, rx, ry, dir, flash){
   // inside the mouth
   if(op>0.04){
     const top = hcy + ry*0.46, bot = seamY + ry*0.04;
-    X.fillStyle='#240a33';
+    X.fillStyle= icy ? '#0a1f33' : '#240a33';
     X.beginPath(); X.ellipse(cx+dir*rx*0.18, (top+bot)/2, rx*0.82, (bot-top)/2 + ry*0.08, 0, 0, 7); X.fill();
-    X.fillStyle='rgba(120,40,140,.35)';
+    X.fillStyle= icy ? 'rgba(40,120,180,.35)' : 'rgba(120,40,140,.35)';
     X.beginPath(); X.ellipse(cx+dir*rx*0.05, (top+bot)/2, rx*0.40, (bot-top)*0.34, 0, 0, 7); X.fill();
   }
   // the heap (lower jaw and body)
@@ -3782,11 +3858,15 @@ function drawSludge(u, cx, cy, rx, ry, dir, flash){
   X.strokeStyle=lipC; X.lineWidth=Math.max(2, rx*0.13);                           // the lower lip
   X.beginPath(); X.ellipse(cx+dir*rx*0.18, seamY+ry*0.02, rx*0.80, ry*0.12, 0, Math.PI*1.05, Math.PI*1.95); X.stroke();
   X.restore();
+  if(icy){                                           // ice shards driven into the heap
+    for(const [ox, oy, hh, tl] of [[-0.85,0.30,0.55,-0.9],[-0.35,0.62,0.40,-0.3],[0.30,0.55,0.48,0.4],[0.85,0.28,0.58,0.95],[0.05,0.82,0.30,0.1]])
+      iceCrystal(cx + rx*ox, cy + ry*oy, ry*hh, rx*0.20, tl);
+  }
   // drips off the heap
   for(let i=0;i<3;i++){ const ph=((T*0.45 + i*0.33 + seed*0.1)%1), dx=cx+(i-1)*rx*0.8;
     X.fillStyle=c[1]; X.beginPath(); X.ellipse(dx, cy+ry*0.72+ph*ry*0.22, rx*0.06, ry*(0.06+ph*0.08), 0, 0, 7); X.fill(); }
   // the tongue: big, purple, lolling over the lower lip
-  X.save(); X.fillStyle='#c257d6'; X.strokeStyle='#6f2386'; X.lineWidth=Math.max(1.5, rx*0.045);
+  X.save(); X.fillStyle= icy ? '#8fd6ff' : '#c257d6'; X.strokeStyle= icy ? '#2a6a9a' : '#6f2386'; X.lineWidth=Math.max(1.5, rx*0.045);
   const tip = cx + dir*rx*(0.62 + op*0.25), tipY = seamY + ry*(0.22 + op*0.08);
   X.beginPath(); X.moveTo(cx-dir*rx*0.30, seamY-ry*0.02);
   X.quadraticCurveTo(cx+dir*rx*0.25, seamY - ry*(0.16+op*0.30), tip, tipY);
@@ -3820,6 +3900,20 @@ function drawSludge(u, cx, cy, rx, ry, dir, flash){
   X.fillStyle='rgba(255,255,255,.45)';
   X.beginPath(); X.ellipse(hcx-rx*0.40, hcy-ry*0.28, rx*0.22, ry*0.09, -0.4, 0,7); X.fill();
   eyes(hcx+dir*rx*0.20, hcy-ry*0.22, rx*0.74, dir, 'slit', u.blink>0, true);
+  if(icy){                                           // a crown frozen on, and shards through the head
+    iceCrystal(hcx - dir*rx*0.70, hcy - ry*0.20, ry*0.55, rx*0.20, -dir*0.9);
+    iceCrystal(hcx + dir*rx*0.62, hcy - ry*0.35, ry*0.42, rx*0.18, dir*0.7);
+    const kx = hcx - dir*rx*0.05, ky = hcy - ry*0.62;
+    X.save(); X.translate(kx, ky); X.rotate(-dir*0.12);
+    const cw = rx*0.62, chh = ry*0.42;
+    const cg = X.createLinearGradient(0, -chh, 0, 0); cg.addColorStop(0, '#fff2a8'); cg.addColorStop(1, '#d89a1a');
+    X.fillStyle = cg; X.strokeStyle='#8a5a08'; X.lineWidth=Math.max(1.5, rx*0.04);
+    X.beginPath(); X.moveTo(-cw, 0); X.lineTo(-cw, -chh*0.75); X.lineTo(-cw*0.5, -chh*0.35); X.lineTo(0, -chh);
+    X.lineTo(cw*0.5, -chh*0.35); X.lineTo(cw, -chh*0.75); X.lineTo(cw, 0); X.closePath(); X.fill(); X.stroke();
+    X.fillStyle='#5fd0ff'; for(const gx of [-0.5, 0, 0.5]){ X.beginPath(); X.arc(cw*gx, -chh*0.18, rx*0.06, 0, 7); X.fill(); }
+    X.fillStyle='rgba(255,255,255,.75)'; X.fillRect(-cw*0.85, -chh*0.62, cw*0.25, chh*0.10);    // frost on the gold
+    X.restore();
+  }
   X.restore();
   if(flash>0){ X.save(); X.globalCompositeOperation='lighter'; X.globalAlpha=flash*0.7;
     gooPath(cx, cy+ry*0.36, rx*1.14, ry*0.64, 0.08, 6, T*0.9, seed, true); X.fillStyle='#ffffff'; X.fill();
@@ -5160,7 +5254,7 @@ function newBattle(li, isXp){
     isXp:!!isXp, xpT:(L.xpMode && L.xpMode.first) || 0, xpWaveAt:0, xpBonus:0, xpWave:0, pendingXp:[],
     time:0, si:0, loopT:0, poolI:0, bossFired:false, bossWave:0, bossUnits:[], pendingPeons:[], killed:{}, hits:{}, waveGap:WAVE_GAP,
     throws:[], spits:[], coins:[], pendingRise:[], spores:[], tracers:[], waves:[], everyT:null, bossMus:0, aiT:0, aiPick:null, qbOn:false, qbT:0, hurt:{}, shock:[], strikes:[], pendingK:[], finaleDone:0, ekT:((L.everyK && !L.everyK.after)? L.everyK.t : 0),
-    camX:0, camT:0, camManual:0, field:FIELD,
+    camX:0, camT:0, camManual:0, field:FIELD, z:Math.max(zoomMin(), Math.min(ZOOM_MAX, camZoom)),
     over:null, overT:0, paused:false, kills:0
   };
   for(const k of teamUnits()) if(B.cd[k]==null) B.cd[k]=0;
@@ -5273,6 +5367,7 @@ function spawnUnit(k, asBoss, quiet){
   u.isBoss = boss;                                          // whoever wears the bar at the top
   const sh = d.team<0 ? espec(k,'shield') : d.shield;
   if(sh){ u.shield = u.shieldMax = sh; }                    // a shield soaks every hit until it breaks
+  if(d.drIce) u.atk = 3;                                    // Doctor Ice takes a moment before his first raise
   if(d.shadowOf) u.undead = 1;                              // a dev-mode shadow: drawn like a reaped one
   B.units.push(u);
   if(u.isBoss) bossEntry(u);                                  // and makes an entrance
@@ -6048,7 +6143,7 @@ function updateBattle(dt){
       if(L.qbEvery){ B.qbOn = true; B.qbT = L.qbEvery; }
       if(L.bossMore) for(let i=1;i<=L.bossMore.n;i++)                       // the rest of them, on a delay
         B.pendingK.push({t:i*(L.bossMore.gap||2), k:L.bossMore.k, mark:1});
-      if(L.bossThen) B.pendingK.push({t:L.bossThen.t, k:L.bossThen.k, entry:1});
+      if(L.bossThen) B.pendingK.push({t:L.bossThen.t, k:L.bossThen.k, entry: L.bossThen.bar===false ? 0 : 1});
       for(let i=0;i<(L.bossPeons||0);i++) B.pendingPeons.push(0.6+i*0.9);   // slime escort
     }
     if(B.qbOn){                                    // quarterbacks, once the boss is out
@@ -6170,6 +6265,17 @@ function updateBattle(dt){
             B.throws.push({x0:u.x, x1:tx, y0:GY-40, t:0, dur:0.55, rot:0});
             SFX.whoosh(0);
           }
+        } else if(d.summon==='reincarnate'){       // DOCTOR ICE: something dead climbs back out of the ground
+          const kk = !u.raisedOnce ? 'rsludge' : (Math.random() < 0.8 ? 'yeti' : 'rsludge');
+          u.raisedOnce = 1;
+          const r = spawnUnit(kk, false, true);
+          r.isBoss = false;                            // no bar for the risen
+          r.x = Math.max(P_FRONT+60, u.x + u.team*110); r.rise = 1; r.spawnA = 1;
+          SFX.spawn(); tone(140,0.9,'sawtooth',0.10,70); noise(0.8,0.14,900,200,0.7);
+          shake = Math.max(shake, 10);
+          ring(r.x, GY-6, '#bfe8ff', 10, 140, 0.6, 8); ring(r.x, GY-6, '#4fb3ff', 8, 90, 0.5, 5);
+          for(let q=0;q<22;q++) B.parts.push({x:r.x+(Math.random()-0.5)*90, y:GY-4, vx:(Math.random()-0.5)*160, vy:-60-Math.random()*200,
+            r:2+Math.random()*4, life:0.6+Math.random()*0.6, t:0, col: Math.random()<0.5?'#e6f8ff':'#7fc8f0', g:300});
         } else {
         const r = spawnUnit(d.summon);
         r.x = u.x + u.team*76;          // clear of the hat so both read
@@ -6518,7 +6624,7 @@ function updateBattle(dt){
   B.coins = B.coins.filter(c=>!c.done);
 
   // camera: MANUAL ONLY — no autoscroll. drag or two-finger scroll the field.
-  const camMax = Math.max(0, FIELD-W);
+  const camMax = Math.max(0, FIELD-viewW());
   B.camT = Math.max(0, Math.min(camMax, B.camT));
   B.camX += (B.camT - B.camX) * Math.min(1, dt*14);
 
@@ -6703,7 +6809,7 @@ function drawUnit(u){
                cx+=dir*(-6*e*e + 8*gust*e); rot=dir*0.14*gust*e; }                                         // and it leans into the blow
         cy = GY - ry*0.98;
       }
-      else if(d.phoenix || d.aero || d.snowman || d.avalanche){ cy = GY - ry*0.98; }   // these animate inside their own drawing
+      else if(d.phoenix || d.aero || d.snowman || d.avalanche || d.drIce){ cy = GY - ry*0.98; }   // these animate inside their own drawing
       else if(d.elderCane || d.reap){ cy = GY - ry*0.98; }
       else if(d.hammer){
         // heave the hammer up over his head, then bring it down with everything he has
@@ -6848,6 +6954,7 @@ function drawUnit(u){
   else if(d.toad) drawToad(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.lord) drawLord(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.shroom) drawShroom(u,cx,cy,rx,ry,dir,u.flash);
+  else if(d.drIce) drawDrIce(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.yeti) drawYeti(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.snowman) drawSnowman(u,cx,cy,rx,ry,dir,u.flash);
   else if(d.avalanche) drawAvalanche(u,cx,cy,rx,ry,dir,u.flash);
@@ -7219,7 +7326,6 @@ function drawBar(){
     cg.addColorStop(0, afford? shade(d.c[1], hov?24:6) : '#3a4c5c'); cg.addColorStop(1, afford? d.c[2] : '#222e39');
     X.fillStyle=cg; rr(x,y-(hov&&afford?2:0),w,h,12); X.fill();
     X.strokeStyle=afford? shade(d.c[2],-24):'#18222b'; X.lineWidth=3; X.stroke();
-    if(UPG[k] && UPG[k].godly) godlyFrame(x, y-(hov&&afford?2:0), w, h, 12, afford? 1 : 0.55, false);   // GODLY: a gold frame (it holds still on the cards)
     const lift=(hov&&afford?2:0), nm=uname(k);
     const pr = Math.min(1, d.r/26);            // a tiny unit gets a tiny portrait
     if(tiny){
@@ -7336,6 +7442,7 @@ function drawMini(k, cx, cy, r, dir, seed){
                      [ 'yeti',  drawYeti,  0.80, 0.80],
                      [ 'iceSlime', drawIceBlower, 0.86, 0.86],
                      [ 'hitslime', drawHitman, 0.90, 0.92],
+                     [ 'drIce', drawDrIce, 0.80, 0.80],
                      [ 'snowman', drawSnowman, 0.80, 0.80],
                      [ 'avalanche', drawAvalanche, 0.42, 0.42]];
     for(const [flag, fn, fx, fy] of SPECIAL){
@@ -7459,7 +7566,7 @@ function drawTut(dt){
   if(tu.step===0) tg = TUT_AT.card || {x:302, y:BAR_Y+12, w:120, h:82};
   else if(tu.step===1) tg = {x:10, y:BAR_Y+8, w:186, h:70};
   else if(tu.step===2) tg = {x:808, y:BAR_Y+12, w:180, h:82};
-  else tg = {x:E_BASE_X-B.camX-70, y:GY-190, w:140, h:196};
+  else { const zz=B.z||1; tg = {x:(E_BASE_X-B.camX-70)*zz, y:BAR_Y-(BAR_Y-GY+190)*zz, w:140*zz, h:196*zz}; }
   const ready = B.cannon.ch>=100;
   let title=st.title, sub=st.sub;
   if(tu.step===2 && ready){ title='THE CANNON IS CHARGED!'; sub='tap BLOB CANNON to blast every slime in the lane'; }
@@ -7550,7 +7657,10 @@ function drawTryOut(dt){
   if(to.step===1 && pop>=1) btn(bx+bw-110, by+bh-36, 96, 26, 'GOT IT', ()=>{ B.tryOut = null; }, {fs:13, r:8, c1:'#8affc9', c2:'#2f9b3f'});
 }
 function drawBattle(dt){
+  const zz = B.z || 1;
+  if(zz < 1){ X.fillStyle = B.L.sky[0]; X.fillRect(0, 0, W, BAR_Y); }   // zoomed out: sky above the world
   X.save();
+  if(zz !== 1){ X.translate(0, BAR_Y); X.scale(zz, zz); X.translate(0, -BAR_Y); }
   X.translate(-Math.round(B.camX), 0);
   drawBG(B.L, dt);
   let aim=-0.24;
@@ -7570,8 +7680,8 @@ function drawBattle(dt){
   X.restore();
 
   // edge markers so you know which way the fight is
-  if(FIELD>W){
-    const leftOff = B.camX>4, rightOff = B.camX < FIELD-W-4;
+  if(FIELD>viewW()){
+    const leftOff = B.camX>4, rightOff = B.camX < FIELD-viewW()-4;
     X.save();
     for(const [on,dir,ex] of [[leftOff,-1,16],[rightOff,1,W-16]]){
       if(!on) continue;
@@ -7598,6 +7708,15 @@ function drawBattle(dt){
   drawBar();
   btn(14, 72, 100, 40, aiMode?'AI: ON':'AI: OFF', ()=>{ aiMode = aiMode?0:1; },
       {fs:14, r:10, c1: aiMode?'#8ce03e':'#2f5f80', c2: aiMode?'#3c7a1c':'#173447'});
+  // ZOOM: − and + (also pinch, or the - / + keys)
+  const zmin = zoomMin();
+  btn(14, 118, 46, 36, '\u2212', ()=>{ zoomBy(1/1.25, W/2); }, {fs:22, r:10, c1:'#2f5f80', c2:'#173447', disabled: zz <= zmin+0.001});
+  btn(68, 118, 46, 36, '+', ()=>{ zoomBy(1.25, W/2); }, {fs:22, r:10, c1:'#2f5f80', c2:'#173447', disabled: zz >= ZOOM_MAX-0.001});
+  if(Math.abs(zz-1) > 0.02){
+    X.save(); X.fillStyle='rgba(6,20,32,.55)'; rr(14, 158, 100, 20, 8); X.fill();
+    X.fillStyle='#cfeeff'; X.font='800 12px ui-rounded, Trebuchet MS, sans-serif'; X.textAlign='center';
+    X.fillText('ZOOM '+Math.round(zz*100)+'%', 64, 172); X.restore();
+  }
   btn(W-296, 72, 100, 40, 'SPEED '+SPEEDS[fastMode]+'x',
       ()=>{ fastMode = (fastMode+1) % SPEEDS.length; },
       {fs:14, r:10, c1: fastMode?'#4fd1ff':'#2f5f80', c2: fastMode?'#17557f':'#173447'});
@@ -8406,7 +8525,6 @@ function labCard(k, cx, f){
   X.save(); X.globalAlpha = al;
   X.fillStyle='rgba(6,22,38,.92)'; rr(x, y, w, h, 18*sc); X.fill();
   X.strokeStyle = focus? accent : 'rgba(140,200,240,.22)'; X.lineWidth = focus?3.5:2; X.stroke();
-  if(UPG[k] && UPG[k].godly) godlyFrame(x, y, w, h, 18*sc, al, focus);
   if(focus && canEvo){ X.save(); X.globalAlpha=0.10+0.06*Math.sin(T*4);
     X.fillStyle=accent; rr(x,y,w,h,18*sc); X.fill(); X.restore(); }
 
@@ -9512,21 +9630,37 @@ function toCv(e){ const r=cv.getBoundingClientRect();
 let dragX=null;
 const ptrs = new Map();               // live touch points, for the two-finger scroll
 let twoX = null;                      // midpoint of the two fingers last frame
-function canPan(){ return scene==='battle' && B && FIELD>W; }
+const ZOOM_MAX = 1.8;
+let camZoom = 1;                      // remembered between battles
+function zoomMin(){ return Math.min(1, Math.max(0.4, W/FIELD)); }   // out until the whole field shows (never past 40%)
+function viewW(){ return W/((B && B.z) || 1); }
+function zoomBy(f, fx){               // zoom keeping the field point under screen x = fx where it is
+  if(!B || scene!=='battle') return;
+  const z0 = B.z||1, z1 = Math.max(zoomMin(), Math.min(ZOOM_MAX, z0*f));
+  if(Math.abs(z1-z0) < 1e-4) return;
+  const wx = B.camX + fx/z0;
+  B.z = camZoom = z1;
+  B.camX = B.camT = Math.max(0, Math.min(Math.max(0, FIELD-W/z1), wx - fx/z1));
+  B.camManual = 3.5;
+}
+function canPan(){ return scene==='battle' && B && FIELD>viewW(); }
 function panCam(dx){                  // dx = how far the fingers moved; the field goes the other way
   if(!canPan()) return;
-  B.camX = Math.max(0, Math.min(FIELD-W, B.camX - dx));
+  B.camX = Math.max(0, Math.min(FIELD-viewW(), B.camX - dx/(B.z||1)));
   B.camT = B.camX; B.camManual = 3.5;
 }
-function twoMid(){ let s=0; for(const v of ptrs.values()) s+=v; return s/ptrs.size; }
+function twoMid(){ let s=0; for(const v of ptrs.values()) s+=v.x; return s/ptrs.size; }
+let twoD = null;                      // finger spread last frame, for pinch-zoom
+function twoDist(){ const v=[...ptrs.values()]; return Math.hypot(v[0].x-v[1].x, v[0].y-v[1].y); }
 cv.addEventListener('pointermove', e=>{
   const p=toCv(e);
-  if(ptrs.has(e.pointerId)) ptrs.set(e.pointerId, p.x);
+  if(ptrs.has(e.pointerId)) ptrs.set(e.pointerId, {x:p.x, y:p.y});
   if(ptrs.size>=2){                   // TWO FINGERS: scroll the map by their midpoint
     dragX=null;
-    const mid=twoMid();
+    const mid=twoMid(), dd=twoDist();
     if(twoX!==null) panCam(mid-twoX);
-    twoX=mid;
+    if(twoD!==null && twoD>20 && dd>20) zoomBy(dd/twoD, mid);   // TWO FINGERS apart/together: zoom
+    twoX=mid; twoD=dd;
   } else if(eqDrag){
     eqDrag.moved += Math.abs(p.x-eqDrag.x) + Math.abs(p.y-eqDrag.y);
     eqDrag.x=p.x; eqDrag.y=p.y;
@@ -9551,7 +9685,7 @@ function dropPtr(e){
     selDrag = null;
   }
   ptrs.delete(e.pointerId);
-  if(ptrs.size<2) twoX = null;
+  if(ptrs.size<2){ twoX = null; twoD = null; }
   dragX=null;
   lastPtr = performance.now();                   // a long press must not fire again as a "mouse" click
   if(modal && modal.kind==='cheat' && codeFocus){ try{ codeIn.focus({preventScroll:true}); }catch(err){} }
@@ -9563,12 +9697,16 @@ cv.addEventListener('pointercancel', dropPtr);
 // meant to look along the map takes you off the page — so every sideways swipe is the game's.
 addEventListener('wheel', e=>{
   if(Math.abs(e.deltaX) > Math.abs(e.deltaY)) e.preventDefault();
+  if(e.ctrlKey && scene==='battle') e.preventDefault();          // a pinch zooms the battle, never the page
 }, {passive:false});
 cv.addEventListener('wheel', e=>{
   if(scene==='select' && selMax>0){
     const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
     if(d){ e.preventDefault(); selScroll = Math.max(0, Math.min(selMax, selScroll + d*1.1)); }
     return;
+  }
+  if(e.ctrlKey && scene==='battle' && B){          // trackpad PINCH (and ctrl+wheel): zoom at the pointer
+    e.preventDefault(); zoomBy(Math.exp(-e.deltaY*0.01), toCv(e).x); return;
   }
   if(!canPan()) return;
   const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
@@ -9598,7 +9736,7 @@ function onPress(e){
 }
 cv.addEventListener('pointerdown', e=>{
   lastPtr=performance.now(); const p=toCv(e);
-  if(e.pointerType==='touch'){ ptrs.set(e.pointerId, p.x); if(ptrs.size>=2){ twoX=twoMid(); dragX=null; return; } }
+  if(e.pointerType==='touch'){ ptrs.set(e.pointerId, {x:p.x, y:p.y}); if(ptrs.size>=2){ twoX=twoMid(); twoD=twoDist(); dragX=null; return; } }
   if(scene==='equip'){                             // pick a blob up: from a slot, or off the roster
     const pick = eqPickAt(p.x, p.y);
     if(pick){ eqDrag = {k:pick.k, from:pick.from, x:p.x, y:p.y, moved:0, ev:e};
@@ -9627,6 +9765,8 @@ addEventListener('keydown', e=>{
   }
   if(k===' '||e.code==='Space'){ e.preventDefault(); if(scene==='battle') fireCannon(); }
   if(scene==='battle' && B){
+    if(k==='-' || k==='_'){ zoomBy(1/1.25, W/2); }
+    if(k==='=' || k==='+'){ zoomBy(1.25, W/2); }
     const list=teamUnits();
     if(k==='1' && list[0]) tryDeploy(list[0]);
     if(k==='2' && list[1]) tryDeploy(list[1]);

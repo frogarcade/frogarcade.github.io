@@ -422,56 +422,108 @@
           <span class="badge"><i>🐧</i>Arcade</span>
           <svg viewBox="0 0 640 400" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
   <defs>
-    <linearGradient id="pb-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7cc8f2"/><stop offset="1" stop-color="#d9f1fd"/></linearGradient>
-    <linearGradient id="pb-ice" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eaf8ff"/><stop offset="1" stop-color="#9fd3ef"/></linearGradient>
-    <linearGradient id="pb-sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3f9bd6"/><stop offset="1" stop-color="#1d5f94"/></linearGradient>
-    <radialGradient id="pb-sun" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff8d6"/><stop offset=".45" stop-color="#fff2b0" stop-opacity=".7"/><stop offset="1" stop-color="#fff2b0" stop-opacity="0"/></radialGradient>
+    <linearGradient id="pb-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#071a3d"/><stop offset=".45" stop-color="#0f4b8c"/><stop offset="1" stop-color="#5cc4ee"/></linearGradient>
+    <filter id="pb-blur" x="-20%" y="-50%" width="140%" height="200%"><feGaussianBlur stdDeviation="14"/></filter>
+    <filter id="pb-soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="4"/></filter>
+    <radialGradient id="pb-sun" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#eafcff" stop-opacity=".9"/><stop offset=".35" stop-color="#a8ecff" stop-opacity=".45"/><stop offset="1" stop-color="#a8ecff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="pb-cliff" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d6f1ff"/><stop offset="1" stop-color="#6fb3dc"/></linearGradient>
+    <linearGradient id="pb-sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c6aa8"/><stop offset="1" stop-color="#062447"/></linearGradient>
+    <linearGradient id="pb-iceF" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f4fdff"/><stop offset=".5" stop-color="#bfe9fb"/><stop offset="1" stop-color="#7cc7ec"/></linearGradient>
+    <linearGradient id="pb-iceS" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6fb8e0"/><stop offset="1" stop-color="#3f8fc4"/></linearGradient>
+    <linearGradient id="pb-iceT" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#d8f3ff"/></linearGradient>
+    <linearGradient id="pb-tnt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c8742e"/><stop offset="1" stop-color="#8a4316"/></linearGradient>
+    <radialGradient id="pb-back" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#3a4a62"/><stop offset=".55" stop-color="#151c28"/><stop offset="1" stop-color="#05080e"/></radialGradient>
+    <radialGradient id="pb-belly" cx=".4" cy=".35" r=".75"><stop offset="0" stop-color="#ffffff"/><stop offset=".7" stop-color="#eef4fa"/><stop offset="1" stop-color="#b9cadb"/></radialGradient>
+    <radialGradient id="pb-seal" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#c7d2de"/><stop offset=".6" stop-color="#8794a6"/><stop offset="1" stop-color="#4c5869"/></radialGradient>
+    <linearGradient id="pb-crown" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff2a8"/><stop offset=".5" stop-color="#ffc93a"/><stop offset="1" stop-color="#d48a0a"/></linearGradient>
+    <radialGradient id="pb-hit" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffffff"/><stop offset=".4" stop-color="#d9f6ff" stop-opacity=".8"/><stop offset="1" stop-color="#9fe4ff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="pb-streak" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#ffffff" stop-opacity="0"/><stop offset="1" stop-color="#ffffff" stop-opacity=".75"/></linearGradient>
+    <g id="pb-cube">
+      <path d="M0 0 L58 0 L72 -14 L14 -14 Z" fill="url(#pb-iceT)"/>
+      <path d="M58 0 L72 -14 L72 42 L58 56 Z" fill="url(#pb-iceS)"/>
+      <rect width="58" height="56" fill="url(#pb-iceF)"/>
+      <path d="M6 8 L22 8 M6 14 L14 14" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity=".9"/>
+      <path d="M0 0 L58 0 L58 56 L0 56 Z M58 0 L72 -14 M58 56 L72 42 M72 -14 L72 42 M0 0 L14 -14 L72 -14" fill="none" stroke="#4d93bf" stroke-width="2"/>
+    </g>
   </defs>
   <rect width="640" height="400" fill="url(#pb-sky)"/>
-  <circle cx="230" cy="64" r="64" fill="url(#pb-sun)"/>
-  <path d="M0 250 L50 180 L90 215 L150 140 L210 210 L250 175 L300 240 L640 240 L640 262 L0 262 Z" fill="#cde9f8"/>
-  <path d="M50 180 L66 202 L55 200 L44 211 Z M150 140 L170 168 L157 164 L142 179 Z" fill="#ffffff" opacity=".9"/>
+  <!-- aurora -->
+  <g filter="url(#pb-blur)" opacity=".75">
+    <path d="M-40 90 C80 40 180 120 300 70 C420 20 520 90 680 40 L680 80 C520 130 420 60 300 110 C180 160 80 80 -40 130 Z" fill="#3cf0b4"/>
+    <path d="M-40 40 C100 10 200 70 330 30 C460 -10 560 50 680 10 L680 34 C560 74 460 14 330 54 C200 94 100 34 -40 64 Z" fill="#8a7bff" opacity=".7"/>
+  </g>
+  <g fill="#ffffff"><circle cx="40" cy="30" r="1.2" opacity=".7"/><circle cx="130" cy="64" r="1" opacity=".5"/><circle cx="250" cy="22" r="1.3" opacity=".7"/><circle cx="600" cy="120" r="1" opacity=".5"/><circle cx="560" cy="30" r="1.2" opacity=".6"/><circle cx="420" cy="150" r=".9" opacity=".4"/></g>
+  <!-- ice cliffs and the sea -->
+  <path d="M0 268 L0 214 L40 200 L70 222 L120 176 L170 210 L210 192 L260 236 L300 228 L340 262 Z" fill="url(#pb-cliff)" opacity=".85"/>
+  <path d="M120 176 L136 196 L126 192 L112 206 Z M40 200 L54 214 L44 212 Z" fill="#ffffff" opacity=".85"/>
+  <path d="M640 262 L640 226 L600 214 L560 236 L520 228 L490 262 Z" fill="url(#pb-cliff)" opacity=".6"/>
   <rect y="260" width="640" height="140" fill="url(#pb-sea)"/>
-  <path d="M0 272 Q40 264 80 272 T160 272 T240 272 T320 272 T400 272 T480 272 T560 272 T640 272" fill="none" stroke="#ffffff" stroke-opacity=".4" stroke-width="3"/>
-  <!-- the board up top: ice with HP, a TNT crate, and the crowned seal boss sitting on it -->
-  <g transform="translate(296,26) scale(1.04)">
-    <g stroke="#5aa2c8" stroke-width="3">
-      <rect x="0" y="70" width="58" height="52" rx="8" fill="url(#pb-ice)"/><rect x="64" y="70" width="58" height="52" rx="8" fill="url(#pb-ice)"/>
-      <rect x="192" y="70" width="58" height="52" rx="8" fill="url(#pb-ice)"/><rect x="256" y="70" width="58" height="52" rx="8" fill="url(#pb-ice)"/>
+  <path d="M0 272 Q60 264 120 272 T240 272 T360 272 T480 272 T600 272 T720 272" fill="none" stroke="#bfefff" stroke-opacity=".35" stroke-width="2"/>
+  <ellipse cx="470" cy="300" rx="180" ry="18" fill="#9fe4ff" opacity=".12"/>
+  <g transform="translate(0,30)">
+  <!-- the wall of ice up top, with a TNT crate -->
+  <g transform="translate(300,70)">
+    <use href="#pb-cube" x="0" y="20"/><use href="#pb-cube" x="62" y="20"/>
+    <use href="#pb-cube" x="248" y="20"/>
+    <g transform="translate(186,20)">
+      <path d="M0 0 L58 0 L72 -14 L14 -14 Z" fill="#e6a060"/><path d="M58 0 L72 -14 L72 42 L58 56 Z" fill="#6e3410"/>
+      <rect width="58" height="56" fill="url(#pb-tnt)"/>
+      <path d="M0 18 L58 18 M0 38 L58 38" stroke="#5a2a0a" stroke-width="2"/>
+      <rect x="6" y="20" width="46" height="16" rx="2" fill="#e8402f"/>
+      <text x="29" y="33" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="12" fill="#fff">TNT</text>
+      <path d="M0 0 L58 0 L58 56 L0 56 Z" fill="none" stroke="#4a1e06" stroke-width="2"/>
     </g>
-    <g font-family="Lilita One, Arial Rounded MT Bold, sans-serif" font-size="20" fill="#2c6f96" text-anchor="middle">
-      <text x="29" y="104">13</text><text x="93" y="104">13</text><text x="221" y="104">18</text><text x="285" y="104">33</text></g>
-    <g transform="translate(128,70)"><rect width="58" height="52" rx="6" fill="#b5652a" stroke="#6a3410" stroke-width="3"/>
-      <rect x="6" y="14" width="46" height="16" rx="3" fill="#d83a2e"/><text x="29" y="27" text-anchor="middle" font-family="Lilita One, Arial Rounded MT Bold, sans-serif" font-size="13" fill="#fff">TNT</text>
-      <text x="29" y="46" text-anchor="middle" font-family="Lilita One, Arial Rounded MT Bold, sans-serif" font-size="14" fill="#ffe7c4">7</text></g>
-    <g transform="translate(157,38)">
-      <ellipse cx="0" cy="8" rx="34" ry="30" fill="#8c98a6" stroke="#4a5462" stroke-width="3"/>
-      <ellipse cx="0" cy="18" rx="20" ry="14" fill="#c6cfd8"/>
-      <circle cx="-11" cy="0" r="5" fill="#1e232b"/><circle cx="11" cy="0" r="5" fill="#1e232b"/>
-      <circle cx="-9.5" cy="-1.5" r="1.6" fill="#fff"/><circle cx="12.5" cy="-1.5" r="1.6" fill="#fff"/>
-      <path d="M-16 -9 L-6 -5 M16 -9 L6 -5" stroke="#1e232b" stroke-width="3" stroke-linecap="round"/>
-      <ellipse cx="0" cy="9" rx="5" ry="3.5" fill="#1e232b"/>
-      <path d="M-18 -24 L-18 -40 L-9 -31 L0 -44 L9 -31 L18 -40 L18 -24 Z" fill="#ffd23a" stroke="#a97c0a" stroke-width="2.5"/>
+    <!-- the block the penguin is smashing: flying apart -->
+    <g transform="translate(124,20)">
+      <path d="M0 0 L22 0 L14 24 L0 30 Z" fill="url(#pb-iceF)" stroke="#4d93bf" stroke-width="2" transform="translate(-10,-14) rotate(-18)"/>
+      <path d="M36 0 L58 0 L58 26 L44 20 Z" fill="url(#pb-iceF)" stroke="#4d93bf" stroke-width="2" transform="translate(16,-22) rotate(22)"/>
+      <path d="M0 36 L18 30 L24 56 L0 56 Z" fill="url(#pb-iceF)" stroke="#4d93bf" stroke-width="2" transform="translate(-18,10) rotate(-28)"/>
+      <path d="M40 34 L58 30 L58 56 L34 56 Z" fill="url(#pb-iceF)" stroke="#4d93bf" stroke-width="2" transform="translate(22,14) rotate(26)"/>
+    </g>
+    <!-- the seal king, peeking over the wall, not happy -->
+    <g transform="translate(219,-34)">
+      <path d="M-40 26 C-40 -4 -22 -22 0 -22 C22 -22 40 -4 40 26 Z" fill="url(#pb-seal)" stroke="#3a4352" stroke-width="2.5"/>
+      <ellipse cx="0" cy="12" rx="17" ry="11" fill="#dfe6ee"/>
+      <ellipse cx="-12" cy="-2" rx="6" ry="7" fill="#11151b"/><ellipse cx="12" cy="-2" rx="6" ry="7" fill="#11151b"/>
+      <circle cx="-10" cy="-4.5" r="2.2" fill="#fff"/><circle cx="14" cy="-4.5" r="2.2" fill="#fff"/>
+      <path d="M-20 -13 L-6 -8 M20 -13 L6 -8" stroke="#11151b" stroke-width="3.5" stroke-linecap="round"/>
+      <ellipse cx="0" cy="7" rx="5" ry="3.6" fill="#11151b"/>
+      <ellipse cx="0" cy="17" rx="5" ry="4" fill="#5a1f2a"/>
+      <path d="M-8 12 L-22 9 M-8 15 L-22 16 M8 12 L22 9 M8 15 L22 16" stroke="#3a4352" stroke-width="1.4"/>
+      <path d="M-20 -24 L-22 -46 L-10 -34 L0 -52 L10 -34 L22 -46 L20 -24 Z" fill="url(#pb-crown)" stroke="#9a6406" stroke-width="2"/>
+      <circle cx="0" cy="-30" r="3" fill="#ff4a5a"/>
     </g>
   </g>
-  <!-- the launch: a dotted arc up from the slingshot, a penguin mid-flight heading for the ice -->
-  <path d="M545 312 Q520 250 470 210" fill="none" stroke="#ffffff" stroke-width="4" stroke-dasharray="2 12" stroke-linecap="round" opacity=".95"/>
-  <g transform="translate(452,196) rotate(-38)">
-    <path d="M-17 2 L-28 12 M17 2 L28 12" stroke="#1e2530" stroke-width="6" stroke-linecap="round"/>
-    <ellipse cx="0" cy="0" rx="18" ry="23" fill="#1e2530"/>
-    <ellipse cx="0" cy="5" rx="12" ry="16" fill="#fff"/>
-    <circle cx="-5" cy="-10" r="3.2" fill="#fff"/><circle cx="5" cy="-10" r="3.2" fill="#fff"/>
-    <circle cx="-5" cy="-10" r="1.6" fill="#111"/><circle cx="5" cy="-10" r="1.6" fill="#111"/>
-    <path d="M-3 -5 L3 -5 L0 1 Z" fill="#ff9a2a"/>
+  <!-- impact flash where the penguin hits -->
+  <circle cx="453" cy="112" r="60" fill="url(#pb-hit)"/>
+  <g fill="#ffffff"><path d="M453 52 L457 92 L453 98 L449 92 Z" opacity=".9"/><path d="M393 112 L433 108 L439 112 L433 116 Z" opacity=".7"/><path d="M513 112 L473 116 L467 112 L473 108 Z" opacity=".7"/></g>
+  <g fill="#e9fbff" stroke="#7cc7ec" stroke-width="1.2">
+    <path d="M410 70 L418 62 L422 74 Z"/><path d="M500 64 L512 58 L508 72 Z"/><path d="M398 140 L392 128 L406 132 Z"/><path d="M512 150 L522 142 L520 156 Z"/><path d="M430 40 L436 30 L440 44 Z"/>
   </g>
-  <g fill="#ffffff" opacity=".85"><circle cx="476" cy="226" r="3"/><circle cx="488" cy="240" r="2"/></g>
-  <!-- the ice floe and the slingshot, bottom right -->
-  <path d="M470 380 L500 336 L600 336 L630 380 Z" fill="url(#pb-ice)" stroke="#5aa2c8" stroke-width="3"/>
-  <path d="M536 338 L542 304 M562 338 L556 304" stroke="#7a4a20" stroke-width="7" stroke-linecap="round"/>
-  <path d="M542 306 Q549 316 556 306" stroke="#3a2a1a" stroke-width="3" fill="none"/>
-  <g transform="translate(512,328)"><ellipse rx="9" ry="11" fill="#1e2530"/><ellipse cy="3" rx="5.5" ry="7.5" fill="#fff"/><circle cx="-2" cy="-5" r="1.4" fill="#111"/></g>
-  <g transform="translate(590,330)"><ellipse rx="8" ry="10" fill="#1e2530"/><ellipse cy="3" rx="5" ry="7" fill="#fff"/><circle cx="2" cy="-5" r="1.3" fill="#111"/></g>
+  <!-- speed streaks behind the penguin -->
+  <g stroke="url(#pb-streak)" stroke-linecap="round">
+    <path d="M330 300 L426 172" stroke-width="7"/><path d="M362 316 L446 196" stroke-width="5"/><path d="M300 270 L404 162" stroke-width="4"/>
+  </g>
+  <!-- the hero: an Adélie penguin rocketing up into the ice -->
+  <g transform="translate(442,160) rotate(38)">
+    <ellipse cx="0" cy="46" rx="26" ry="8" fill="#000" opacity=".18" filter="url(#pb-soft)"/>
+    <path d="M-30 6 C-48 18 -58 34 -62 52 C-48 44 -36 36 -26 26 Z" fill="url(#pb-back)"/>
+    <path d="M30 6 C48 18 58 34 62 52 C48 44 36 36 26 26 Z" fill="url(#pb-back)"/>
+    <path d="M0 -50 C26 -50 36 -26 36 2 C36 32 22 50 0 50 C-22 50 -36 32 -36 2 C-36 -26 -26 -50 0 -50 Z" fill="url(#pb-back)"/>
+    <path d="M0 -16 C18 -16 24 2 24 18 C24 36 14 46 0 46 C-14 46 -24 36 -24 18 C-24 2 -18 -16 0 -16 Z" fill="url(#pb-belly)"/>
+    <circle cx="-11" cy="-26" r="7" fill="#ffffff"/><circle cx="11" cy="-26" r="7" fill="#ffffff"/>
+    <circle cx="-10" cy="-26" r="3.6" fill="#0a0d12"/><circle cx="12" cy="-26" r="3.6" fill="#0a0d12"/>
+    <circle cx="-9" cy="-27.5" r="1.3" fill="#fff"/><circle cx="13" cy="-27.5" r="1.3" fill="#fff"/>
+    <path d="M-17 -36 L-5 -32 M17 -36 L5 -32" stroke="#0a0d12" stroke-width="3" stroke-linecap="round"/>
+    <path d="M-7 -18 L7 -18 L0 -6 Z" fill="#ff9a2a" stroke="#b85e0a" stroke-width="1.2"/>
+    <path d="M-12 46 L-20 58 L-6 54 Z M12 46 L20 58 L6 54 Z" fill="#ff9a2a"/>
+    <path d="M-26 -38 C-18 -48 -6 -52 4 -50" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity=".35" fill="none"/>
+  </g>
+  </g>
+  <!-- snow drifting across everything -->
+  <g fill="#ffffff"><circle cx="60" cy="150" r="2" opacity=".6"/><circle cx="180" cy="110" r="1.6" opacity=".5"/><circle cx="280" cy="200" r="2.2" opacity=".6"/><circle cx="590" cy="200" r="1.8" opacity=".6"/><circle cx="360" cy="40" r="1.6" opacity=".5"/><circle cx="520" cy="250" r="2" opacity=".5"/></g>
 </svg>
+
           <div class="cap"><small>Penguin brick breaker</small><strong>Penguin Bounce</strong></div>
         </div>
         <div class="info">
