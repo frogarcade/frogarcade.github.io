@@ -6791,6 +6791,18 @@ function updateBattle(dt){
   C.recoil=Math.max(0, C.recoil-dt*3.5);
 
   // enemy spawn schedule
+  if(!B.over){                                     // every mode (campaign, XP levels, endless):
+    for(let i=B.pendingRise.length-1;i>=0;i--){     // the reaper's harvest, coming up out of the ground
+      B.pendingRise[i].t -= dt;
+      if(B.pendingRise[i].t<=0){ const e=B.pendingRise[i]; B.pendingRise.splice(i,1); raiseUndead(e); }
+    }
+    for(let i=B.pendingK.length-1;i>=0;i--){        // queued arrivals (boss follow-ups, the devils' assassins)
+      B.pendingK[i].t -= dt;
+      if(B.pendingK[i].t<=0){ const e=B.pendingK[i]; B.pendingK.splice(i,1);
+        const nu=spawnUnit(e.k, !!e.entry); if(e.mark) nu.isBoss=true;
+        if(B.endless && nu.team<0) endScale(nu, B.endless.wave, false); }
+    }
+  }
   if(!B.over && L.endless){ endlessTick(dt); }
   else if(!B.over && L.xpMode){
     const M = L.xpMode;
@@ -6882,15 +6894,6 @@ function updateBattle(dt){
     for(let i=B.pendingPeons.length-1;i>=0;i--){
       B.pendingPeons[i]-=dt;
       if(B.pendingPeons[i]<=0){ B.pendingPeons.splice(i,1); spawnUnit('slime'); }
-    }
-    for(let i=B.pendingRise.length-1;i>=0;i--){     // the reaper's harvest, coming up out of the ground
-      B.pendingRise[i].t -= dt;
-      if(B.pendingRise[i].t<=0){ const e=B.pendingRise[i]; B.pendingRise.splice(i,1); raiseUndead(e); }
-    }
-    for(let i=B.pendingK.length-1;i>=0;i--){
-      B.pendingK[i].t -= dt;
-      if(B.pendingK[i].t<=0){ const e=B.pendingK[i]; B.pendingK.splice(i,1);
-        const nu=spawnUnit(e.k, !!e.entry); if(e.mark) nu.isBoss=true; }
     }
     if(L.loop && B.si >= L.list.length){
       B.loopT += dt;
