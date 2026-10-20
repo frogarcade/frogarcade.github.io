@@ -408,9 +408,10 @@ const U = {
   devil: {nm:'THE DEVIL', traits:['dark'], team:-1, hp:4200, dmg:200, rate:2.0, spd:14, rng:500, r:58, wide:1.15,
           swT:3.0, hitP:0.80, devil:1, boss:1, kbStep:0.1429, aoe:240, aoeOff:150, aoeTarget:1, onKB:{k:'assassin', n:3},
           c:['#fdfbf5','#d8d4c8','#2a2732']},          // white horns, black slime face, a purple orb
-  devilr:{nm:'DEVIL REBORN', traits:['dark'], team:-1, hp:6500, dmg:200, rate:0, spd:22, rng:500, r:60, wide:1.15,
-          swT:1.5, hitP:0.80, devil:1, reborn:1, boss:1, kbStep:0.2, aoe:240, aoeOff:150, aoeTarget:1, onKB:{k:'assassin', n:3},
-          c:['#ffd6c8','#5a1e24','#14060a']},          // the devil, back angrier: no cooldown, swings twice as fast, and each knockback makes him 20% faster
+  devilr:{nm:'THE DEVIL REBORN', traits:['dark'], team:-1, hp:6500, dmg:360, rate:3.0, spd:22, rng:500, r:60, wide:1.15,
+          swT:5.4, hitP:0.80, devil:1, reborn:1, boss:1, kbStep:0.2, aoe:360, aoeOff:150, aoeTarget:1, onKB:{k:'assassin', n:3}, orbMul:1.5,
+          c:['#ffd6c8','#5a1e24','#14060a']},          // a slow, heavy summoning (80% longer than the devil's) and a 3s cooldown — but the ball is 50% bigger,
+                                                        // hits 80% harder and goes off as a plasma blast. Each knockback still makes him 20% faster
   tworker:{nm:'TURRET BUILDER', traits:['normal'], team:-1, hp:0.7, dmg:0, rate:3.0, spd:34, rng:40, r:28.6, wide:1,
           swT:0.85, hitP:0.55, worker:1, summon:'barrier', throwArc:1, throwKind:'turret', body:['#ffc4b8','#e04a3a','#7a1a12'],
           c:['#ffe9a8','#f2a81f','#8a5a06']},          // a red construction slime, 30% bigger, that lobs gun turrets instead of barricades
@@ -1787,6 +1788,73 @@ function godFX(u, d, dt){                              // what drifts off them, 
   }
 }
 
+/* ---- THE DEVIL REBORN's energy ball goes off as a plasma blast: a white-hot core, a crimson-magenta sphere,
+   lightning crawling out of it, a shockwave across the ground ---- */
+function plasmaBlast(x, y, aoe){
+  B.plasmas.push({x, y, aoe, t:0, life:1.15, seed:Math.random()*100, arcs:null, arcT:0});
+  SFX.boom(); tone(70, 0.9, 'sawtooth', 0.16, 30); noise(0.9, 0.22, 4000, 300, 0.8); tone(1800, 0.25, 'square', 0.05, 400);
+  shake = Math.max(shake, 26); flashScreen = Math.max(flashScreen, 0.35); hitStop = Math.max(hitStop, 0.07);
+  const R = Math.random;
+  for(let i=0;i<46;i++){ const a=R()*Math.PI*2, sp=180+R()*520;
+    gpart(x, y, Math.cos(a)*sp, Math.sin(a)*sp*0.8 - 60, 2+R()*3.5, 0.5+R()*0.6, R()<0.3?'#ffffff':R()<0.6?'#ff5ad8':'#ff3a3a', 260, R()<0.5?'glow':'spark'); }
+  for(let i=0;i<18;i++) gpart(x+(R()-0.5)*aoe*1.4, GY-4, (R()-0.5)*200, -60-R()*220, 3+R()*5, 0.5+R()*0.5, R()<0.5?'#3a0a18':'#7a1430', 480);
+}
+function plasmaArcs(p){                                 // fresh jagged lightning, re-rolled every few frames
+  const arcs=[], n=9, len=p.aoe*0.95;
+  for(let i=0;i<n;i++){
+    const a = i*Math.PI*2/n + (Math.random()-0.5)*0.5, pts=[[0,0]], seg=7;
+    for(let s=1;s<=seg;s++){ const f=s/seg, jit=(Math.random()-0.5)*len*0.16;
+      pts.push([Math.cos(a)*len*f - Math.sin(a)*jit, (Math.sin(a)*len*f + Math.cos(a)*jit)*0.75]); }
+    arcs.push(pts);
+  }
+  return arcs;
+}
+function updatePlasmas(dt){
+  for(const p of B.plasmas){ p.t += dt; p.arcT -= dt; if(p.arcT<=0){ p.arcT = 0.05; p.arcs = plasmaArcs(p); } }
+  B.plasmas = B.plasmas.filter(p => p.t < p.life);
+}
+function drawPlasmas(){
+  for(const p of B.plasmas){
+    const q = p.t/p.life, e = 1-q, grow = 1-Math.pow(1-Math.min(1, q*2.2), 3), R = p.aoe*(0.25 + 0.75*grow);
+    X.save();
+    // the shockwave rolling out across the ground
+    X.globalAlpha = 0.8*e; X.strokeStyle='#ff6ad8'; X.lineWidth = 10*e + 2;
+    X.beginPath(); X.ellipse(p.x, GY-4, p.aoe*(0.3+1.05*Math.min(1,q*1.6)), 22*(0.3+Math.min(1,q*1.6)), 0, 0, 7); X.stroke();
+    X.strokeStyle='#ffffff'; X.lineWidth = 3*e + 1;
+    X.beginPath(); X.ellipse(p.x, GY-4, p.aoe*(0.2+0.95*Math.min(1,q*1.8)), 18*(0.3+Math.min(1,q*1.8)), 0, 0, 7); X.stroke();
+    // the sphere: crimson-magenta plasma with a white-hot heart
+    const sg = X.createRadialGradient(p.x, p.y, 0, p.x, p.y, R);           // painted, so it stays crimson on a bright sky
+    sg.addColorStop(0, 'rgba(255,255,255,'+(0.95*e)+')');
+    sg.addColorStop(0.18, 'rgba(255,150,230,'+(0.90*e)+')');
+    sg.addColorStop(0.45, 'rgba(240,30,130,'+(0.80*e)+')');
+    sg.addColorStop(0.75, 'rgba(150,10,60,'+(0.55*e)+')');
+    sg.addColorStop(1, 'rgba(90,0,30,0)');
+    X.fillStyle=sg; X.beginPath(); X.arc(p.x, p.y, R, 0, 7); X.fill();
+    X.globalCompositeOperation='lighter';                                  // and glows on a dark one
+    X.globalAlpha = 0.35; X.fill();
+    X.globalCompositeOperation='source-over'; X.globalAlpha = 1;
+    // plasma rings spinning off it
+    X.lineWidth = 4*e + 1; X.lineCap='round';
+    for(let i=0;i<3;i++){
+      X.globalAlpha = 0.7*e; X.strokeStyle = i%2? '#ffd0f4' : '#ff4aa8';
+      X.beginPath(); X.ellipse(p.x, p.y, R*(0.55+i*0.18), R*(0.18+i*0.05), p.seed + q*4*(i%2? -1 : 1) + i, 0, 7); X.stroke();
+    }
+    // lightning crawling out of it
+    if(p.arcs && q < 0.8){
+      const s = 0.35 + 0.65*grow;
+      for(const pts of p.arcs){
+        X.globalAlpha = 0.9*(1-q/0.8);
+        for(const [w, col] of [[6, '#ff5ad8'], [2, '#ffffff']]){
+          X.strokeStyle=col; X.lineWidth=w; X.beginPath();
+          pts.forEach(([ax,ay],j)=>{ const px=p.x+ax*s, py=p.y+ay*s; if(j) X.lineTo(px,py); else X.moveTo(px,py); });
+          X.stroke();
+        }
+      }
+    }
+    X.restore();
+  }
+}
+
 /* ---- REAPER BLOB: a big hooded blob with a scythe taller than it is ---- */
 function reaperScythe(u, d){
   const p = u.sw>0 ? 1-u.sw/u.swT : -1, ss=x=>x*x*(3-2*x), h=d.hitP||0.62;
@@ -2936,12 +3004,12 @@ function drawDevil(u, cx, cy, rx, ry, dir, flash){
 
   // ---- the orb: it climbs out of the ground where it means to land, then falls in on itself ----
   const orbX = (u.lockX!=null) ? u.lockX : cx + dir*rx*1.30;
-  const R0 = rx*0.85;
+  const OM = U[u.k].orbMul || 1, R0 = rx*0.85*OM, orbH = 104*OM;   // the reborn's ball is 50% bigger
   if(p>=0 && burst<=0){
     const rise = grow;                                          // 0 at the first crack, 1 fully risen
     const imp = rise>0.90 ? (rise-0.90)/0.10 : 0;               // the last tenth is the collapse
     const orbR = R0 * (0.22 + 0.78*rise) * (imp>0 ? (1-0.88*imp*imp) : 1);
-    const orbY = GY - 6 - 104*Math.pow(rise, 0.75);
+    const orbY = GY - 6 - orbH*Math.pow(rise, 0.75);
     // the ground it is coming out of
     X.save(); X.globalCompositeOperation='lighter';
     X.globalAlpha=(0.30+0.45*rise)*(1-imp*0.5);
@@ -3006,8 +3074,8 @@ function drawDevil(u, cx, cy, rx, ry, dir, flash){
     }
   }
   // ---- and then it all comes back out ----
-  if(burst>0 && burst<1){
-    const e=1-burst, orbY = GY - 110;
+  if(burst>0 && burst<1 && !U[u.k].reborn){            // (the reborn's goes off as a plasma blast instead)
+    const e=1-burst, orbY = GY - 6 - orbH;
     X.save(); X.globalCompositeOperation='lighter';
     X.globalAlpha=e;
     const fg2=X.createRadialGradient(orbX, orbY, 0, orbX, orbY, R0*(0.6+2.6*burst));
@@ -5850,7 +5918,7 @@ function newBattle(li, isXp){
     cannon:{ch:55, rate:5.5, ready:false, recoil:0},
     isXp:!!isXp, xpT:(L.xpMode && L.xpMode.first) || 0, xpWaveAt:0, xpBonus:0, xpWave:0, pendingXp:[],
     time:0, si:0, loopT:0, poolI:0, bossFired:false, bossWave:0, bossUnits:[], pendingPeons:[], killed:{}, hits:{}, waveGap:WAVE_GAP,
-    throws:[], spits:[], coins:[], pendingRise:[], spores:[], tracers:[], impacts:[], timeStop:0, timeStopMax:1, waves:[], everyT:null, bossMus:0, aiT:0, aiPick:null, qbOn:false, qbT:0, hurt:{}, shock:[], strikes:[], pendingK:[], finaleDone:0, ekT:((L.everyK && !L.everyK.after)? L.everyK.t : 0),
+    throws:[], spits:[], coins:[], pendingRise:[], spores:[], tracers:[], impacts:[], plasmas:[], timeStop:0, timeStopMax:1, waves:[], everyT:null, bossMus:0, aiT:0, aiPick:null, qbOn:false, qbT:0, hurt:{}, shock:[], strikes:[], pendingK:[], finaleDone:0, ekT:((L.everyK && !L.everyK.after)? L.everyK.t : 0),
     camX:0, camT:0, camManual:0, field:FIELD, z:Math.max(zoomMin(), Math.min(ZOOM_MAX, camZoom)),
     over:null, overT:0, paused:false, kills:0
   };
@@ -6728,6 +6796,7 @@ function updateFX(dt){
   if(B.waves && B.waves.length) updateWaves(dt);
   for(const tr of (B.tracers||[])) tr.t += dt;
   for(const m of B.impacts) m.t += dt; B.impacts = B.impacts.filter(m => m.t < m.life);
+  if(B.plasmas.length) updatePlasmas(dt);
   if(B.timeStop>0) B.timeStop -= dt;
   if(B.tracers) B.tracers = B.tracers.filter(tr => tr.t < 0.14);
   for(const sc of (B.spores||[])){                   // spore clouds: anything of the other side inside is slowed
@@ -6799,8 +6868,7 @@ function updateBattle(dt){
     for(let i=B.pendingK.length-1;i>=0;i--){        // queued arrivals (boss follow-ups, the devils' assassins)
       B.pendingK[i].t -= dt;
       if(B.pendingK[i].t<=0){ const e=B.pendingK[i]; B.pendingK.splice(i,1);
-        const nu=spawnUnit(e.k, !!e.entry); if(e.mark) nu.isBoss=true;
-        if(B.endless && nu.team<0) endScale(nu, B.endless.wave, false); }
+        const nu=spawnUnit(e.k, !!e.entry); if(e.mark) nu.isBoss=true; }   // (the devils' assassins come at their normal strength, endless too)
     }
   }
   if(!B.over && L.endless){ endlessTick(dt); }
@@ -7237,6 +7305,8 @@ function updateBattle(dt){
             for(let q=0;q<24;q++) B.parts.push({x:x0+(ix+u.team*d.aoe - x0)*Math.random(), y:GY-4,
               vx:u.team*(40+Math.random()*200), vy:-60-Math.random()*200, r:2.5+Math.random()*5,
               life:0.35+Math.random()*0.45, t:0, col: Math.random()<0.5?'#efe4cf':'#a9906a', g:480});
+          } else if(U[u.k].reborn){                    // THE DEVIL REBORN: the ball goes off as plasma
+            plasmaBlast(ix, GY - 6 - 104*(d.orbMul||1), d.aoe);
           } else if(U[u.k].reap){                      // the scythe: a cold violet crescent through them
             SFX.slam(); tone(110,0.3,'sawtooth',0.10,55); noise(0.2,0.12,3200,900,1.6);
             ring(ix, iy, '#d8c8ff', 10, 90, 0.34, 6);
@@ -8493,6 +8563,7 @@ function drawBattle(dt){
   for(const u of sorted) drawUnit(u);
   for(const s of B.shots) drawShot(s);
   drawFX();
+  drawPlasmas();
   drawImpacts();
   X.restore();
   drawTimeStop();
