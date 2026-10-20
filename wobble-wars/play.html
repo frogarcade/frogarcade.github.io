@@ -343,7 +343,7 @@ const U = {
           hpUp:72, dmgUp:64, wide:1.18, swT:2.0, hitP:0.72, elderCane:1, kbStep:0.34, aoe:110, aoeOff:204,   // the cane's shockwave rolls out to 314
           tier:'godly', c:['#eef0f6','#a9b1c6','#5b6378']},   // slow, old, and the cane comes down hard
   reaper:{nm:'REAPER BLOB', abil:[{t:'massive', vs:['normal']}], team:1, hp:1250, dmg:500, rate:1.6, spd:40, rng:180, r:40, cost:1400, cd:40,
-          hpUp:250, dmgUp:100, wide:1.10, swT:1.4, hitP:0.62, reap:{chance:0.45, mul:0.40}, kbStep:0.34,
+          hpUp:250, dmgUp:100, wide:1.10, swT:1.4, hitP:0.62, reap:{chance:0.80, mul:0.30}, kbStep:0.34,
           tier:'godly', c:['#8a86a0','#3d3950','#16141e']},   // what it kills may get back up — for you
   aero:  {nm:'AERO BLOB', team:1, hp:400, dmg:1500, rate:2.0, spd:420, rng:84, r:34, cost:1750, cd:120,
           hpUp:80, dmgUp:300, wide:1.10, swT:0.70, hitP:0.50, aero:1, kbStep:0.25, aoe:46, aoeOff:78,   // the rocket fist goes off in a small blast
@@ -602,8 +602,8 @@ const EVO = {
           note:'+35% HP, +30% damage, and the cane flies 25% further', c:['#e8f6f2','#57b8a8','#2a5f59']},
   elder: {nm:'OLD TIMER BLOB', cost:9000, hpMul:1.20, dmgMul:1.20, spdMul:0.80,
           note:'+20% HP and damage, and 20% slower still', c:['#f4f2ee','#b7b0a4','#6b645a']},
-  reaper:{nm:'GRIM BLOB', cost:9000, hpMul:1.25, spdMul:1,
-          note:'+25% HP', aura:'#b58cff', c:['#7c7896','#2c2840','#0e0c15']},
+  reaper:{nm:'GRIM BLOB', cost:9000, hpMul:1.25, spdMul:1, reapAll:1,
+          note:'+25% HP, and EVERY slime it kills rises for you', aura:'#b58cff', c:['#7c7896','#2c2840','#0e0c15']},
   aero:  {nm:'JETSTREAM BLOB', cost:9000, hpMul:1, dmgMul:1.30, spdMul:0.91, jet:1, bump:1,
           abil:[{t:'tough', vs:['ice']}, {t:'nofreeze'}, {t:'noslow'}],   // the ice counter: half damage from ICE, can't be frozen or slowed
           note:'+30% damage, rams, and counters ICE', c:['#fff1ea','#e8584a','#6e1f1c']},
@@ -5968,7 +5968,13 @@ function spawnUnit(k, asBoss, quiet){
   const sh = d.team<0 ? espec(k,'shield') : d.shield;
   if(sh){ u.shield = u.shieldMax = sh; }                    // a shield soaks every hit until it breaks
   if(d.drIce) u.atk = 3;                                    // Doctor Ice takes a moment before his first raise
-  if(d.shadowOf) u.undead = 1;                              // a dev-mode shadow: drawn like a reaped one
+  if(d.shadowOf){                                           // a shadow teammate: drawn like a reaped one,
+    u.undead = 1;
+    if(!quiet && B){ u.rise = 1;                            // and it climbs up out of the ground
+      for(let q=0;q<14;q++) B.parts.push({x:u.x+(Math.random()-0.5)*44, y:GY-2, vx:(Math.random()-0.5)*160, vy:-80-Math.random()*200,
+        r:2+Math.random()*4, life:0.4+Math.random()*0.4, t:0, col: Math.random()<0.5?'#3d2a52':'#6b5585', g:520});
+      ring(u.x, GY-6, '#b58cff', 8, 70, 0.5, 5); }
+  }
   B.units.push(u);
   if(u.isBoss) bossEntry(u);                                  // and makes an entrance
   if(d.hitman && d.team<0 && !quiet) launchHitman(u);         // a hit man slime lights the dynamite the moment he's out
@@ -6337,13 +6343,13 @@ function kingLand(u, d){
   for(let q=0;q<26;q++) B.parts.push({x:u.x+(Math.random()-0.5)*K.r*1.6, y:GY-4, vx:(Math.random()-0.5)*320, vy:-100-Math.random()*260,
     r:3+Math.random()*6, life:0.45+Math.random()*0.5, t:0, col: Math.random()<0.5?'#b6ee6a':'#5aa82a', g:520});
   for(let i=0;i<2;i++){                               // and his subjects pour out after him
-    const sl = spawnUnit('slime'); sl.x = u.x + (i? 50 : -50); sl.spawnA = 1;
-    if(B.endless) endScale(sl, B.endless.wave, false);
+    const sl = spawnUnit('slime', false, true); sl.x = u.x + (i? 50 : -50); sl.spawnA = 1; joinSide(sl, u);
+    if(B.endless && u.team<0) endScale(sl, B.endless.wave, false);
   }
 }
-function timeStop(dur){                                // THE TIMEKEEPER: every blob on the field stops dead
+function timeStop(dur, team){                          // THE TIMEKEEPER: everyone on the other side stops dead
   B.timeStop = B.timeStopMax = dur;
-  for(const o of B.units) if(o.team>0 && !o.dead && !o.dying && !o.fly){ o.freezeT = Math.max(o.freezeT||0, dur); o.sw = 0; }
+  for(const o of B.units) if(o.team!==(team||-1) && !o.dead && !o.dying && !o.fly){ o.freezeT = Math.max(o.freezeT||0, dur); o.sw = 0; }
   flashScreen = Math.max(flashScreen, 0.45); shake = Math.max(shake, 8);
   tone(1200,0.12,'square',0.06,1200); tone(600,1.4,'sine',0.10,150,0.1); noise(1.2,0.06,200,1200,0.6);
 }
@@ -6365,7 +6371,10 @@ function boltHit(st){
     life:0.35+Math.random()*0.45, t:0, col: Math.random()<0.5? '#ffffff' : '#9fb0ff', g:520});
 }
 
-/* ---- REAPER: the fallen come back up behind it, 40% of what they were ---- */
+/* ---- REAPER: the fallen come back up behind it, 30% of what they were (Reaper 80% of kills, Grim Blob all of them) ---- */
+function joinSide(r, owner){                          // something a shadow brings out fights on the shadow's side
+  if(owner.team>0){ r.team = owner.team; r.dir = owner.team; r.undead = 1; r.isBoss = false; }
+}
 function canRaise(k){ const d=U[k]; return !(d.barrier || d.worker || d.throwArc || d.onKB); }
 function raiseUndead(e){
   const src = e.src;
@@ -6454,8 +6463,8 @@ function endAir(u){
       for(let i=0;i<sp.n;i++){
         const h = spawnUnit(sp.k);
         h.x = u.x + (i - (sp.n-1)/2) * 34;
-        h.noSplit = true; h.spawnA = 0;
-        if(B.endless) endScale(h, B.endless.wave, false);
+        h.noSplit = true; h.spawnA = 0; joinSide(h, u);
+        if(B.endless && u.team<0) endScale(h, B.endless.wave, false);
         if(sp.mul){                                   // the pieces carry their own boost and size
           h.hp = h.max = Math.round(U[sp.k].hp*sp.mul*10)/10;
           h.dmgFix = U[sp.k].dmg*sp.mul; h.rs = sp.rs||1;
@@ -6680,7 +6689,8 @@ function dmgUnit(u, amount, from, src){
   if(u.hp<=0){
     u.hp=0;
     const R = src && !src.dead && U[src.k] && U[src.k].reap;
-    if(R && B && u.team!==src.team && !u.undead && canRaise(u.k) && Math.random() < R.chance)
+    const rc = (src && src.evo && EVO[src.k] && EVO[src.k].reapAll) ? 1 : (R ? R.chance : 0);   // GRIM BLOB: everything it kills gets back up
+    if(R && B && u.team!==src.team && !u.undead && canRaise(u.k) && Math.random() < rc)
       B.pendingRise.push({k:u.k, max:u.max, rs:u.rs||1, dmg:unitDmg(u)*R.mul, mul:R.mul, src, t:0.9});
     knockback(u, 1.3, true); return;
   }
@@ -6957,7 +6967,7 @@ function updateBattle(dt){
     if(d.king && !u.air && kingTick(u, d, udt)) continue;
     if(d.timekeeper && !u.air){
       u.tsT = (u.tsT==null ? d.timekeeper.first : u.tsT) - udt;
-      if(u.tsT<=0){ u.tsT = d.timekeeper.every; timeStop(d.timekeeper.dur); }
+      if(u.tsT<=0){ u.tsT = d.timekeeper.every; timeStop(d.timekeeper.dur, u.team); }
     }
 
     if(d.heal && !u.air){              // menders work to their own clock
@@ -7024,6 +7034,7 @@ function updateBattle(dt){
           const kk = (!u.raisedOnce && n===0) ? 'rsludge' : (Math.random() < 0.8 ? 'yeti' : 'rsludge');   // the very first is always the sludge
           const r = spawnUnit(kk, false, true);
           r.isBoss = false;                            // no bar for the risen
+          joinSide(r, u);
           if(u.endF){ r.max = Math.round(r.max*u.endF); r.hp = r.max; r.dmgMul = Math.sqrt(u.endF); }   // endless: the risen fit the wave too
           r.x = Math.max(P_FRONT+60, u.x + u.team*(110 + n*120)); r.rise = 1; r.spawnA = 1;
           SFX.spawn(); tone(140,0.9,'sawtooth',0.10,70); noise(0.8,0.14,900,200,0.7);
@@ -8473,7 +8484,8 @@ function drawBattle(dt){
   // big units sit BEHIND the small ones — blobs read in front of chonks and bosses
   // ...except a god, who is never behind anybody
   // ...except a god, who is never behind anybody, and the godly blobs, who stand in front of the rest
-  const front=(u)=> U[u.k].storm? 2 : (u.k==='elder' || u.k==='reaper' || u.k==='aero' || u.k==='samurai') ? 1 : 0;
+  const front=(u)=> (u.undead && u.team>0) ? 3                     // shadow teammates: in front of every blob
+                  : U[u.k].storm? 2 : (u.k==='elder' || u.k==='reaper' || u.k==='aero' || u.k==='samurai') ? 1 : 0;
   const sorted=B.units.slice().sort((a,b)=> (front(a)-front(b)) || (U[b.k].r*(b.rs||1) - U[a.k].r*(a.rs||1)));
   for(const u of sorted) drawUnit(u);
   for(const s of B.shots) drawShot(s);
@@ -9129,15 +9141,6 @@ function drawMenu(dt){
                             : 'upgrade in the BLOB LAB and try again', 0, 18);
       X.restore();
     }
-  }
-  if(!AC){                       // browsers keep every page silent until it is clicked
-    X.save();
-    X.globalAlpha = 0.72 + 0.28*Math.sin(T*4);
-    X.fillStyle='rgba(6,22,36,.82)'; rr(530, 372, 340, 32, 11); X.fill();
-    X.strokeStyle='#ffd86a'; X.lineWidth=2; X.stroke();
-    X.fillStyle='#ffe9a8'; X.font='800 13px ui-rounded, Trebuchet MS, sans-serif';
-    X.fillText('CLICK ANYWHERE TO TURN THE SOUND ON', 700, 393);
-    X.restore();
   }
   X.textAlign='left';
 
