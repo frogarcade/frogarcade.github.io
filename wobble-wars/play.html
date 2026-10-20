@@ -349,7 +349,7 @@ const U = {
           hpUp:80, dmgUp:300, wide:1.10, swT:0.70, hitP:0.50, aero:1, kbStep:0.25, aoe:46, aoeOff:78,   // the rocket fist goes off in a small blast
           tier:'godly', c:['#eef6ff','#8fb8e6','#2c4a70']},   // a little mecha, a blob at the controls, rockets on its back
   samurai:{nm:'SAMURAI BLOB', traits:['fire'], team:1, hp:900, dmg:240, rate:1.0, spd:47.6, rng:80, r:36, cost:2000, cd:50,   // spd +40% (user)
-          hpUp:180, dmgUp:48, wide:1.05, swT:1.40, hitP:0.80, samurai:1, combo:[0.22,0.50,0.80], finalAoe:110, finalMul:1.5, finalKB:90,
+          hpUp:180, dmgUp:48, wide:1.05, swT:1.40, hitP:0.80, samurai:1, combo:[0.22,0.50,0.80], finalAoe:110, finalMul:1.5, finalKB:180,
           poison:{mul:0.35, t:3}, burn:1, kbStep:0.34,      // two quick cuts on one slime, then an overhead on everything in front — and it all burns
           tier:'godly', c:['#ffe0d4','#e84a32','#7a1c12']},
   fierce:{nm:'DEMIGOD BLOB', team:1, hp:875, dmg:65, rate:2.2, spd:20, rng:460, r:70, cost:1000, cd:60,
@@ -385,7 +385,7 @@ const U = {
   avalanche:{nm:'THE AVALANCHE', traits:['ice'], team:-1, hp:11500, dmg:300, rate:0.375, spd:38.4, rng:140, r:66, wide:1.2,
           swT:0.458, hitP:0.60, avalanche:1, boss:1, aoe:140, aoeOff:110, kbStep:0.25,
           c:['#e6f8ff','#8fcbe8','#2f6a92']},          // a walking mountain of ice: every second a foot comes down for 300, all around
-  phoenix:{nm:'THE GODLY PHOENIX', traits:['fire','angelic'], abil:[{t:'kb', chance:0.50}], team:-1, hp:5000, dmg:10, rate:8, spd:43.9, rng:640, r:62, wide:1.22,
+  phoenix:{nm:'THE GODLY PHOENIX', traits:['fire','angelic'], abil:[{t:'kb', chance:0.50, dist:44, cap:110}], team:-1, hp:5000, dmg:10, rate:8, spd:43.9, rng:640, r:62, wide:1.22,
           swT:8, hitP:0.375, phoenix:1, boss:1, kbStep:0.1, beam:{t0:0.375, n:100, reach:Infinity},
           c:['#e6f6ff','#3fa9f5','#1b4d8c']},   // 3s charging in the sky, 5s of beam, 8s rest. It starts from 640 away,
                                                 // but once the beam is on it reaches anything on the field
@@ -972,9 +972,28 @@ function endlessTick(dt){
   if(!alive){                                         // wave cleared
     const g = endWaveXP(E.wave); E.xp += g; E.cleared = E.wave;
     E.pop = {txt:'WAVE '+E.wave+' CLEARED  +'+g.toLocaleString()+' XP', t:2.2};
-    E.mus = null; if(E.wave%10===0) endSky(null);
+    E.mus = null; if(E.wave%10===0 || E.devSky) endSky(null); E.devSky = 0;
     SFX.ready(); E.state = 'break'; E.t = 3;
   }
+}
+/* DEV (cheat mode only): call any endless boss out right now, to see it */
+const DEV_BOSSES = ['devilr','clock','king','drice','avalanche','lord','phoenix','sludge','yeti','toad','mib','golem','oak','scrapjaw','blower','brute'];
+let devBossI = 0;
+function devSummonBoss(){
+  const E = B.endless; if(!E || B.over) return;
+  const k = DEV_BOSSES[devBossI], u = spawnUnit(k, true); u.isBoss = true;
+  endScale(u, Math.max(10, E.wave), true);                 // at least wave-10 strength
+  const major = END_MAJOR.indexOf(k) >= 0;
+  E.mus = major ? 'boss' : (E.mus || 'miniboss');
+  if(major && END_SKIES[k]){ endSky(END_SKIES[k]); E.devSky = 1; }
+  if(E.state==='break'){ E.state='wave'; E.queue=[]; E.t=0.6; E.banner=0; }   // it counts as a wave of its own
+}
+function drawDevBossBtns(){
+  if(!save.cheat || !B.endless || B.over) return;
+  const y = 122, x = W-284;
+  btn(x, y, 34, 32, '\u25c2', ()=>{ devBossI = (devBossI + DEV_BOSSES.length - 1) % DEV_BOSSES.length; }, {fs:14, r:9, c1:'#5a3a80', c2:'#2a1844'});
+  btn(x+38, y, 194, 32, 'SUMMON '+U[DEV_BOSSES[devBossI]].nm.replace(/^THE /,''), devSummonBoss, {fs:12, r:9, c1:'#c0382a', c2:'#6a1410'});
+  btn(x+236, y, 34, 32, '\u25b8', ()=>{ devBossI = (devBossI + 1) % DEV_BOSSES.length; }, {fs:14, r:9, c1:'#5a3a80', c2:'#2a1844'});
 }
 function drawEndlessHUD(){
   const E = B.endless; if(!E || B.over) return;
@@ -6370,7 +6389,7 @@ function comboTick(u, d){
         if(o.team===u.team || o.dead || o.dying || o.phased) continue;
         if(Math.abs(o.x - hx) <= R + U[o.k].r*0.5*(o.rs||1)){
           dmgUnit(o, base*mul, u.team, u);
-          if(!o.dead && !o.dying && !U[o.k].noKB) o.push = Math.min(160, (o.push||0) + (d.finalKB||90));
+          if(!o.dead && !o.dying && !U[o.k].noKB) o.push = Math.min(320, (o.push||0) + (d.finalKB||180));
         }
       }
       if(t2==='base'){ if(u.team>0) B.ebHP = Math.max(0, B.ebHP - base*mul); SFX.baseHit(); }
@@ -6419,7 +6438,7 @@ function kingLand(u, d){
   const K=d.king, dmg = unitDmg(u)*1.5;
   for(const o of B.units){
     if(o.team===u.team || o.dead || o.dying || o.fly) continue;
-    if(Math.abs(o.x-u.x) <= K.r){ dmgUnit(o, dmg, u.team, u); if(!o.dead && !o.dying && !U[o.k].noKB) o.push = Math.min(140, (o.push||0) + 70); }
+    if(Math.abs(o.x-u.x) <= K.r){ dmgUnit(o, dmg, u.team, u); if(!o.dead && !o.dying && !U[o.k].noKB) o.push = Math.min(280, (o.push||0) + 140); }
   }
   SFX.slam(); tone(60,0.5,'sine',0.25,30); shake=Math.max(shake,20); hitStop=Math.max(hitStop,0.05);
   ring(u.x, GY-6, '#d8ff9a', 16, K.r*1.6, 0.5, 10); ring(u.x, GY-6, '#ffffff', 10, K.r, 0.35, 6);
@@ -6610,7 +6629,7 @@ function dmgMultiplier(src, tgt){
 function applyProcs(src, tgt){
   for(const ab of abilsOf(src)){
     if(ab.chance==null || !abilHits(ab, tgt) || Math.random() >= ab.chance) continue;
-    if(ab.t==='kb'){ if(!U[tgt.k].noKB) tgt.push = Math.min(110, (tgt.push||0) + (ab.dist||44)); }
+    if(ab.t==='kb'){ if(!U[tgt.k].noKB) tgt.push = Math.min(ab.cap||220, (tgt.push||0) + (ab.dist||88)); }   // knockback shoves twice as far as it used to (user) — the phoenix keeps its own
     else if(ab.t==='freeze'){ if(hasAbil(tgt,'nofreeze')) continue; tgt.freezeT = Math.max(tgt.freezeT||0, ab.time||1); tgt.sw=0; }
     else if(ab.t==='slow'){ if(hasAbil(tgt,'noslow')) continue; tgt.slowT = Math.max(tgt.slowT||0, ab.time||2); }
   }
@@ -8640,6 +8659,7 @@ function drawBattle(dt){
   btn(W-96, 72, 84, 40, B.paused?'RESUME':'PAUSE', ()=>{ B.paused=!B.paused; }, {fs:14, c1:'#2f5f80', c2:'#173447', r:10});
   if(B.tut && !B.over && !B.paused) drawTut(dt);
   if(B.tryOut && !B.over && !B.paused) drawTryOut(dt);
+  drawDevBossBtns();
 
   if(B.paused && !B.over){
     X.fillStyle='rgba(4,14,24,.72)'; X.fillRect(0,0,W,BAR_Y);
