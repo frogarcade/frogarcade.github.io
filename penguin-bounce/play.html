@@ -44,7 +44,7 @@ function mulberry(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let 
 
 // ================================================================ save
 const SAVE_KEY = 'penguinBounce.v2';
-const defSave = () => ({ fish: 0, champ: 'adelie', unlocked: ['adelie', 'gentoo', 'rockhopper'], stageUnlocked: 0, best: {}, sound: true, music: true, run: null, tutSeen: [], seen: [], upg: { lives: 0, pow: {}, frozenHeart: false }, decor: [], pondT: 0 });
+const defSave = () => ({ fish: 0, champ: 'adelie', unlocked: ['adelie', 'gentoo', 'rockhopper'], stageUnlocked: 0, best: {}, sound: true, music: true, run: null, tutSeen: [], seen: [], upg: { lives: 0, pow: {} }, decor: [], pondT: 0 });
 function loadSave() { try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s) return Object.assign(defSave(), s); } catch (e) { } return defSave(); }
 function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { } }
 const save = loadSave();
@@ -104,7 +104,7 @@ const SK = {
   crabeater: { name: 'Crabeater Seal', r: .38, w: .8, body: '#d3c8ae', light: '#f2ecdd', belly: '#f7f3e8', ol: '#3b3427', score: 400, desc: 'Lobs krill over everything at your base. All crabeaters march or throw together.' },
   sealy:   { name: 'SEALY',         boss: 1, body: '#7e92aa', light: '#b5c6d8', belly: '#d8e1ea', ol: OL, score: 6000, desc: 'Charges down, then rocks back and forth summoning seals.' },
   walrus:  { name: 'BIG WALRUS',    boss: 1, body: '#a8693f', light: '#d39566', belly: '#dca37a', ol: '#3a1d0c', score: 6000, desc: 'Rocks like Sealy and summons walruses every move.' },
-  queen:   { name: 'LEOPARD QUEEN', boss: 1, body: '#bfb38c', light: '#e2d8b6', belly: '#ece4cb', ol: '#2b2a22', score: 8000, desc: 'Rocks like Sealy and builds 5 snow walls every turn.' },
+  queen:   { name: 'LEOPARD QUEEN', boss: 1, body: '#bfb38c', light: '#e2d8b6', belly: '#ece4cb', ol: '#2b2a22', score: 8000, desc: 'Rocks like Sealy. Each time she retreats to the back she summons 3 Leopard Seals and builds 5 snow walls in front of her.' },
   bearded:  { name: 'Bearded Seal',  r: .44, w: 1.6, body: '#8a7464', light: '#b39d8a', belly: '#c9b6a2', ol: '#2b1f17', score: 800, desc: 'Huge and slow: only marches every other turn.' },
   spotted:  { name: 'Spotted Seal',  r: .4,  w: 1.1, body: '#c3c8cc', light: '#e8ebed', belly: '#eef0f2', ol: '#262b31', score: 600, desc: 'When popped, two pups tumble out.' },
   weddell:  { name: 'Weddell Seal',  r: .42, w: 1.2, body: '#4f5866', light: '#7d8898', belly: '#a9b2bd', ol: '#14181f', score: 700, desc: 'Dives under the ice every other turn. Penguins pass right over it while it is down.' },
@@ -488,7 +488,7 @@ function drawSeal(o, x, y, look, noBadge) {
   for (const sd of [-1, 1]) { g.save(); g.translate(sd * 30, 18); g.rotate(sd * (.7 + fw)); g.beginPath(); g.ellipse(0, fur ? 12 : 8, fur ? 9 : 8, fur ? 21 : 15, 0, 0, 7); g.fillStyle = K.body; g.fill(); g.lineWidth = olw; g.strokeStyle = K.ol; g.stroke(); g.restore(); }
   if (!(o.swipeT > 0)) for (const sd of [-1, 1]) { g.beginPath(); g.ellipse(sd * 12, 38, 11, 6, sd * .3, 0, 7); g.fillStyle = K.body; g.fill(); g.lineWidth = olw; g.strokeStyle = K.ol; g.stroke(); }
   const gr = g.createRadialGradient(-12, -20, 4, 0, 0, 52); gr.addColorStop(0, K.light); gr.addColorStop(1, K.body);
-  g.fillStyle = hit > .5 ? '#ffffff' : o.healT > 0 ? '#b8ffb0' : gr; g.fill(SEAL_BODY);
+  g.fillStyle = hit > .5 ? '#ffffff' : gr; g.fill(SEAL_BODY);
   g.save(); g.clip(SEAL_BODY);
   g.beginPath(); g.ellipse(0, 24, 25, 18, 0, 0, 7); g.fillStyle = K.belly; g.fill();
   if (spotty) { g.fillStyle = 'rgba(25,28,34,.55)'; for (const [sx, sy, sr] of [[-14, 18, 3], [10, 24, 3.4], [-4, 30, 2.6], [18, 14, 2.4], [-22, 28, 2.2], [4, 16, 2]]) { g.beginPath(); g.ellipse(sx, sy, sr, sr * .8, .4, 0, 7); g.fill(); } }
@@ -773,11 +773,16 @@ function puff(x, y, n, col, sp = 220, sz = 14) { for (let i = 0; i < n; i++) { c
 function shards(x, y, n, col, sp = 380) { for (let i = 0; i < n; i++) { const a = rnd(0, 6.28), v = rnd(.4, 1) * sp; parts.push({ k: 'shard', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 120, life: rnd(.5, .9), max: .9, s: rnd(5, 11), c: col, rot: rnd(0, 6), vr: rnd(-12, 12), g: 900 }); } }
 function stars(x, y, n, sp = 300) { for (let i = 0; i < n; i++) { const a = rnd(0, 6.28), v = rnd(.4, 1) * sp; parts.push({ k: 'star', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: rnd(.5, .9), max: .9, s: rnd(6, 11), c: ['#ffe14a', '#fff', '#ffb02e'][i % 3], rot: rnd(0, 6), vr: rnd(-8, 8), g: 300 }); } }
 function ring(x, y, r, col, life = .4, lw = 8) { parts.push({ k: 'ring', x, y, r0: r * .2, r1: r, life, max: life, c: col, lw }); }
+function healFx(o) {              // ~10 green plus signs drift up off a healed seal
+  const c = objCenter(o), sw = (o.w || 1) * C * .45;
+  for (let i = 0; i < 10; i++) parts.push({ k: 'plus', x: c.x + rnd(-sw, sw), y: c.y + rnd(-20, 30), vx: rnd(-18, 18), vy: rnd(-150, -80), life: rnd(.9, 1.4), max: 1.4, wait: i * .05, s: rnd(9, 15), g: 40 });
+}
 function popTxt(x, y, s, col = '#fff', size = 30) { parts.push({ k: 'txt', x, y, vx: 0, vy: -90, life: 1, max: 1, s: size, c: col, t: s, g: 60 }); }
 function updateParts(dt) {
   for (const p of parts) {
     p.life -= dt;
     if (p.k === 'fly') { p.t += dt / p.dur; const t = easeOut(Math.min(1, p.t)); p.x = lerp(p.x0, p.x1, t) + Math.sin(t * Math.PI) * p.arc; p.y = lerp(p.y0, p.y1, t) - Math.sin(t * Math.PI) * 80; if (p.t >= 1) { p.life = 0; p.done && p.done(); } continue; }
+    if (p.wait > 0) { p.wait -= dt; p.life += dt; continue; }
     if (p.vx !== undefined) { p.vy += (p.g || 0) * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= .985; }
     if (p.rot !== undefined) p.rot += p.vr * dt;
   }
@@ -793,6 +798,9 @@ function drawParts() {
     else if (p.k === 'txt') { g.globalAlpha = Math.min(1, a * 2.5); const k = p.life > .85 ? 1 + (p.life - .85) * 3 : 1; txt(p.t, p.x, p.y, p.s * k, p.c); }
     else if (p.k === 'drop') { g.globalAlpha = a; g.beginPath(); g.arc(p.x, p.y, p.s, 0, 7); g.fillStyle = p.c; g.fill(); }
     else if (p.k === 'fly') { g.globalAlpha = 1; if (p.what === 'fish') fishIcon(p.x, p.y, 24, p.t * 8); else drawPenguin(p.ptype || 'adelie', p.x, p.y, 15, p.t * 12, { glide: 1 }); }
+    else if (p.k === 'plus') { if (p.wait > 0) continue; g.globalAlpha = Math.min(1, a * 2); const s2 = p.s, t2 = s2 * .36, k = 1 + Math.max(0, p.life - p.max + .2) * 2;
+      g.save(); g.translate(p.x, p.y); g.scale(k, k); g.beginPath(); g.rect(-s2, -t2, s2 * 2, t2 * 2); g.rect(-t2, -s2, t2 * 2, s2 * 2);
+      g.lineWidth = 5; g.lineJoin = 'round'; g.strokeStyle = '#0f5a1e'; g.stroke(); g.fillStyle = '#4cf06a'; g.fill(); g.restore(); }
     else if (p.k === 'trail') { g.globalAlpha = a * .5; g.beginPath(); g.arc(p.x, p.y, p.s * a, 0, 7); g.fillStyle = p.c; g.fill(); }
   }
   g.globalAlpha = 1;
@@ -865,6 +873,8 @@ function drawSnowfall(dt, isl = 0) {
 // ================================================================ run / wave state
 let scene = 'lobby', run = null, S = null, T = 0, shake = 0, fade = 0, uid = 0;
 let settingsOpen = false, resetAsk = 0, toast = null;
+// Frozen Heart was removed from the shop: anyone who owned it gets the full original price back (once)
+if (save.upg && save.upg.frozenHeart) { delete save.upg.frozenHeart; save.fish += 600; persist(); toast = { msg: 'Frozen Heart refunded: +600 fish', t: -2.5 }; }
 let tab = 'battle', chapSel = Math.min(save.stageUnlocked, CHAPTERS - 1), penSel = save.champ, helpOpen = false;
 let WAVE_T = 1.05, BOSS_T = 4, ST_K = .22;           // wave / boss HP in "turns of expected flock damage" (tuned by sim)
 
@@ -1136,19 +1146,7 @@ function onHit(p, o) {
 }
 // 20% chance, rolled at most once per seal per turn, and it lasts a single turn: no perma-stuns
 const FREEZE_CHANCE = .2;
-function loseHeart(n) {
-  run.hearts = Math.max(0, run.hearts - n);
-  if (save.upg.frozenHeart && run.hearts > 0) freezeFrame();
-}
-function freezeFrame() {
-  const seals = S.objs.filter(o => o.cat === 'seal' && !o.dead).sort(() => Math.random() - .5), n = Math.ceil(seals.length * .6);
-  for (const o of seals.slice(0, n)) {
-    if (o.boss) { if ((o.frzCount || 0) >= 3) continue; o.frzCount = (o.frzCount || 0) + 1; }
-    o.frozen = Math.max(o.frozen, 1); const c = objCenter(o); shards(c.x, c.y, 8, '#c9f2ff', 260);
-  }
-  S.ffT = 1.6; SFX.freeze(); tone(523, .5, { type: 'triangle', vol: .08 }); tone(784, .6, { type: 'triangle', vol: .06, delay: .1 }); tone(1047, .7, { type: 'triangle', vol: .05, delay: .2 });
-  ring(W / 2, 640, 700, '#bff0ff', .8, 20); shake = Math.max(shake, 10);
-}
+function loseHeart(n) { run.hearts = Math.max(0, run.hearts - n); }
 function knockUp(o) {                                         // african bray: push the seal back a row if there's room
   if (o.boss || o.row <= 0 || occupant(o.col, o.row - 1)) return;
   o.row--; o.pushT = 1; const c = objCenter(o); puff(c.x, c.y + 60, 8, '#fff', 180, 10); tone(220, .12, { type: 'sawtooth', to: 160, vol: .05 });
@@ -1337,7 +1335,7 @@ function afterAdvance() {
   if (run.hearts <= 0) { run.hearts = 0; S.phase = 'fail'; S.failT = 0; SFX.lose(); return; }
   if (!sealsLeft()) return waveClear();
   for (const r of S.objs) if (r.kind === 'ross' && !r.dead && !r.frozen) {      // ross seals sing and heal their neighbours
-    let any = false; for (const q of S.objs) if (q !== r && q.cat === 'seal' && !q.dead && !q.boss && Math.abs(q.col - r.col) <= 1 && Math.abs(q.row - r.row) <= 1 && q.hp < q.maxHp) { q.hp = Math.min(q.maxHp, q.hp + Math.ceil(q.maxHp * .1)); q.healT = .5; any = true; }
+    let any = false; for (const q of S.objs) if (q !== r && q.cat === 'seal' && !q.dead && !q.boss && Math.abs(q.col - r.col) <= 1 && Math.abs(q.row - r.row) <= 1 && q.hp < q.maxHp) { q.hp = Math.min(q.maxHp, q.hp + Math.ceil(q.maxHp * .1)); healFx(q); any = true; }
     const rc = objCenter(r); for (let i = 0; i < 3; i++) popTxt(rc.x + rnd(-30, 30), rc.y - 40 - i * 12, '♪', '#9fe3ff', 26); if (any) tone(880, .25, { type: 'triangle', vol: .04 });
   }
   const boss = S.objs.find(o => o.boss && !o.dead);
@@ -1351,7 +1349,7 @@ const CRABKING = { hp: 1050, first: 7, swing: 6, stepT: .13, summonMin: 2, summo
 const FURSEAL = { hp: 1000, first: 7, swing: 6, stepT: .13, summonMin: 2, summonMax: 2, pair: [['crabeater', 32], ['seal', 48]] };
 const MV = { first: 7, swing: 6, stepT: .13 };
 const CHARGE = { sealy: SEALY, crabking: CRABKING, furseal: FURSEAL,
-  queen:       { ...MV, hp: 1400, act: 1 },                                                       // ch4: 5 snow walls a turn
+  queen:       { ...MV, hp: 1400, queen: 1 },                                                     // ch4: at the back, 3 leopards + 5 snow walls
   sealion:     { ...MV, hp: 1600, summonMin: 1, summonMax: 2, kinds: [['spotted', 1, 34]], act: 1 },   // ch5
   weddellboss: { ...MV, hp: 1800, summonMin: 2, summonMax: 2, kinds: [['weddell', 1, 34]], act: 1 },   // ch6
   king:        { ...MV, hp: 2100, act: 1, elephants: 1 },                                         // ch7
@@ -1429,6 +1427,18 @@ function bossCells(b, n) {
   return ring.sort(() => Math.random() - .5).concat(back.sort(() => Math.random() - .5)).filter((v, i, a) => a.findIndex(x => x[0] === v[0] && x[1] === v[1]) === i).slice(0, n);
 }
 function sealySummon(b, cfg) {
+  if (cfg.queen) {                                       // leopard queen: only when she has rocked back to the top
+    if (b.row > 3) return;
+    const fr = b.row + b.h, c0 = clamp(b.col - 1, 0, COLS - 5);       // a 5-wide snow wall right in front of her
+    let walls = 0;
+    for (let c = c0; c < c0 + 5; c++) { const o = addBlock('snow', c, fr); if (o) { walls++; const oc = objCenter(o); puff(oc.x, oc.y, 10, '#fff', 200, 12); } }
+    if (walls < 5) for (const [c, r] of freeCells([fr + 1], [0, 1, 2, 3, 4, 5, 6], true).sort(() => Math.random() - .5).slice(0, 5 - walls)) { const o = addBlock('snow', c, r); if (o) { const oc = objCenter(o); puff(oc.x, oc.y, 10, '#fff', 200, 12); } }
+    const ahead = freeCells([fr + 1, fr + 2], [b.col - 2, b.col - 1, b.col, b.col + 1, b.col + 2, b.col + 3]).sort(() => Math.random() - .5);
+    const cells = ahead.concat(bossCells(b, 3)).filter((v, i, a) => a.findIndex(x => x[0] === v[0] && x[1] === v[1]) === i).slice(0, 3);
+    for (const [c, r] of cells) spawnMinion('leopard', c, r, 38);
+    b.roarT = 1; SFX.roar(); shake = Math.max(shake, 12); const bc = objCenter(b); ring(bc.x, bc.y, 260, 'rgba(255,255,255,.8)', .6, 10);
+    return;
+  }
   if (cfg.elephants && b.moves % 2 === 0) {               // every 2nd move: 3 armoured elephant seals instead of the usual
     for (const [c, r] of bossCells(b, 3)) spawnMinion('elephant', c, r, 70);
     b.roarT = 1; SFX.roar(); return;
@@ -1438,9 +1448,9 @@ function sealySummon(b, cfg) {
   if (!cfg.kinds && !cfg.pair) return;
   const n = cfg.summonMin + (Math.random() * (cfg.summonMax - cfg.summonMin + 1) | 0);
   const pairPick = cfg.pair ? cfg.pair[Math.random() * cfg.pair.length | 0] : null;   // fur seal: 2 crabeaters OR 2 seals
-  const ring = freeCells([b.row - 1, b.row, b.row + 1, b.row + 2], [b.col - 1, b.col, b.col + 1, b.col + 2]).filter(([c, r]) => r <= 7);
+  const nearC = freeCells([b.row - 1, b.row, b.row + 1, b.row + 2], [b.col - 1, b.col, b.col + 1, b.col + 2]).filter(([c, r]) => r <= 7);
   const back = freeCells([0, 1, 2, 3], [0, 1, 2, 3, 4, 5, 6]);
-  const cells = ring.sort(() => Math.random() - .5).concat(back.sort(() => Math.random() - .5)).filter((v, i, a) => a.findIndex(x => x[0] === v[0] && x[1] === v[1]) === i).slice(0, n);
+  const cells = nearC.sort(() => Math.random() - .5).concat(back.sort(() => Math.random() - .5)).filter((v, i, a) => a.findIndex(x => x[0] === v[0] && x[1] === v[1]) === i).slice(0, n);
   for (const [col, row] of cells) {
     let kind, hp;
     if (pairPick) [kind, hp] = pairPick;
@@ -1520,7 +1530,7 @@ function bossAct(b) {
     const cells = near.sort(() => Math.random() - .5).slice(0, n);
     for (const [col, row] of cells) { const o = addBlock('snow', col, row); if (o) { const oc = objCenter(o); puff(oc.x, oc.y, 10, '#fff', 200, 12); } }
   } else {
-    for (const o of S.objs) if (o.cat === 'seal' && !o.dead && !o.boss && o.hp < o.maxHp) { o.hp = Math.min(o.maxHp, o.hp + Math.ceil(o.maxHp * .2)); o.healT = .6; const oc = objCenter(o); puff(oc.x, oc.y, 5, '#8cff7a', 120, 8); }
+    for (const o of S.objs) if (o.cat === 'seal' && !o.dead && !o.boss && o.hp < o.maxHp) { o.hp = Math.min(o.maxHp, o.hp + Math.ceil(o.maxHp * .2)); healFx(o); }
     tone(660, .2, { type: 'triangle', vol: .08 }); tone(990, .25, { type: 'triangle', vol: .06, delay: .1 });
   }
 }
@@ -1587,7 +1597,7 @@ function updateStage(dt) {
     if (o.drop > 0) o.drop = Math.max(0, o.drop - dt * 1.8);
     if (o.blinkT > 0) o.blinkT -= dt; else if (Math.random() < dt * .25) o.blinkT = .12;
   }
-  S.launchKick = Math.max(0, S.launchKick - dt * 6); if (S.ffT > 0) S.ffT -= dt; S.slapT = Math.max(0, S.slapT - dt); S.fenceFlash = Math.max(0, S.fenceFlash - dt * 4);
+  S.launchKick = Math.max(0, S.launchKick - dt * 6); S.slapT = Math.max(0, S.slapT - dt); S.fenceFlash = Math.max(0, S.fenceFlash - dt * 4);
   if (S.paused) return;
   if (S.tip) { S.tip.t += dt; if (S.tip.dur && S.tip.t > S.tip.dur) closeTip(); else if (S.tip.tap) return; }
   const slow = S.tip && S.tip.id === 'fence' ? .35 : 1;
@@ -1946,7 +1956,6 @@ function drawRookery() {
 
 }
 let shopPage = 0;
-const FROZEN_HEART_COST = 300;
 function buy(cost, fn) { if (save.fish < cost) { SFX.arf(); return; } save.fish -= cost; fn(); persist(); SFX.recruit(); }
 function drawShopTab() {
   txt('SHOP', W / 2, 200, 46, '#ffe45a');
@@ -1957,15 +1966,8 @@ function drawShopTab() {
   for (let i = 0; i < 8; i++) heart(186 + i * 34, 292, 30, i < mh ? '#ff4a5c' : '#3a4459');
   if (lv < LIFE_COST.length) button('buylife', 560, 292, 200, 70, `${LIFE_COST[lv]}`, 'green', () => buy(LIFE_COST[lv], () => { save.upg.lives = lv + 1; }), { icon: (x, y) => fishIcon(x + 66, y, 26), size: 30, disabled: save.fish < LIFE_COST[lv] });
   else txt('MAX', 560, 292, 34, '#ffe45a');
-  // frozen heart
-  rr(36, 362, 648, 100, 24); g.fillStyle = 'rgba(30,80,130,.8)'; g.fill(); g.lineWidth = 3; g.strokeStyle = '#9fe3ff'; g.stroke();
-  heart(84, 412, 46, '#9fe3ff');
-  txt('FROZEN HEART', 120, 394, 26, '#e8fbff', 'left');
-  wrap('Freeze Frame: losing a heart freezes 60% of the seals for a turn, giving you 2 free shots.', 330, 15).forEach((l, i) => txt(l, 120, 420 + i * 18, 15, '#cfefff', 'left', OL, 3));
-  if (save.upg.frozenHeart) txt('OWNED', 590, 412, 30, '#9fe3ff');
-  else button('buyfh', 590, 412, 160, 60, `${FROZEN_HEART_COST}`, 'blue', () => buy(FROZEN_HEART_COST, () => { save.upg.frozenHeart = true; }), { icon: (x, y) => fishIcon(x + 52, y, 22), size: 26, disabled: save.fish < FROZEN_HEART_COST });
-  txt('PENGUIN POWER  ·  +20% damage per level', W / 2, 494, 20, '#dfe8f3');
-  const top = 518, bot = 1142, contentH = ROSTER.length * 80 + 10;
+  txt('PENGUIN POWER  ·  +20% damage per level', W / 2, 386, 20, '#dfe8f3');
+  const top = 410, bot = 1142, contentH = ROSTER.length * 80 + 10;
   shopScrollMax = Math.max(0, contentH - (bot - top)); shopScroll = clamp(shopScroll, 0, shopScrollMax);
   g.save(); g.beginPath(); g.rect(VL, top, VR - VL, bot - top); g.clip();
   const uiStart = UI.length;
@@ -2122,8 +2124,6 @@ function drawPlay(dt) {
   drawParts();
   drawHUD();
   if (S.slapT > 0) { g.fillStyle = `rgba(255,30,20,${S.slapT * .35})`; g.fillRect(VL, VT, VR - VL, VB - VT); }
-  if (S.ffT > 0) { g.fillStyle = `rgba(160,230,255,${Math.min(.35, S.ffT * .3)})`; g.fillRect(VL, VT, VR - VL, VB - VT);
-    const k = easeBack(Math.min(1, (1.6 - S.ffT) / .35)); g.save(); g.translate(W / 2, 520); g.scale(k, k); ribbon(0, 0, 420, 'FREEZE FRAME!', 'blue', 50); g.restore(); }
   const ph = S.phase;
   if (ph === 'waveIntro') drawWaveIntro();
   if (ph === 'meet') drawMeet();
@@ -2183,16 +2183,17 @@ function drawMeet() {
   const k = S.meet[0]; if (!k) return; const K = SK[k], boss = K.boss, t = S.meetT;
   dim(.72); const a = easeBack(Math.min(1, t / .4));
   g.save(); g.translate(W / 2, 640); g.scale(a, a);
-  panel(-300, -330, 600, 660, boss ? '#2a1418' : '#ffffff', 36);
-  if (boss) { g.save(); rr(-300, -330, 600, 660, 36); g.clip(); for (let i = -8; i < 8; i++) { g.beginPath(); g.moveTo(i * 80, -330); g.lineTo(i * 80 + 40, -330); g.lineTo(i * 80 + 140, -290); g.lineTo(i * 80 + 100, -290); g.closePath(); g.fillStyle = '#ffcf2e'; g.fill(); } g.restore(); }
+  panel(-300, -330, 600, 720, boss ? '#2a1418' : '#ffffff', 36);
+  if (boss) { g.save(); rr(-300, -330, 600, 720, 36); g.clip(); for (let i = -8; i < 8; i++) { g.beginPath(); g.moveTo(i * 80, -330); g.lineTo(i * 80 + 40, -330); g.lineTo(i * 80 + 140, -290); g.lineTo(i * 80 + 100, -290); g.closePath(); g.fillStyle = '#ffcf2e'; g.fill(); } g.restore(); }
   ribbon(0, -330, 360, boss ? 'BOSS INCOMING!' : 'NEW SEAL!', boss ? 'red' : 'orange', 44);
-  g.save(); rr(-300, -330, 600, 660, 36); g.clip(); g.translate(0, -90); g.rotate(T * .3); for (let i = 0; i < 12; i++) { g.rotate(Math.PI / 6); g.beginPath(); g.moveTo(0, 0); g.lineTo(-40, -330); g.lineTo(40, -330); g.closePath(); g.fillStyle = boss ? 'rgba(255,80,60,.12)' : 'rgba(255,190,60,.16)'; g.fill(); } g.restore();
+  g.save(); rr(-300, -330, 600, 720, 36); g.clip(); g.translate(0, -90); g.rotate(T * .3); for (let i = 0; i < 12; i++) { g.rotate(Math.PI / 6); g.beginPath(); g.moveTo(0, 0); g.lineTo(-40, -330); g.lineTo(40, -330); g.closePath(); g.fillStyle = boss ? 'rgba(255,80,60,.12)' : 'rgba(255,190,60,.16)'; g.fill(); } g.restore();
   const o = fakeSeal(k, 5); o.roarT = boss ? Math.max(0, Math.sin(T * 2)) * .6 : 0;
   g.save(); g.translate(0, -90); const sc = boss ? 1.2 : 2.4; g.scale(sc, sc); drawSeal(o, 0, 0, { x: Math.sin(T) * .5, y: .3 }, true); g.restore();
   txt(K.name.toUpperCase(), 0, 105, boss ? 46 : 52, boss ? '#ff8a78' : '#ffb52a');
   wrap(K.desc, 500, 27).forEach((l, i) => txt(l, 0, 165 + i * 34, 27, boss ? '#ffe9e2' : '#3a4d68', 'center', boss ? OL : '#fff', boss ? 4 : 0));
-  if (Math.sin(T * 5) > -.3) txt('TAP TO CONTINUE', 0, 300, 24, boss ? '#ffcf2e' : '#2b8fe3', 'center', boss ? OL : '#fff', boss ? 4 : 0);
   g.restore();
+  // only this button closes the card, and only once it has fully popped in, so stray taps can't skip it
+  if (t > .5) button('gotit', W / 2, 640 + 318, 280, 84, 'GOT IT!', boss ? 'red' : 'green', () => { if (S.phase === 'meet') nextMeet(); }, { pulse: 1 });
 }
 function drawWaveClear() {
   const t = S.wcT, k = easeBack(Math.min(1, t / .35));
@@ -2333,10 +2334,9 @@ cv.addEventListener('pointerdown', e => {
   try { cv.setPointerCapture(e.pointerId); } catch (_) { }
   if (scene === 'play' && S && !S.paused) {
     if (S.tip && S.tip.tap) { closeTip(); return; }
-    if (S.phase === 'meet') { nextMeet(); return; }
   }
   if (scene === 'lobby' && tab === 'penguins' && !helpOpen && !settingsOpen && p.y > 622 && p.y < 1142) drag = { y0: p.y, s0: penScroll, moved: false, which: 'pen' };
-  if (scene === 'lobby' && tab === 'shop' && !helpOpen && !settingsOpen && p.y > 518 && p.y < 1142) drag = { y0: p.y, s0: shopScroll, moved: false, which: 'shop' };
+  if (scene === 'lobby' && tab === 'shop' && !helpOpen && !settingsOpen && p.y > 410 && p.y < 1142) drag = { y0: p.y, s0: shopScroll, moved: false, which: 'shop' };
   if (scene === 'lobby' && tab === 'rookery' && !helpOpen && !settingsOpen) rookTap(p);
   const u = hitUI(p);
   if (u) { if (!u.off) pressId = u.id; return; }
@@ -2373,7 +2373,7 @@ function frame(now) {
 }
 requestAnimationFrame(frame);
 window.__pb = { get S() { return S; }, get run() { return run; }, set scene(v) { scene = v; }, set tab(v) { tab = v; }, set helpOpen(v) { helpOpen = v; },
-  tune(a, b, c) { WAVE_T = a; BOSS_T = b; ST_K = c; }, SEALY, M, BUF, spawnWave, revive, maxHearts, tryFreeze, drawCoach, set T(v) { T = v; }, startRun, restoreRun, fire, update, render, trace, endTurn, finishRun, waveClear, openPick, save, PT, get parts() { return parts; } };
+  tune(a, b, c) { WAVE_T = a; BOSS_T = b; ST_K = c; }, SEALY, M, BUF, spawnWave, revive, maxHearts, tryFreeze, drawCoach, set T(v) { T = v; }, startRun, restoreRun, fire, update, render, trace, endTurn, finishRun, waveClear, openPick, save, PT, get parts() { return parts; }, sealySummon, CHARGE, healFx, bossAct, get UI() { return UI; }, get toast() { return toast; } };
 </script>
 </body>
 </html>
