@@ -131,11 +131,11 @@ const BOXER_DEFS = {
   // ---------------- CHALLENGES ----------------
   slumber: {
     id: 'slumber', name: 'SLUMBERJACK', tag: 'Out Cold, Not Out Of It',
-    maxHp: 600, speed: 95, dmg: 30, mass: 1.7,
+    maxHp: 600, speed: 105, dmg: 30, mass: 1.7,
     playerHp: 260, playerDmg: 24,
     special: 'sleep', specialName: 'LOG NAP', specialCooldown: 16,
-    specialDesc: 'Sleeps for 10 seconds, snoring back 25 health a second while drifting around the ring — even straight up. Bump into him and it\'s 30 damage. Hit him and he takes QUADRUPLE damage and flies a country mile, still fast asleep!',
-    playerSpecialDesc: 'Sleep for 10 seconds, snoring back {h:25} health a second while you drift around the ring — even straight up. Anyone you bump takes {d:30}. Get hit and you take QUADRUPLE damage and fly a country mile, still fast asleep!',
+    specialDesc: 'Sleeps for 10 seconds, snoring back 25 health a second while drifting around the ring — even straight up. Bump into him and it\'s 30 damage. Hit him and he takes QUADRUPLE damage and flies a country mile, still fast asleep — and when he wakes, he STRETCHES: 35 damage to anyone close!',
+    playerSpecialDesc: 'Sleep for 10 seconds, snoring back {h:25} health a second while you drift around the ring — even straight up. Anyone you bump takes {d:30}. Get hit and you take QUADRUPLE damage and fly a country mile, still fast asleep — and when you wake, you STRETCH: {d:35} damage to anyone close!',
     build: 'human', bulk: 1.42, head: 'slumber', physique: 'jacked', tier: 'challenge',
     skin: 0xe0a878, hair: 0x4a2a14, trunks: 0x8d2b22, trunksTrim: 0x2c2016,
     gloves: 0x6b4a2a, boots: 0x3b2a18, scaleY: 1.05, uiColor: '#d8a66a'
@@ -195,6 +195,18 @@ const RIG = {
   hipY: 0.92, chestY: 1.42, headY: 1.68,
   shoulderX: 0.27, hipX: 0.15,
   armLen: 0.60, legLen: 0.92, headR: 0.185
+};
+
+// [victory, defeat] for the end screen
+const END_POSES = {
+  _: ['pump', 'slump'],
+  joe: ['fist', 'slump'],      joeabove: ['fist', 'slump'],
+  bean: ['royal', 'sit'],      jimmy: ['royal', 'kneel'],
+  blaze: ['pump', 'kneel'],    hound: ['pump', 'flat'],
+  honk: ['dance', 'flat'],     presto: ['dance', 'flat'],
+  vicious: ['flex', 'kneel'],  brick: ['flex', 'sit'],     bigwave: ['flex', 'sit'],
+  bull: ['chest', 'kneel'],    gustavo: ['chest', 'kneel'],
+  mitchell: ['fist', 'slump'], peter: ['belly', 'sit'],    slumber: ['pump', 'flat']
 };
 
 const _v1 = new THREE.Vector3(), _v2 = new THREE.Vector3(), _v3 = new THREE.Vector3();
@@ -290,6 +302,7 @@ class Ragdoll {
       _v1.subVectors(pt.p, pt.o).multiplyScalar(0.995);
       maxSpeed = Math.max(maxSpeed, _v1.length());
       pt.o.copy(pt.p);
+      pt.ox = pt.o.x; pt.oz = pt.o.z;        // pre-step position, for rope crossings
       pt.p.add(_v1);
       pt.p.y += g;
     }
@@ -327,6 +340,10 @@ class Ragdoll {
             if (Math.abs(v) > ROPE_IN && Math.abs(v) < ROPE_OUT && Math.abs(v) > Math.abs(pv) - 0.001) {
               const s = Math.sign(v);
               const vel = v - pv;
+              // the rope gives under the body (once per step, not per pass)
+              if (iter === 0 && Math.abs(vel) / dt > 0.6) {
+                RingRopes.impact(ax, s, pt.p[ax === 'x' ? 'z' : 'x'], pt.p.y, Math.min(7, Math.abs(vel) / dt * 0.55));
+              }
               pt.p[ax] = s * ROPE_IN;
               pt.o[ax] = pt.p[ax] + vel * 0.75; // springy rope bounce
             }
@@ -351,6 +368,18 @@ class Ragdoll {
           // friction
           pt.o.x += (pt.p.x - pt.o.x) * 0.35;
           pt.o.z += (pt.p.z - pt.o.z) * 0.35;
+        }
+      }
+    }
+    // a body thrown through or over the ropes drags them out with it
+    for (const pt of this.pts) {
+      if (pt.pin || pt.ox == null) continue;
+      if (pt.p.y < RING.top - 0.1 || pt.p.y > RING.top + 1.6) continue;
+      for (const ax of ['x', 'z']) {
+        const was = Math.abs(ax === 'x' ? pt.ox : pt.oz), now = Math.abs(pt.p[ax]);
+        if (was <= RING.postHalf && now > RING.postHalf) {
+          const speed = (now - was) / dt;
+          RingRopes.impact(ax, Math.sign(pt.p[ax]), pt.p[ax === 'x' ? 'z' : 'x'], pt.p.y, Math.min(7, speed * 0.5));
         }
       }
     }
@@ -443,7 +472,9 @@ class Boxer {
     this.wall = null;      // Brick: guard-and-counter
     this.charge = null;    // Bully Bull: the rush
     this.ricochet = null;  // Presto: pinballing off the ropes
-    this.rage = null;      // player only: the AI has the wheel
+    // NOT `rage` — that field already belongs to the Hound's one-shot spin, and
+    // sharing it gave the Hound Rage Mode's buffs and crashed a player Hound.
+    this.berserk = null;   // player only: the AI has the wheel
     this.sleep = null;     // Slumberjack: flat out on the mat
     this.shield = 0;       // Big Wave: seconds of damage-to-heal left
     this.sinceHit = 999;   // seconds since last taking damage
@@ -1258,7 +1289,23 @@ class Boxer {
     this.wall = null;
     this.charge = null;
     this.ricochet = null;
-    if (this.sleep) { for (const pt of this.ragdoll.pts) pt.pin = null; this.sleep = null; }
+    if (this.sleep) {
+      // Knocked out mid-nap — possibly mid-whip, high in the air by the ropes,
+      // where the nap's own containment was the only thing holding him in.
+      // Drop him back onto the canvas INSIDE the ropes, or the reseeded body
+      // falls outside and he's ruled out without anyone throwing him.
+      for (const pt of this.ragdoll.pts) pt.pin = null;
+      this.sleep = null;
+      const lim = RING.half - 0.6;
+      const c = this.state === 'fight' ? this.pos : this.ragdoll.center();
+      const x = THREE.MathUtils.clamp(c.x, -lim, lim), z = THREE.MathUtils.clamp(c.z, -lim, lim);
+      this.pos.set(x, groundYAt(x, z), z);
+      this.root.position.copy(this.pos);
+      this.root.rotation.set(0, this.yaw, 0);
+      this.root.quaternion.setFromEuler(this.root.rotation);
+      this.root.updateMatrixWorld(true);
+      impulse = null;   // a short drop, not a launch
+    }
     this.feast = null;
     this.quake = null;
     this.setSteel(0);
@@ -1287,6 +1334,12 @@ class Boxer {
     vel = vel.clone().multiplyScalar(1 / Math.sqrt(this.mass));
     this.slam = null; this.roll = null;
     this.barrage = null; this.busy = 0;
+    // Knocked down mid-move, the move is over. These used to survive the
+    // knockdown and pick up again once you stood — Presto would finish his
+    // ricochet on his own, leaving you nearly 4 seconds without control.
+    this.charge = null; this.ricochet = null;
+    if (this.feast && this.feast.eating > 0) this.feast = null;   // drops the burger
+    this.ragT = 0;
     this.pendingLandDmg = landDmg;
     this.thrownBy = byBoxer || null;
 
@@ -1386,7 +1439,12 @@ class Boxer {
     // out of the ring is out of the fight — you lie where you landed
     if (this.eliminated) return;
     const c = this.ragdoll.center();
-    this.pos.set(c.x, groundYAt(c.x, c.z), c.z);
+    // you only get up if you weren't ruled out, so you get up in the ring —
+    // never standing on the apron outside the ropes
+    const lim = RING.half;
+    const gx = THREE.MathUtils.clamp(c.x, -lim, lim), gz = THREE.MathUtils.clamp(c.z, -lim, lim);
+    this.pos.set(gx, groundYAt(gx, gz), gz);
+    this.ragT = 0; this.holdT = 0;
     this.state = 'getup';
     this.getupT = 0;
     this.vel.set(0, 0, 0);
@@ -1442,6 +1500,9 @@ class Boxer {
       case 'ragdoll': this.updateRagdoll(dt); return;
       case 'getup': this.updateGetup(dt); return;
     }
+
+    // end-screen victory / defeat pose takes over the whole rig
+    if (this.endPose) { this.updateEndPose(dt, t); return; }
 
     // ---------- scripted specials ----------
     if (this.slam) {
@@ -1541,8 +1602,8 @@ class Boxer {
         const speed = r.phase === 'charge' ? 7.6 : 4.4;
         this.pos.addScaledVector(_v1, sign * speed * dt);
         // bounce off the ropes instead of rolling out of the ring
-        if (Math.abs(this.pos.x) > lim) { this.pos.x = Math.sign(this.pos.x) * lim; r.phase = 'charge'; r.phaseT = 1.35; }
-        if (Math.abs(this.pos.z) > lim) { this.pos.z = Math.sign(this.pos.z) * lim; r.phase = 'charge'; r.phaseT = 1.35; }
+        if (Math.abs(this.pos.x) > lim) { this.pos.x = Math.sign(this.pos.x) * lim; r.phase = 'charge'; r.phaseT = 1.35; RingRopes.impactAt(this.pos, 4, RING.top + 0.55); }
+        if (Math.abs(this.pos.z) > lim) { this.pos.z = Math.sign(this.pos.z) * lim; r.phase = 'charge'; r.phaseT = 1.35; RingRopes.impactAt(this.pos, 4, RING.top + 0.55); }
       }
       this.pos.y = groundYAt(this.pos.x, this.pos.z);
       if (!r.lookSteered) this.yaw = Math.atan2(_v1.x, _v1.z);
@@ -1970,7 +2031,7 @@ class Boxer {
     if (this.carrying) mv.multiplyScalar(0.55);
 
     const surge = (this.shield > 0 ? 2 : 1) * (this.feast && this.feast.eating <= 0 ? 2 : 1)
-      * (this.rage ? 1.7 : 1);
+      * (this.berserk ? 1.7 : 1);
     this.pos.addScaledVector(mv, dt * surge);   // Rising Tide / Burger Break
     this.pos.addScaledVector(this.vel, dt);
     this.vel.multiplyScalar(Math.exp(-6 * dt));
@@ -2124,6 +2185,138 @@ class Boxer {
   }
 
   // ---------------------------------------------------------
+  // END SCREEN POSES — every wrestler celebrates (and sulks) their own way.
+  // this.endPose = 'win' | 'lose'; the style comes from END_POSES by id.
+  updateEndPose(dt, t) {
+    const P = this.parts;
+    const win = this.endPose === 'win';
+    const style = (END_POSES[this.cfg.id] || END_POSES._)[win ? 0 : 1];
+    const L = dampFactor(9, dt);
+    const R = (o, x = 0, y = 0, z = 0) => {
+      o.rotation.x += (x - o.rotation.x) * L;
+      o.rotation.y += (y - o.rotation.y) * L;
+      o.rotation.z += (z - o.rotation.z) * L;
+    };
+    const arms = (fn) => { fn(P.armL, 1); fn(P.armR, -1); };
+    const legs = (hip, knee) => { R(P.legL.hip, hip, 0, 0.04); R(P.legR.hip, hip, 0, -0.04); R(P.legL.knee, knee); R(P.legR.knee, knee); };
+    let lift = 0, rootX = 0, rootZ = 0, yaw = this.yaw;
+    P.torso.position.y = RIG.hipY;
+
+    switch (style) {
+      // ---- victories ----
+      case 'pump': {            // both fists up, hopping
+        const hop = Math.abs(Math.sin(t * 5.2));
+        lift = hop * 0.16;
+        legs(-0.1 - hop * 0.25, 0.2 + hop * 0.5);
+        R(P.torso, -0.18, Math.sin(t * 5.2) * 0.1, 0);
+        arms((a, s) => { R(a.shoulder, -2.85 + Math.sin(t * 10.4 + s) * 0.18, 0, s * 0.45); R(a.elbow, -0.35); });
+        R(P.neck, -0.35);
+        break;
+      }
+      case 'fist': {            // one fist pumping the air, other on the hip
+        const k = Math.max(0, Math.sin(t * 6));
+        legs(0.04, 0.1);
+        R(P.torso, -0.1, 0.18, 0);
+        R(P.armR.shoulder, -2.5 - k * 0.45, 0, -0.35); R(P.armR.elbow, -1.1 + k * 0.85);
+        R(P.armL.shoulder, -0.25, 0, 0.75); R(P.armL.elbow, -1.7);
+        R(P.neck, -0.3 - k * 0.1, -0.15, 0);
+        break;
+      }
+      case 'flex': {            // lat spread, crunching down on the beat
+        const k = Math.pow(Math.max(0, Math.sin(t * 3.2)), 2);
+        legs(0.08 + k * 0.1, 0.16 + k * 0.25);
+        lift = -k * 0.05;
+        R(P.torso, 0.05 + k * 0.22, 0, 0);
+        arms((a, s) => { R(a.shoulder, -0.42 - k * 0.5, s * -0.15, s * (1.0 + k * 0.25)); R(a.elbow, -0.75 - k * 1.0); });
+        R(P.neck, -0.12 + k * 0.1);
+        break;
+      }
+      case 'chest': {           // pound the chest, left-right
+        const ph = t * 7;
+        legs(0.12, 0.25);
+        R(P.torso, -0.2, Math.sin(ph) * 0.12, 0);
+        arms((a, s) => {
+          const hit = Math.max(0, Math.sin(ph + (s > 0 ? 0 : Math.PI)));
+          R(a.shoulder, -1.0 - hit * 0.35, s * 0.2, s * (0.2 + hit * 0.25)); R(a.elbow, -2.2 + hit * 0.5);
+        });
+        R(P.neck, -0.45);
+        break;
+      }
+      case 'royal': {           // a regal wave, other hand on the hip
+        legs(0.02, 0.06);
+        R(P.torso, -0.12, -0.12, 0);
+        R(P.armR.shoulder, -2.3, 0, -0.5 + Math.sin(t * 4.2) * 0.35); R(P.armR.elbow, -0.7);
+        R(P.armL.shoulder, -0.25, 0, 0.75); R(P.armL.elbow, -1.7);
+        R(P.neck, -0.32, 0.1, 0);
+        break;
+      }
+      case 'dance': {           // spin on the spot, arms flung wide
+        yaw = this.yaw + Math.sin(t * 1.6) * 0.9;
+        const bop = Math.abs(Math.sin(t * 6.4));
+        lift = bop * 0.06;
+        legs(-bop * 0.2, 0.15 + bop * 0.35);
+        R(P.torso, -0.08, Math.sin(t * 6.4) * 0.25, 0);
+        arms((a, s) => { R(a.shoulder, -1.6 + Math.sin(t * 6.4 + s * 1.5) * 0.6, 0, s * 1.2); R(a.elbow, -0.4); });
+        R(P.neck, -0.2, 0, Math.sin(t * 6.4) * 0.2);
+        break;
+      }
+      case 'belly': {           // lean back and rub the belly — that was dinner
+        legs(0.05, 0.12);
+        R(P.torso, -0.3, 0, 0);
+        arms((a, s) => {
+          const c = Math.sin(t * 4 + (s > 0 ? 0 : 1.6));
+          R(a.shoulder, -0.55 + c * 0.15, s * -0.35, s * (0.25 + c * 0.08)); R(a.elbow, -1.35);
+        });
+        R(P.neck, -0.45, Math.sin(t * 2) * 0.15, 0);
+        break;
+      }
+
+      // ---- defeats ----
+      case 'kneel': {           // on his knees, hammering the canvas
+        lift = -0.40;
+        legs(0, 1.55);
+        R(P.torso, 0.55, 0, 0);
+        const bang = Math.pow(Math.max(0, Math.sin(t * 3.4)), 3);
+        R(P.armR.shoulder, -1.2 + bang * 0.9, 0, -0.15); R(P.armR.elbow, -0.4 - bang * 0.4);
+        R(P.armL.shoulder, 0.05, 0, 0.18); R(P.armL.elbow, -0.25);
+        R(P.neck, 0.6);
+        break;
+      }
+      case 'slump': {           // still standing, barely — dizzy, arms dangling
+        legs(0.1, 0.3);
+        const sw = Math.sin(t * 1.7);
+        R(P.torso, 0.45, sw * 0.1, 0);
+        rootZ = sw * 0.06;
+        arms((a, s) => { R(a.shoulder, 0.2 + Math.sin(t * 1.7 + s) * 0.12, 0, s * 0.12); R(a.elbow, -0.15); });
+        R(P.neck, 0.55, Math.sin(t * 2.3) * 0.3, sw * 0.2);
+        break;
+      }
+      case 'sit': {             // sat on the mat, shaking his head
+        lift = -0.78;
+        legs(-1.5, 0.15);
+        R(P.torso, -0.22, 0, 0);
+        arms((a, s) => { R(a.shoulder, 0.75, 0, s * 0.35); R(a.elbow, 0); });
+        R(P.neck, 0.15, Math.sin(t * 5) * 0.35, 0);
+        break;
+      }
+      case 'flat': {            // spread-eagle on his back, out cold
+        lift = 0.14; rootX = -Math.PI / 2;
+        yaw = Math.PI / 2 + 0.12;   // lie across the shot, not away from it
+        R(P.legL.hip, 0, 0, 0.35); R(P.legR.hip, 0, 0, -0.35); R(P.legL.knee, 0.1); R(P.legR.knee, 0.1);
+        R(P.torso, 0, 0, 0);
+        arms((a, s) => { R(a.shoulder, 0, 0, s * 2.2); R(a.elbow, -0.2); });
+        R(P.neck, 0, 0, Math.sin(t * 1.4) * 0.35);
+        break;
+      }
+    }
+
+    const sc = this.scale || 1;
+    this.root.position.set(this.pos.x, this.pos.y + lift * sc, this.pos.z);
+    this.root.rotation.set(rootX, yaw, rootZ, 'YXZ');
+    this.root.quaternion.setFromEuler(this.root.rotation);
+  }
+
+  // ---------------------------------------------------------
   updateRagdoll(dt) {
     const rd = this.ragdoll;
 
@@ -2175,19 +2368,25 @@ class Boxer {
     if (this.koTimer > 0) {
       this.koTimer -= dt;
       if (this.koTimer <= 0 && !this.eliminated) {
-        // still flying through the air? wait for touchdown before recovering
+        // still flying through the air? wait for touchdown before recovering —
+        // but only so long: a body draped over the top rope never "lands"
         if (!this.carriedBy) {
           const c = this.ragdoll.center();
-          if (c.y > groundYAt(c.x, c.z) + 0.6) { this.koTimer = 0.05; return; }
+          this.holdT = (this.holdT || 0) + dt;
+          if (c.y > groundYAt(c.x, c.z) + 0.6 && this.holdT < 2.5) { this.koTimer = 0.05; return; }
         }
-        // Still past the ropes? Never stand up out there — hold the count and
-        // let checkRingOut finish the job once the body settles.
+        // Past the out line? Never stand up out there — hold the count and let
+        // checkRingOut rule them out. Same line as the ring-out rule (postHalf
+        // + 0.1): the two used to differ, and a body resting in the gap between
+        // them could neither get up nor be ruled out.
         if (!this.carriedBy) {
           const cc = this.ragdoll.center();
-          if (Math.abs(cc.x) > RING.postHalf || Math.abs(cc.z) > RING.postHalf) {
+          const OUT = RING.postHalf + 0.1;
+          if (Math.abs(cc.x) > OUT || Math.abs(cc.z) > OUT) {
             this.koTimer = 0.05; return;
           }
         }
+        this.holdT = 0;
         this.koTimer = 0;
         if (this.carriedBy) {
           // wake up mid-carry: break free!
@@ -2203,15 +2402,22 @@ class Boxer {
         this.tryGetUp();
         return;
       }
-    } else if (this.state === 'ragdoll' && rd.landed && rd.airTime >= 0 && this.busy <= 0 && !this.eliminated) {
-      // non-KO ragdoll (e.g. survived a suplex): get up once settled
-      this.getupDelay = (this.getupDelay || 0.5) - dt;
-      if (this.getupDelay <= 0) {
-        this.getupDelay = 0.5;
-        const cc = this.ragdoll.center();
-        if (Math.abs(cc.x) > RING.postHalf || Math.abs(cc.z) > RING.postHalf) return;
-        this.tryGetUp();
-        return;
+    } else if (this.state === 'ragdoll' && !this.eliminated) {
+      // non-KO ragdoll (e.g. survived a suplex): get up once settled. A body
+      // that never quite settles — jittering against a rope or a post — still
+      // gets up after a few seconds; it must never lie there indefinitely.
+      this.ragT = (this.ragT || 0) + dt;
+      const settled = rd.landed && rd.airTime >= 0 && this.busy <= 0;
+      if (settled || this.ragT > 5) {
+        this.getupDelay = (this.getupDelay || 0.5) - dt;
+        if (this.getupDelay <= 0) {
+          this.getupDelay = 0.5;
+          const cc = this.ragdoll.center();
+          const OUT = RING.postHalf + 0.1;
+          if (Math.abs(cc.x) > OUT || Math.abs(cc.z) > OUT) return;   // checkRingOut's call
+          this.tryGetUp();
+          return;
+        }
       }
     }
   }
@@ -2269,7 +2475,7 @@ class Boxer {
     this.pendingLandDmg = 0; this.thrownBy = null;
     this.sinceHit = 999; this.regen = false;
     this.jumpVel = 0; this.slam = null; this.roll = null;
-    this.wall = null; this.charge = null; this.ricochet = null; this.rage = null;
+    this.wall = null; this.charge = null; this.ricochet = null; this.berserk = null;
     this.sleep = null; this.shield = 0;
     for (const pt of this.ragdoll.pts) pt.pin = null;   // never start a round strung up
     this.feast = null; this.quake = null; this.rage = false;

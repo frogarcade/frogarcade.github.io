@@ -806,7 +806,8 @@ function openSettings(from) {
 }
 function closeSettings() {
   hide('settings');
-  if (settingsReturn === 'pause') updatePauseOverlay();
+  // force the pause menu back up — openSettings hid it behind the flag's back
+  if (settingsReturn === 'pause') { game._pauseShown = undefined; updatePauseOverlay(); }
   settingsReturn = null;
 }
 
@@ -913,8 +914,43 @@ $('cup-bronze').addEventListener('click', () => setTournament('bronze'));
 $('cup-silver').addEventListener('click', () => setTournament('silver'));
 $('cup-gold').addEventListener('click', () => setTournament('gold'));
 
-$('juice-hp').addEventListener('click', () => { if (spendSteroid(game.selectedId, 'hp')) { AudioFX.powerUp(); selectBoxer(game.selectedId); } });
-$('juice-dmg').addEventListener('click', () => { if (spendSteroid(game.selectedId, 'dmg')) { AudioFX.powerUp(); selectBoxer(game.selectedId); } });
+// Spending a steroid shouldn't just swap a number: the bar it feeds swells
+// from where it was, flashes, and the figure counts up to its new value.
+function juiceSpend(kind) {
+  const label = kind === 'hp' ? 'HEALTH' : 'POWER';
+  const rowOf = () => document.querySelector('#sel-stats .stat[data-stat="' + label + '"]');
+  const old = rowOf();
+  const before = old && {
+    w: old.querySelector('.fill').style.getPropertyValue('--w'),
+    v: +old.querySelector('b').textContent
+  };
+  if (!spendSteroid(game.selectedId, kind)) return;
+  AudioFX.powerUp();
+  selectBoxer(game.selectedId);
+  const row = rowOf();
+  if (row && before) pumpStat(row, before);
+  const pips = $(kind === 'hp' ? 'juice-hp-pips' : 'juice-dmg-pips');
+  pips.classList.remove('pop'); void pips.offsetWidth; pips.classList.add('pop');
+}
+function pumpStat(row, before) {
+  const fill = row.querySelector('.fill'), num = row.querySelector('b');
+  const toW = fill.style.getPropertyValue('--w'), toV = +num.textContent;
+  fill.style.transition = 'none';
+  fill.style.setProperty('--w', before.w);
+  void fill.offsetWidth;
+  fill.style.transition = 'width 0.6s cubic-bezier(0.25, 1.5, 0.5, 1)';
+  fill.style.setProperty('--w', toW);
+  row.classList.add('pumped');
+  const t0 = performance.now();
+  (function count() {
+    if (!row.isConnected) return;
+    const k = Math.min(1, (performance.now() - t0) / 550);
+    num.textContent = Math.round(before.v + (toV - before.v) * (1 - Math.pow(1 - k, 3)));
+    if (k < 1) requestAnimationFrame(count);
+  })();
+}
+$('juice-hp').addEventListener('click', () => juiceSpend('hp'));
+$('juice-dmg').addEventListener('click', () => juiceSpend('dmg'));
 
 // one spinning display model per boxer, built on demand
 const selectModels = {};
@@ -946,7 +982,7 @@ function scaleDesc(text, st) {
 }
 
 function statRow(label, val, max, cls) {
-  return '<div class="stat"><span>' + label + '</span><div class="bar"><div class="fill ' + cls +
+  return '<div class="stat" data-stat="' + label + '"><span>' + label + '</span><div class="bar"><div class="fill ' + cls +
     '" style="--w:' + Math.round(val / max * 100) + '%"></div></div><b>' + val + '</b></div>';
 }
 function tierClass(v, hi, mid) { return v >= hi ? 'f-high' : v >= mid ? 'f-avg' : 'f-low'; }
@@ -1221,29 +1257,158 @@ function revealActiveChip() {
   }
 }
 
-let unlockNext = null;
-function showUnlock(id, next) {
-  const c = BOXER_DEFS[id];
-  $('roll-label').style.display = 'none';   // the name says it — no banner over it
-  const nameEl = $('roll-name');
-  nameEl.textContent = c.name;
-  nameEl.style.color = c.uiColor;
-  nameEl.classList.remove('settled');
-  void nameEl.offsetWidth;
-  nameEl.classList.add('settled');
-  $('roll-sub').textContent = c.specialName + ' — "' + c.tag + '"';
-  show('roll-overlay');
-  AudioFX.fanfare(true);
-  world.crowd.excitement = 1;
-  unlockNext = () => {
-    clearTimeout(game.unlockTimer);
-    unlockNext = null;
-    hide('roll-overlay');
-    next();
+// ============ NEW WRESTLER UNLOCKED ============
+// Played once, at the END of a run, for everyone you unlocked along the way.
+// A padlocked silhouette strains, the lock bursts, the light floods in and the
+// name slams down. Click skips ahead; click again moves to the next wrestler.
+const UnlockFX = (() => {
+  let cv, g, raf = 0, P = [], running = false, last = 0, ambient = null;
+  function size() {
+    const r = window.devicePixelRatio || 1;
+    cv.width = Math.max(1, cv.clientWidth * r); cv.height = Math.max(1, cv.clientHeight * r);
+    g.setTransform(r, 0, 0, r, 0, 0);
+  }
+  function loop(now) {
+    if (!running) return;
+    raf = requestAnimationFrame(loop);
+    const dt = Math.min(0.05, (now - (last || now)) / 1000 || 0.016); last = now;
+    step(dt);
+  }
+  function step(dt) {
+    if (cv.clientWidth && (cv.width === 1)) size();
+    g.clearRect(0, 0, cv.clientWidth, cv.clientHeight);
+    if (ambient && Math.random() < dt * 22) {
+      P.push({ x: ambient.x + (Math.random() - 0.5) * 420, y: ambient.y + 160 + Math.random() * 60,
+               vx: (Math.random() - 0.5) * 10, vy: -30 - Math.random() * 50, g: -4, life: 3, max: 3,
+               r: 1.2 + Math.random() * 2.2, col: Math.random() < 0.5 ? ambient.col : '#ffe9a3', kind: 'dot' });
+    }
+    g.globalCompositeOperation = 'lighter';
+    for (let i = P.length - 1; i >= 0; i--) {
+      const p = P[i];
+      p.life -= dt;
+      if (p.life <= 0) { P.splice(i, 1); continue; }
+      const dr = Math.exp(-(p.drag || 0) * dt);
+      p.vy += p.g * dt; p.vx *= dr; p.vy *= dr;
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      const f = p.life / p.max;
+      g.globalAlpha = Math.min(1, f * 1.8);
+      if (p.kind === 'shard') {
+        p.rot += p.vr * dt;
+        g.save(); g.translate(p.x, p.y); g.rotate(p.rot);
+        g.globalCompositeOperation = 'source-over';
+        g.fillStyle = p.col; g.beginPath();
+        g.moveTo(-p.r, -p.r * 0.6); g.lineTo(p.r, -p.r * 0.2); g.lineTo(p.r * 0.3, p.r); g.closePath(); g.fill();
+        g.restore(); g.globalCompositeOperation = 'lighter';
+      } else {
+        const rr = p.r * (0.5 + 0.5 * f);
+        const grd = g.createRadialGradient(p.x, p.y, 0, p.x, p.y, rr * 3);
+        grd.addColorStop(0, p.col); grd.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = grd; g.beginPath(); g.arc(p.x, p.y, rr * 3, 0, Math.PI * 2); g.fill();
+      }
+    }
+    g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+  }
+  return {
+    start(canvas) {
+      cv = canvas; g = cv.getContext('2d'); size();
+      P = []; ambient = null;
+      if (!running) { running = true; last = 0; raf = requestAnimationFrame(loop); }
+    },
+    stop() { running = false; cancelAnimationFrame(raf); P = []; ambient = null; if (g) g.clearRect(0, 0, cv.width, cv.height); },
+    burst(x, y, col) {
+      for (let i = 0; i < 150; i++) {
+        const a = Math.random() * Math.PI * 2, sp = 160 + Math.random() * 520;
+        P.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 80, g: 260, drag: 1.4,
+                 life: 0.8 + Math.random() * 1.1, max: 1.9, r: 1.5 + Math.random() * 3.2,
+                 col: [col, '#ffffff', '#ffe27a'][(Math.random() * 3) | 0], kind: 'dot' });
+      }
+      // the padlock comes apart in gold and steel chunks
+      for (let i = 0; i < 18; i++) {
+        const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.6, sp = 220 + Math.random() * 320;
+        P.push({ x: x + (Math.random() - 0.5) * 40, y: y + (Math.random() - 0.5) * 40,
+                 vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, g: 900, drag: 0.2, life: 1.4, max: 1.4,
+                 r: 6 + Math.random() * 9, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 18,
+                 col: Math.random() < 0.6 ? '#e2a21c' : '#c9d0db', kind: 'shard' });
+      }
+    },
+    sparksFrom(x, y, col) {
+      P.push({ x: x + (Math.random() - 0.5) * 70, y: y + (Math.random() - 0.5) * 60,
+               vx: (Math.random() - 0.5) * 140, vy: -60 - Math.random() * 120, g: 200, drag: 1,
+               life: 0.5, max: 0.5, r: 1.5 + Math.random() * 2, col, kind: 'dot' });
+    },
+    ambient(x, y, col) { ambient = { x, y, col }; },
+    _step: (dt) => step(dt)
   };
-  game.unlockTimer = setTimeout(() => { if (unlockNext) unlockNext(); }, 2600);
+})();
+
+let unlockAdvance = null;
+function showUnlocks(ids, done) {
+  ids = (ids || []).filter(id => BOXER_DEFS[id]);
+  if (!ids.length) { done(); return; }
+  const scr = $('unlock-screen');
+  let idx = 0, timers = [];
+  const later = (ms, fn) => timers.push(setTimeout(fn, ms));
+  const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
+  let phase = 'idle', strainIv = null;
+  const cardCenter = () => {
+    const r = $('unl-card').getBoundingClientRect(), s = scr.getBoundingClientRect();
+    return { x: r.left - s.left + r.width / 2, y: r.top - s.top + r.height / 2 };
+  };
+  function burst() {
+    if (phase === 'burst' || phase === 'named') return;
+    phase = 'burst';
+    clearInterval(strainIv);
+    scr.classList.remove('straining');
+    scr.classList.add('burst');
+    const c = cardCenter(), col = BOXER_DEFS[ids[idx]].uiColor || '#ffd94d';
+    UnlockFX.burst(c.x, c.y, col);
+    UnlockFX.ambient(c.x, c.y, col);
+    AudioFX.clang(); AudioFX.slam && AudioFX.slam(); AudioFX.fanfare(true);
+    world.crowd.excitement = 1;
+    later(260, () => { phase = 'named'; scr.classList.add('named'); AudioFX.sparkle(5); });
+  }
+  function play() {
+    clearTimers();
+    const id = ids[idx], c = BOXER_DEFS[id];
+    scr.className = 'screen';                       // reset every stage class
+    scr.style.setProperty('--uc', c.uiColor || '#ffd94d');
+    $('unl-face').src = portraitFor(id) || '';
+    $('unl-name').textContent = c.name;
+    $('unl-tag').textContent = '"' + c.tag + '"';
+    $('unl-special').innerHTML = '<b>SPECIAL — ' + c.specialName + ':</b> ' +
+      scaleDesc(c.playerSpecialDesc || c.specialDesc, getSteroids(id));
+    $('unl-count').textContent = ids.length > 1 ? (idx + 1) + ' / ' + ids.length : '';
+    // restart the card's entrance animation
+    const card = $('unl-card'); card.style.animation = 'none'; void card.offsetWidth; card.style.animation = '';
+    phase = 'locked';
+    AudioFX.whoosh();
+    later(650, () => {
+      phase = 'straining'; scr.classList.add('straining');
+      AudioFX.riser && AudioFX.riser();
+      strainIv = setInterval(() => {
+        const p = cardCenter(); UnlockFX.sparksFrom(p.x, p.y + 10, '#ffe27a');
+      }, 40);
+    });
+    later(1650, burst);
+  }
+  unlockAdvance = () => {
+    if (phase === 'locked' || phase === 'straining') { clearTimers(); burst(); return; }   // skip ahead
+    if (phase === 'burst') return;                                                          // let it land
+    clearInterval(strainIv);
+    idx++;
+    if (idx < ids.length) { play(); return; }
+    clearTimers();
+    UnlockFX.stop();
+    hide('unlock-screen');
+    unlockAdvance = null;
+    done();
+  };
+  show('unlock-screen');
+  game.state = 'unlock';
+  UnlockFX.start($('unl-fx'));
+  play();
 }
-$('roll-overlay').addEventListener('click', () => { if (unlockNext) unlockNext(); });
+$('unlock-screen').addEventListener('click', () => { if (unlockAdvance) unlockAdvance(); });
 
 // ============ CHALLENGES SCREEN ============
 // Challenges get their own screen: pick the boss, read their card, then pick
@@ -1396,7 +1561,9 @@ $('btn-menu').addEventListener('click', () => {
 $('cutscene').addEventListener('click', () => { if (game.state === 'cutscene') startFight(); });
 
 function cleanupMatch() {
-  if (game.player) game.player.rage = null;
+  RingRopes.reset();
+  MatDust.clear();
+  if (game.player) game.player.berserk = null;
   $('hud').classList.remove('raging');
   // The charge you built is yours for the whole run — it follows you into the
   // next fight, and onto the next wrestler if this one goes over the ropes.
@@ -1456,8 +1623,6 @@ let cratePending = 0, crateTier = 0, crateChances = UPGRADE_CHANCES;
 
 function paintCrate() {
   const tier = RARITY[crateTier];
-  const box = $('crate-box');
-  box.className = 'crate-box ' + tier.cls + (box.classList.contains('open') ? ' open' : '');
   $('crate-rarity').textContent = tier.name;
   $('crate-rarity').className = 'crate-rarity ' + tier.cls;
   $('crate-sub').textContent = crateQueue + (crateQueue === 1 ? ' crate left · ' : ' crates left · ') +
@@ -1471,7 +1636,7 @@ function beginCrate() {
   cratePending = 0;
   crateTier = 0;
   crateChances = UPGRADE_CHANCES;
-  $('crate-box').className = 'crate-box';
+  Crate3D.reset(0);               // a fresh crate thumps down onto the stage
   $('crate-result').textContent = '';
   $('crate-result').className = 'crate-result';
   $('btn-crate').textContent = 'TRY UPGRADE';
@@ -1484,13 +1649,19 @@ function openCrates(count, next) {
   crateQueue = count;
   crateNext = next;
   $('crate-title').textContent = 'SUPPLY ' + (count === 1 ? 'CRATE' : 'CRATES');
-  beginCrate();
   show('crate-screen');
+  Crate3D.mount($('crate-stage'));   // after show(), so the stage has a size
+  Crate3D.start();
+  beginCrate();
   game.state = 'crates';
 }
 
+let crateBusy = false;   // mid-animation: ignore clicks so nothing gets skipped
 $('btn-crate').addEventListener('click', () => {
-  const box = $('crate-box'), res = $('crate-result'), btn = $('btn-crate');
+  if (crateBusy) return;
+  const res = $('crate-result'), btn = $('btn-crate');
+  const hold = (ms) => { crateBusy = true; btn.disabled = true;
+                         setTimeout(() => { crateBusy = false; btn.disabled = false; }, ms); };
 
   // ---- phase 1: gamble the rarity upward ----
   if (crateState === 'upgrade') {
@@ -1506,13 +1677,14 @@ $('btn-crate').addEventListener('click', () => {
       res.className = 'crate-result upgraded' + (jumped > 1 ? ' double' : '');
       res.textContent = '';
       AudioFX.sparkle(jumped > 1 ? 6 : 4);
-      box.classList.add('shaking');
-      setTimeout(() => box.classList.remove('shaking'), 450);
+      Crate3D.upgrade(crateTier, jumped);
     } else {
       res.className = 'crate-result nothing';
       res.textContent = 'NO LUCK';
       AudioFX.hit(0.35);
+      Crate3D.dud();
     }
+    hold(350);
     if (crateChances <= 0 || crateTier >= RARITY.length - 1) {
       crateState = 'ready';
       btn.textContent = 'OPEN CRATE';
@@ -1526,16 +1698,18 @@ $('btn-crate').addEventListener('click', () => {
     crateQueue--;
     cratePending = rollLoot(crateTier);
     crateState = 'revealed';
-    box.classList.add('shaking');
-    setTimeout(() => { box.classList.remove('shaking'); box.classList.add('open'); }, 420);
+    res.textContent = '';
+    Crate3D.open();                 // strains, leaks light, then the lid blows off
+    const shown = cratePending > 0 ? cratePending : 1;   // always teases at least one
+    setTimeout(() => Crate3D.reveal(shown), 850);
     setTimeout(() => {
-      const shown = cratePending > 0 ? cratePending : 1;   // always teases at least one
       res.className = 'crate-result';
       res.textContent = '+' + shown + ' STEROID' + (shown > 1 ? 'S' : '') + '!';
       AudioFX.sparkle(3);
       btn.textContent = 'CLAIM';
-    }, 620);
+    }, 1350);
     btn.textContent = '...';
+    hold(1400);
     return;
   }
 
@@ -1547,11 +1721,14 @@ $('btn-crate').addEventListener('click', () => {
       res.className = 'crate-result';
       res.textContent = 'CLAIMED +' + cratePending;
       AudioFX.fanfare();
+      Crate3D.claim();
     } else {
       res.className = 'crate-result toolate';
       res.textContent = 'TOO LATE!';
       AudioFX.hit(0.6);
+      Crate3D.fizzle();
     }
+    hold(500);
     crateState = 'claimed';
     $('crate-sub').textContent = crateQueue + (crateQueue === 1 ? ' crate left' : ' crates left');
     btn.textContent = crateQueue > 0 ? 'NEXT CRATE' : 'CONTINUE';
@@ -1559,7 +1736,8 @@ $('btn-crate').addEventListener('click', () => {
   }
 
   // ---- phase 4: next crate or leave ----
-  if (crateQueue > 0) { beginCrate(); return; }
+  if (crateQueue > 0) { beginCrate(); hold(650); return; }
+  Crate3D.stop();
   hide('crate-screen');
   const go = crateNext;
   crateNext = null;
@@ -1580,6 +1758,7 @@ function startTournament(playerId) {   // eslint-disable-line no-param-reassign
   game.team = teamList().slice(0, teamMax());
   game.teamDown = [];
   game.cratesWon = 0;
+  game.unlockedThisRun = [];
   game.selectedId = game.team[0];
   playerId = game.team[0];
   game.ladder = cup.order.slice();
@@ -1780,6 +1959,7 @@ function wireBoxer(b) {
     b.onChargeHit = (self) => combatAPI.chargeHit(self);
     b.onChargeMiss = (self) => combatAPI.chargeMiss(self);
     b.onSleepBump = (self) => combatAPI.sleepBump(self);
+    b.onWake = (self) => combatAPI.wakeStretch(self);
     b.onRicochetHit = (self) => combatAPI.ricochetHit(self);
     b.onRicochetBounce = (self, n) => combatAPI.ricochetBounce(self, n);
     b.onFeastStart = (self) => combatAPI.feastStart(self);
@@ -1791,6 +1971,7 @@ function beginRoundCommon() {
   game.timeScale = 1;
   game.lastPhp = undefined; game.lastEhp = undefined;
   game.kickP = 0; game.kickY = 0;
+  game.camRoll = 0; game.camRollV = 0; game.hitstop = 0;
   game.camEye = null;
   game.celebT = 0;
   game.endTimer = -1;
@@ -1902,10 +2083,12 @@ function finishFight() {
   if (game.playerWon) {
     // beat a fighter and you can play as them
     const beaten = game.ladder[game.fightIndex];
-    let unlocked = null;
     // a challenge boss stays a boss — you beat them, you don't get to be them
+    // Saved straight away, so a lost run never costs you anyone — but the
+    // reveal waits for the end of the tournament.
     if (ROSTER.includes(beaten) && !isUnlocked(beaten)) {
-      save.unlocked.push(beaten); persist(); unlocked = beaten;
+      save.unlocked.push(beaten); persist();
+      (game.unlockedThisRun = game.unlockedThisRun || []).push(beaten);
     }
     const more = game.fightIndex < game.ladder.length - 1;
     if (more) { game.fightIndex++; game.wonLast = true; }
@@ -1922,7 +2105,7 @@ function finishFight() {
     }
     else if (game.tournament === 'bronze' && !save.bronzeWon) { save.bronzeWon = true; persist(); }
     else if (game.tournament === 'silver' && !save.silverWon) { save.silverWon = true; persist(); }
-    const proceed = more ? beginCutscene : showEndScreen;
+    const proceed = more ? beginCutscene : runFinale;
     // One roll per opponent thrown out — banked now, opened when the run ends.
     rollCrate();
     let next = more ? proceed : () => openCrates(crateTally(), proceed);
@@ -1945,11 +2128,17 @@ function finishFight() {
         next = () => showCeremony(game.selectedId, cupKey, afterCrates);
       }
     }
-    if (unlocked) showUnlock(unlocked, next);
-    else next();
+    next();
     return;
   }
-  openCrates(crateTally(), showEndScreen);   // whatever you earned on the way in
+  openCrates(crateTally(), runFinale);   // whatever you earned on the way in
+}
+
+// the very end of a run: everyone you unlocked along the way, then the results
+function runFinale() {
+  const ids = game.unlockedThisRun || [];
+  game.unlockedThisRun = [];
+  showUnlocks(ids, showEndScreen);
 }
 
 // A run that never put anyone over the ropes still gets one 25% roll, so you
@@ -1995,6 +2184,9 @@ function updatePauseOverlay() {
       box.querySelector('.pause-title').textContent = ready ? 'READY?' : 'PAUSED';
       box.querySelector('.pause-sub').textContent =
         ready ? 'Click to enter the ring' : 'Click to return to the fight';
+      // mid-fight it's a proper menu; before the bell it's just "click to go"
+      box.classList.toggle('menu', !ready);
+      resetQuitButton();
       show('pause-overlay');
     } else {
       hide('pause-overlay');
@@ -2002,13 +2194,53 @@ function updatePauseOverlay() {
   }
 }
 
-$('pause-overlay').addEventListener('click', () => {
+$('pause-overlay').addEventListener('click', (e) => {
+  // the pause MENU only answers to its buttons — a stray click shouldn't
+  // throw you back into the fight
+  if (game.state === 'fight' && $('pause-overlay').classList.contains('menu')) return;
   if (game.state === 'fight') { requestLock(); return; }
   // shouldn't be reachable, but never leave a click doing nothing
   hide('pause-overlay');
   game._pauseShown = false;
   if (game.state === 'versus') $('versus').click();
 });
+
+function resetQuitButton() {
+  const q = $('pause-quit');
+  q.textContent = 'QUIT RUN';
+  q.classList.remove('confirm');
+}
+$('pause-resume').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (game.state === 'fight') requestLock();
+});
+$('pause-settings').addEventListener('click', (e) => {
+  e.stopPropagation();
+  openSettings('pause');
+});
+// two clicks, so a fumbled click can't throw away a whole run
+$('pause-quit').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const q = $('pause-quit');
+  if (!q.classList.contains('confirm')) {
+    q.classList.add('confirm');
+    q.textContent = 'SURE? CLICK AGAIN';
+    return;
+  }
+  resetQuitButton();
+  quitRun();
+});
+function quitRun() {
+  if (game.online) Online.leave();
+  game.matchOver = true;
+  game.ringOutCam = null; game.slowmoTimer = 0; game.endTimer = -1;
+  cleanupMatch(); hideSelectModels();
+  Music.muffle(false);
+  document.querySelectorAll('.screen').forEach(el => el.classList.add('hidden'));
+  game.state = 'menu';
+  game._pauseShown = false;
+  Music.play('menu'); show('menu');
+}
 
 document.addEventListener('mousemove', (e) => {
   if (!game.locked || game.state !== 'fight') return;
@@ -2228,6 +2460,7 @@ const combatAPI = {
     AudioFX.slam();
     game.shake = Math.max(game.shake, 0.75);
     spawnSpark(b.pos.clone().add(new THREE.Vector3(0, 0.35, 0)), true);
+    MatDust.puff(b.pos, 1.2); camRoll(0.05);
     world.crowd.excitement = 1;
     if (!other || other.state !== 'fight' || game.matchOver) return;
     const d = TMP.v.subVectors(other.pos, b.pos); d.y = 0;
@@ -2266,6 +2499,7 @@ const combatAPI = {
     }
     announce('COUNTER — ' + Math.round(stored) + '!', b.isPlayer ? '#ffd94d' : '#ff5a4e');
     dealDamage(b, other, stored, dir, true);
+    if (stored >= 60) { hitstop(4); camRoll(0.07, dir); }
     spawnSpark(other.chestWorldPos(TMP.v3), true);
     game.shake = Math.max(game.shake, 0.6);
     world.crowd.pop(other.pos);
@@ -2299,11 +2533,13 @@ const combatAPI = {
     world.crowd.excitement = 1;
     if (other.isPlayer) game.kickP += 0.25;
     other.launch(dir.clone().multiplyScalar(4.5).setY(2.6), 0, b);
+    hitstop(4); camRoll(0.07, dir); MatDust.puff(b.pos, 0.8);
     if (other.hp <= 0) knockOutBoxer(other, null);
     return true;
   },
 
   chargeMiss(b) {
+    RingRopes.impactAt(b.pos, 6.5);       // the bull meets the ropes
     AudioFX.slam();
     game.shake = Math.max(game.shake, 0.4);
     announce('MISSED!', '#8b96bd');
@@ -2319,6 +2555,25 @@ const combatAPI = {
     announce('SLUMBERJACK IS IN DEEP SLUMBER!', b.isPlayer ? '#ffd94d' : '#ff8d7e');
     AudioFX.omen();
     world.crowd.excitement = Math.max(world.crowd.excitement, 0.5);
+  },
+
+  // WAKE-UP STRETCH — the nap has a dangerous exit. Waiting beside him for it
+  // to end gets you a shockwave of yawning lumberjack.
+  wakeStretch(b) {
+    const other = b === game.player ? game.enemy : game.player;
+    MatDust.puff(b.pos, 0.9);
+    AudioFX.slam();
+    game.shake = Math.max(game.shake, 0.5);
+    world.crowd.excitement = 1;
+    if (!other || other.state !== 'fight' || game.matchOver) return;
+    const d = TMP.v.subVectors(other.pos, b.pos); d.y = 0;
+    if (d.length() > 3) return;
+    const dir = d.lengthSq() > 0.0001 ? d.clone().normalize() : new THREE.Vector3(0, 0, 1);
+    dealDamage(b, other, sp(b, 35), dir, true);
+    spawnSpark(other.chestWorldPos(TMP.v3), true);
+    if (other.isPlayer) game.kickP += 0.25;
+    other.launch(dir.clone().multiplyScalar(6).setY(3), 0, b);
+    if (other.hp <= 0) knockOutBoxer(other, null);
   },
 
   // ...and anyone he drifts into while asleep gets flattened by 300lb of nap
@@ -2354,6 +2609,7 @@ const combatAPI = {
     world.crowd.excitement = 1;
   },
   ricochetBounce(b, n) {
+    RingRopes.impactAt(b.pos, 5.5);       // and they fling him back
     AudioFX.ropeTwang(n - 1);
     game.shake = Math.max(game.shake, 0.3);
     world.crowd.excitement = 1;
@@ -2419,6 +2675,7 @@ const combatAPI = {
     game.shake = Math.max(game.shake, 0.9);
     game.ringWarp = 1;
     spawnCracks(b.pos, 4.0);
+    MatDust.puff(b.pos, 1.5); camRoll(0.08);
     world.crowd.excitement = 1;
     if (!other || other.state !== 'fight' || game.matchOver) return;
     const d = TMP.v.subVectors(other.pos, b.pos); d.y = 0;
@@ -2512,6 +2769,12 @@ const combatAPI = {
 
   doSuplex(attacker, victim, targetPt) {
     if (victim.roll) return false;   // can't get hold of a boxer mid-roll
+    // Only a standing wrestler can lift someone, and nobody lifts a man who is
+    // lifting them. Two Beans suplexing each other on the same frame pinned
+    // each body to the other's head, fed back, and flung BOTH out of the ring.
+    if (attacker.state !== 'fight' || victim.state !== 'fight') return false;
+    if (game.suplexes.some(s => s.attacker === victim || s.victim === attacker ||
+                                s.victim === victim)) return false;
     // The slam always lands inside the ring. Aiming a suplex out over the ropes
     // used to be an instant first-move win, for either fighter — ring-outs have
     // to be earned with a knockout, a grab and a throw.
@@ -2731,6 +2994,7 @@ function updatePiledrivers(dt) {
     game.ringWarp = 1.4;
     spawnCracks(v.ragdoll.center(), 5.5);
     spawnSpark(v.ragdoll.center().clone(), true);
+    hitstop(5); camRoll(0.11); MatDust.puff(v.ragdoll.center(), 1.7);
     world.crowd.excitement = 1;
     if (v.isPlayer) { flashVignette(); game.kickP += 0.4; }
     if (v.hp <= 0) knockOutBoxer(v, null);
@@ -2783,6 +3047,134 @@ function updateSparks(dt) {
 }
 
 // ------------------------------------------------------------
+// Big-hit juice: hitstop, camera roll, canvas dust
+// ------------------------------------------------------------
+// Freeze the fight for a few frames so the biggest hits land with weight.
+// Never on a networked fight — the guest would read it as lag.
+function hitstop(frames) {
+  if (game.online) return;
+  game.hitstop = Math.max(game.hitstop || 0, frames / 60);
+}
+
+// Tip the horizon on a heavy hit; a damped spring rocks it back level.
+// dir (optional) is the hit direction, so the camera rolls away from it.
+function camRoll(amt, dir) {
+  let s = Math.random() < 0.5 ? -1 : 1;
+  if (dir) {
+    const side = dir.x * Math.cos(game.camYaw) - dir.z * Math.sin(game.camYaw);
+    if (Math.abs(side) > 0.05) s = Math.sign(side);
+  }
+  game.camRoll = THREE.MathUtils.clamp((game.camRoll || 0) + s * amt, -0.2, 0.2);
+}
+function stepCamRoll(dt) {
+  if (!game.camRoll && !game.camRollV) return;
+  game.camRollV = (game.camRollV || 0) + (-120 * game.camRoll - 13 * game.camRollV) * dt;
+  game.camRoll += game.camRollV * dt;
+  if (Math.abs(game.camRoll) < 0.0004 && Math.abs(game.camRollV) < 0.004) { game.camRoll = 0; game.camRollV = 0; }
+}
+
+// Dust kicked off the canvas when a body (or a big move) hits the mat.
+// Same idea as the crate's particles, but world-sized and normally blended so
+// it reads as dust on the bright canvas rather than glowing.
+const MatDust = (() => {
+  const MAX = 260;
+  const P = [];
+  const posA = new Float32Array(MAX * 3), sizeA = new Float32Array(MAX), alphaA = new Float32Array(MAX), shadeA = new Float32Array(MAX);
+  const tex = (() => {
+    const c = document.createElement('canvas'); c.width = c.height = 64;
+    const g = c.getContext('2d');
+    // a few overlapping soft blobs, so the puffs look clumpy, not like discs
+    for (const [x, y, r, a] of [[32, 32, 28, 0.55], [24, 36, 16, 0.35], [40, 27, 15, 0.35], [34, 40, 12, 0.3]]) {
+      const gr = g.createRadialGradient(x, y, 0, x, y, r);
+      gr.addColorStop(0, 'rgba(255,255,255,' + a + ')');
+      gr.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+    }
+    return new THREE.CanvasTexture(c);
+  })();
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(posA, 3));
+  geo.setAttribute('psize', new THREE.BufferAttribute(sizeA, 1));
+  geo.setAttribute('palpha', new THREE.BufferAttribute(alphaA, 1));
+  geo.setAttribute('pshade', new THREE.BufferAttribute(shadeA, 1));
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { map: { value: tex }, proj: { value: 400 }, col: { value: new THREE.Color(0xcdbb9e) } },
+    vertexShader: [
+      'attribute float psize; attribute float palpha; attribute float pshade;',
+      'uniform float proj; varying float vA; varying float vS;',
+      'void main(){ vA = palpha; vS = pshade;',
+      ' vec4 mv = modelViewMatrix * vec4(position, 1.0);',
+      ' gl_PointSize = psize * proj / max(0.1, -mv.z);',
+      ' gl_Position = projectionMatrix * mv; }'
+    ].join('\n'),
+    fragmentShader: [
+      'uniform sampler2D map; uniform vec3 col; varying float vA; varying float vS;',
+      'void main(){ vec4 t = texture2D(map, gl_PointCoord); gl_FragColor = vec4(col * vS, t.a * vA); }'
+    ].join('\n'),
+    transparent: true, depthWrite: false
+  });
+  const pts = new THREE.Points(geo, mat);
+  pts.frustumCulled = false;
+  pts.renderOrder = 3;
+  scene.add(pts);
+  const _sz = new THREE.Vector2();
+
+  // power ~0.5 for a knockdown, 1 for a slam, 1.6 for a piledriver
+  function puff(at, power = 1) {
+    const gy = groundYAt(at.x, at.z);
+    const n = Math.round(10 + power * 16);
+    for (let i = 0; i < n; i++) {
+      if (P.length >= MAX) P.shift();
+      const a = Math.random() * Math.PI * 2;
+      const sp = (1.3 + Math.random() * 1.9) * (0.7 + power * 0.8);
+      const r0 = Math.random() * 0.35 * Math.sqrt(power);
+      const life = 0.55 + Math.random() * 0.5 + power * 0.25;
+      P.push({
+        x: at.x + Math.cos(a) * r0, y: gy + 0.06 + Math.random() * 0.1, z: at.z + Math.sin(a) * r0,
+        vx: Math.cos(a) * sp, vy: 0.25 + Math.random() * (0.6 + power * 0.5), vz: Math.sin(a) * sp,
+        size: (0.34 + Math.random() * 0.26) * (0.75 + power * 0.4),
+        grow: 2.2 + Math.random() * 1.2,
+        life, max: life,
+        shade: 0.82 + Math.random() * 0.18,
+        peak: 0.62 + Math.random() * 0.25
+      });
+    }
+  }
+  function update(dt) {
+    for (let i = P.length - 1; i >= 0; i--) {
+      const p = P[i];
+      p.life -= dt;
+      if (p.life <= 0) { P.splice(i, 1); continue; }
+      const k = Math.exp(-3.4 * dt);
+      p.vx *= k; p.vz *= k; p.vy = p.vy * Math.exp(-2 * dt) - 0.6 * dt;
+      p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
+      const gy = groundYAt(p.x, p.z) + 0.04;
+      if (p.y < gy) { p.y = gy; p.vy = 0; }
+    }
+    for (let i = 0; i < MAX; i++) {
+      const p = P[i];
+      if (!p) { alphaA[i] = 0; sizeA[i] = 0; continue; }
+      const f = 1 - p.life / p.max;           // 0 → 1 over its life
+      posA[i * 3] = p.x; posA[i * 3 + 1] = p.y; posA[i * 3 + 2] = p.z;
+      sizeA[i] = p.size * (1 + f * p.grow);
+      alphaA[i] = p.peak * Math.min(1, f * 10) * (1 - f) * (1 - f);
+      shadeA[i] = p.shade;
+    }
+    pts.visible = P.length > 0;
+    if (!pts.visible) return;
+    geo.attributes.position.needsUpdate = true;
+    geo.attributes.psize.needsUpdate = true;
+    geo.attributes.palpha.needsUpdate = true;
+    geo.attributes.pshade.needsUpdate = true;
+    // world-sized points: pixels per metre at 1m from the camera
+    renderer.getDrawingBufferSize(_sz);
+    mat.uniforms.proj.value = _sz.y * 0.5 * camera.projectionMatrix.elements[5];
+  }
+  function clear() { P.length = 0; update(0); }
+  return { puff, update, clear, _P: P, _mat: mat };
+})();
+
+// ------------------------------------------------------------
 // Damage — every source routes through here so Big Wave's shield and
 // Brick's guard apply no matter what hit them
 // ------------------------------------------------------------
@@ -2792,7 +3184,7 @@ function dealDamage(attacker, defender, dmg, dir, big, allowDown) {
   if (!allowDown && defender.state !== 'fight') return 0;
   // difficulty only ever touches what the ENEMY hits you for
   if (attacker && !attacker.isPlayer && !game.online) dmg *= difficulty().enemyDmg;
-  if (attacker && attacker.rage) dmg *= 1.5;   // a raging wrestler hits harder
+  if (attacker && attacker.berserk) dmg *= 1.5;   // a raging wrestler hits harder
 
   // RISING TIDE: the hit heals him and hurls the attacker away
   if (defender.shield > 0) {
@@ -2830,6 +3222,7 @@ function dealDamage(attacker, defender, dmg, dir, big, allowDown) {
     const kick = away.clone().multiplyScalar(19); kick.y = 11;
     defender.sleepSmack(kick);
     game.slowmoTimer = Math.max(game.slowmoTimer, 0.35);
+    hitstop(4); camRoll(0.08, away);
     AudioFX.slam();
     spawnSpark(defender.chestWorldPos(TMP.v3), true);
     game.shake = Math.max(game.shake, 1.0);
@@ -2850,18 +3243,18 @@ function tryTriggerRage(p) {
   if (!p || p.state !== 'fight' || game.matchOver || !game.enemy) return;
   const chance = rageChanceFor(p);
   if (chance <= 0 || Math.random() >= chance) return;
-  if (p.rage) {                                  // already gone: extend, never restack
-    p.rage.left = Math.min(RAGE_CAP, p.rage.left + 2);
+  if (p.berserk) {                                  // already gone: extend, never restack
+    p.berserk.left = Math.min(RAGE_CAP, p.berserk.left + 2);
     return;
   }
-  p.rage = {
+  p.berserk = {
     left: RAGE_MIN + Math.random() * (RAGE_MAX - RAGE_MIN),
     ai: new AIController(p, game.enemy, combatAPI)
   };
-  p.rage.ai.heat = 1;
-  p.rage.ai.specialDelay = 1e9;                  // rage throws hands — see updateRage
-  p.rage.ai.aggression = 1.6;                    // no thinking, only swinging
-  p.rage.ai.comboPause = 0;
+  p.berserk.ai.heat = 1;
+  p.berserk.ai.specialDelay = 1e9;                  // rage throws hands — see updateRage
+  p.berserk.ai.aggression = 1.6;                    // no thinking, only swinging
+  p.berserk.ai.comboPause = 0;
   announce('RAGE!', '#ff5533');
   AudioFX.roar();
   game.shake = Math.max(game.shake, 0.7);
@@ -2869,7 +3262,7 @@ function tryTriggerRage(p) {
   $('hud').classList.add('raging');
 }
 function updateRage(p, dt) {
-  const r = p.rage;
+  const r = p.berserk;
   r.left -= dt;
   if (r.left <= 0 || p.state !== 'fight' || game.matchOver || !game.enemy) { endRage(p); return; }
   r.ai.t = game.enemy;          // a tag-in swaps who you're swinging at
@@ -2884,8 +3277,8 @@ function updateRage(p, dt) {
   game.camYaw += dy * (1 - Math.exp(-7 * dt));
 }
 function endRage(p) {
-  if (!p || !p.rage) return;
-  p.rage = null;
+  if (!p || !p.berserk) return;
+  p.berserk = null;
   p.specialCd = 0;
   game.camYaw = p.yaw;          // hand the controls back pointing where you ended up
   $('hud').classList.remove('raging');
@@ -2977,6 +3370,7 @@ function resolvePunches(attacker, defender, dt) {
           AudioFX.slam();
           game.shake = Math.max(game.shake, 0.55);
           spawnSpark(defender.chestWorldPos(TMP.v3), true);
+          hitstop(4); camRoll(0.07, dir);
           world.crowd.excitement = 1;
         }
         attacker.barrage.rung = Math.min(top, attacker.barrage.rung + 1);
@@ -2995,7 +3389,7 @@ function resolvePunches(attacker, defender, dt) {
 
     // RAGE ignores how bodies are supposed to behave — everything you touch
     // cartwheels off into the lights.
-    if (attacker.rage && defender.hp > 0) {
+    if (attacker.berserk && defender.hp > 0) {
       defender.kdCd = 0;
       defender.launch(dir.clone().multiplyScalar(11).setY(6.5), 0, attacker);
       AudioFX.slam();
@@ -3105,6 +3499,14 @@ function updateLandings(b) {
   const c = b.ragdoll.center();
   const gy = groundYAt(c.x, c.z);
 
+  // first touchdown after a real flight kicks dust off the canvas
+  const rd = b.ragdoll;
+  if (rd.airTime < 0.05) b._landDust = false;
+  else if (!b._landDust && !(b.pendingLandDmg > 0) && rd.airTime > 0.2 && c.y < gy + 0.5) {
+    b._landDust = true;
+    MatDust.puff(c, THREE.MathUtils.clamp(0.35 + rd.airTime * 0.7, 0.4, 1.2));
+  }
+
   if (b.pendingLandDmg > 0 && b.ragdoll.airTime > 0.12 && c.y < gy + 0.55) {
     const dmg = b.pendingLandDmg;
     b.pendingLandDmg = 0;
@@ -3113,6 +3515,7 @@ function updateLandings(b) {
     AudioFX.slam();
     spawnSpark(b.ragdoll.center().clone().add(new THREE.Vector3(0, 0.3, 0)), true);
     game.shake = Math.max(game.shake, 0.45);
+    hitstop(3); camRoll(0.06); MatDust.puff(c, 1.1); b._landDust = true;
     world.crowd.excitement = 1;
     if (b.isPlayer) flashVignette();
     if (b.hp <= 0 && !b.isKO) knockOutBoxer(b, null);
@@ -3121,9 +3524,9 @@ function updateLandings(b) {
 }
 
 // RING OUT — leaving the ring loses the fight whether you're knocked out or not
-function checkRingOut(b) {
+function checkRingOut(b, dt) {
   if (game.matchOver || b.eliminated) return;
-  if (b.state === 'carried') return;              // still being held over the ring
+  if (b.state === 'carried') { b.outsideT = 0; return; }   // still being held over the ring
   const c = b.isRagdolled ? b.ragdoll.center() : b.pos;
   // Out = past the ropes, not past the platform. The apron (the strip of
   // platform outside the ropes) used to count as "still in", so you could land
@@ -3131,9 +3534,16 @@ function checkRingOut(b) {
   // postHalf-0.05, so this sits just beyond them.
   const OUT = RING.postHalf + 0.1;
   const outside = Math.abs(c.x) > OUT || Math.abs(c.z) > OUT;
-  if (!outside) return;
-  // a body still sailing through the air isn't out until it comes down
-  if (b.isRagdolled && c.y > 0.5 && !b.ragdoll.landed) return;
+  if (!outside) { b.outsideT = 0; return; }
+  // A body still sailing through the air isn't out until it comes down. Height
+  // is measured from the surface UNDER the body: the apron outside the ropes is
+  // 0.62 up, so the old absolute "y > 0.5" read everyone lying on it as still
+  // airborne — and since nobody may stand up past the ropes either, they lay
+  // there for the rest of the fight. And whatever `landed` thinks, nobody waits
+  // out there longer than a couple of seconds.
+  b.outsideT = (b.outsideT || 0) + (dt || 1 / 60);
+  const h = c.y - groundYAt(c.x, c.z);
+  if (b.isRagdolled && h > 0.5 && !b.ragdoll.landed && b.outsideT < 2.5) return;
   eliminate(b);
 }
 
@@ -3163,6 +3573,142 @@ function eliminate(loser) {
   subhint('');
 }
 
+// The defeat skull — drawn, not an emoji, in the game's own chunky style.
+const DEFEAT_SKULL = `<svg class="skull" viewBox="0 0 200 222" aria-label="Defeated">
+  <defs>
+    <radialGradient id="skBone" cx="38%" cy="30%" r="78%">
+      <stop offset="0" stop-color="#fffdf6"/><stop offset="0.5" stop-color="#ece1c9"/><stop offset="1" stop-color="#a8956f"/>
+    </radialGradient>
+    <radialGradient id="skEye" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#ffd0a0"/><stop offset="0.35" stop-color="#ff4b2e"/><stop offset="1" stop-color="#ff4b2e" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="100" cy="212" rx="62" ry="8" fill="rgba(0,0,0,0.45)"/>
+  <path d="M100 12 C49 12 20 48 20 93 C20 121 33 140 50 150 L52 172 C52 181 59 187 67 187 L133 187
+           C141 187 148 181 148 172 L150 150 C167 140 180 121 180 93 C180 48 151 12 100 12 Z"
+        fill="url(#skBone)" stroke="#2c2117" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M38 118 C46 132 58 138 70 136" fill="none" stroke="rgba(110,88,58,0.45)" stroke-width="5" stroke-linecap="round"/>
+  <path d="M162 118 C154 132 142 138 130 136" fill="none" stroke="rgba(110,88,58,0.45)" stroke-width="5" stroke-linecap="round"/>
+  <ellipse cx="72" cy="44" rx="26" ry="14" fill="rgba(255,255,255,0.55)" transform="rotate(-22 72 44)"/>
+  <path d="M130 20 L121 42 L132 54 L123 72 L129 80" fill="none" stroke="#2c2117" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M50 93 C49 74 69 66 84 73 C94 78 95 98 88 109 C79 122 54 120 50 105 Z" fill="#170f0b"/>
+  <path d="M150 93 C151 74 131 66 116 73 C106 78 105 98 112 109 C121 122 146 120 150 105 Z" fill="#170f0b"/>
+  <circle class="skull-eye" cx="71" cy="94" r="15" fill="url(#skEye)"/>
+  <circle class="skull-eye" cx="129" cy="94" r="15" fill="url(#skEye)"/>
+  <path d="M100 113 L89 136 C94 141 106 141 111 136 Z" fill="#170f0b"/>
+  <path d="M64 152 H136 V178 C136 182 133 184 129 184 H71 C67 184 64 182 64 178 Z" fill="#170f0b"/>
+  <g fill="#f4ecda" stroke="#2c2117" stroke-width="3">
+    <rect x="67" y="150" width="12" height="22" rx="3"/><rect x="80" y="150" width="12" height="25" rx="3"/>
+    <rect x="93" y="150" width="14" height="26" rx="3"/><rect x="108" y="150" width="12" height="25" rx="3"/>
+    <rect x="121" y="150" width="12" height="22" rx="3"/>
+  </g>
+</svg>`;
+// ------------------------------------------------------------
+// End screen stage — your wrestler, in 3D, celebrating or sulking.
+// Its own little renderer (like the crate's), so it sits exactly where the
+// medal used to be in the layout instead of fighting the arena camera.
+// ------------------------------------------------------------
+const EndStage = (() => {
+  let r = null, sc, cam, mdl = null, glow, shadow, key, rim, failed = false;
+  const box = new THREE.Box3(), _eb = new THREE.Box3(), mid = new THREE.Vector3(), size = new THREE.Vector3();
+  function init() {
+    if (r || failed) return !!r;
+    try {
+      r = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    } catch (e) { failed = true; return false; }
+    r.setClearColor(0x000000, 0);
+    sc = new THREE.Scene();
+    cam = new THREE.PerspectiveCamera(28, 1, 0.05, 60);
+    key = new THREE.DirectionalLight(0xfff2e0, 1.2); key.position.set(-1.6, 3, 3.2);
+    rim = new THREE.DirectionalLight(0x9fc0ff, 0.7); rim.position.set(2.4, 1.6, -2.2);
+    sc.add(key, rim, new THREE.AmbientLight(0xffffff, 0.45));
+    const blob = (inner, outer, mid) => {
+      const c = document.createElement('canvas'); c.width = c.height = 128;
+      const g = c.getContext('2d');
+      const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+      gr.addColorStop(0, inner); if (mid) gr.addColorStop(0.55, mid); gr.addColorStop(1, outer);
+      g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+      return new THREE.CanvasTexture(c);
+    };
+    // a pool of spotlight on the floor, and a contact shadow under the feet
+    // a spot-lit patch of canvas, so nobody floats in the void
+    glow = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 4.6),
+      new THREE.MeshBasicMaterial({ map: blob('rgba(255,255,255,0.75)', 'rgba(255,255,255,0)', 'rgba(255,255,255,0.5)'), transparent: true, depthWrite: false }));
+    glow.rotation.x = -Math.PI / 2;
+    shadow = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6),
+      new THREE.MeshBasicMaterial({ map: blob('rgba(0,0,0,0.6)', 'rgba(0,0,0,0)'), transparent: true, depthWrite: false }));
+    shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.004;
+    sc.add(glow, shadow);
+    return true;
+  }
+  function stop() {
+    if (!mdl) return;
+    sc.remove(mdl.root);
+    mdl.root.traverse((o) => {
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(x => x.dispose());
+    });
+    mdl = null;
+    hide('end-stage');
+  }
+  // won: true/false; medal: a MEDALS entry to hang on a champion (optional)
+  function start(id, won, medal) {
+    stop();
+    if (!init()) return false;
+    const el = $('end-stage');
+    show('end-stage');
+    if (r.domElement.parentNode !== el) el.appendChild(r.domElement);
+    mdl = new Boxer(id, sc, false);
+    mdl.resetFor(new THREE.Vector3(0, 0, 0), 0.32);
+    mdl.endPose = won ? 'win' : 'lose';
+    if (medal) mdl.wearMedal(medal);
+    // let the pose settle, then frame the camera on it once (no zoom pumping)
+    for (let i = 0; i < 90; i++) mdl.update(1 / 60, i / 60, null);
+    mdl.root.updateWorldMatrix(true, true);
+    // only what's actually drawn — the shield bubble and feast aura are
+    // hidden meshes that would otherwise blow the box up
+    box.makeEmpty();
+    const visit = (o) => {
+      if (!o.visible) return;
+      if (o.isMesh) { o.geometry.computeBoundingBox(); box.union(_eb.copy(o.geometry.boundingBox).applyMatrix4(o.matrixWorld)); }
+      for (const ch of o.children) visit(ch);
+    };
+    visit(mdl.root);
+    box.getCenter(mid); box.getSize(size);
+    // glow warm for a winner, cold for a loser
+    glow.material.color.set(won ? 0xd6e2ff : 0x7d8db8);
+    key.color.set(won ? 0xfff2e0 : 0xc8d2ee);
+    glow.position.set(mid.x, 0.002, mid.z);
+    shadow.position.x = mid.x; shadow.position.z = mid.z;
+    shadow.scale.set(Math.max(1, size.x / 0.9), 1, Math.max(1, size.z / 0.9));
+    // flat on the canvas? pull back and look down on him, so it reads as lying there
+    const lying = size.y < Math.max(size.x, size.z) * 0.6;
+    const ext = lying ? Math.max(size.x, size.z) * 1.2 : Math.max(size.y * 1.25, size.x * 0.8, 1.1);
+    const d = ext * 0.5 / Math.tan(THREE.MathUtils.degToRad(cam.fov * 0.5));
+    cam.position.set(mid.x + d * 0.05, mid.y + d * (lying ? 0.62 : 0.34), mid.z + d * (lying ? 0.78 : 0.94));
+    // aim a touch high so the feet and the pool of light sit low in the frame
+    cam.lookAt(mid.x, mid.y + size.y * 0.06, mid.z);
+    return true;
+  }
+  function step(dt, t) {
+    if (!mdl) return;
+    const el = $('end-stage');
+    if (game.state !== 'end' || el.classList.contains('hidden')) { stop(); return; }
+    const w = el.clientWidth, h = el.clientHeight;
+    if (!w || !h) return;
+    const pr = Math.min(2, window.devicePixelRatio || 1);
+    if (r.getPixelRatio() !== pr) r.setPixelRatio(pr);
+    const cv = r.domElement;
+    if (cv.width !== Math.round(w * pr) || cv.height !== Math.round(h * pr)) {
+      r.setSize(w, h, false);
+      cam.aspect = w / h; cam.updateProjectionMatrix();
+    }
+    mdl.update(dt, t, null);
+    r.render(sc, cam);
+  }
+  return { start, stop, step, get active() { return !!mdl; } };
+})();
+
 function showEndScreen() {
   cleanupMatch();
   const cup = TOURNAMENTS[game.tournament] || TOURNAMENTS.bronze;
@@ -3181,7 +3727,7 @@ function showEndScreen() {
     $('end-sub').textContent =
       BOXER_DEFS[game.selectedId].name + ' beat all ' + game.ladder.length + ' wrestlers!';
   } else {
-    $('end-medal').textContent = '💀';
+    $('end-medal').innerHTML = DEFEAT_SKULL;
     $('end-title').textContent = 'RING OUT...';
     const beaten = game.fightIndex;
     const foe = BOXER_DEFS[game.ladder[Math.min(beaten, game.ladder.length - 1)]];
@@ -3195,6 +3741,11 @@ function showEndScreen() {
   $('btn-rematch').textContent = isChallenge() ? 'RETRY CHALLENGE' : 'RETRY TOURNAMENT';
   show('end-screen');
   game.state = 'end';
+  // the wrestler themself replaces the medal / skull icon — the icon stays
+  // as the fallback if a second GL context isn't available
+  const medal = game.playerWon && !isChallenge() ? MEDALS[game.tournament] : null;
+  const staged = EndStage.start(game.selectedId, !!game.playerWon, medal);
+  $('end-medal').classList.toggle('hidden', staged);
   Music.sting(game.playerWon);
   renderRoster();
 }
@@ -3235,7 +3786,7 @@ function checkPlayerRage() {
 function updatePlayerInput(dt) {
   const p = game.player;
   p.moveInput.set(0, 0, 0);
-  if (p.rage) { updateRage(p, dt); return; }   // not your body right now
+  if (p.berserk) { updateRage(p, dt); return; }   // not your body right now
   if (!game.locked || p.state !== 'fight') return;
 
   let f = 0, r = 0;
@@ -3253,6 +3804,12 @@ function updatePlayerInput(dt) {
 }
 
 function updateCamera(dt, t) {
+  updateCameraBase(dt, t);
+  // heavy-hit roll rides on top of whatever shot the camera is in
+  stepCamRoll(dt);
+  if (game.camRoll && game.state === 'fight') camera.rotateZ(game.camRoll);
+}
+function updateCameraBase(dt, t) {
   const p = game.player;
   if (game.state === 'cutscene') {
     // slow menacing orbit that pushes in on the next opponent
@@ -3467,9 +4024,12 @@ function updateHints() {
   const p = game.player, e = game.enemy;
   let hint = '';
   if (!game.matchOver && p && p.state === 'fight') {
-    if (p.carrying) hint = 'CLICK — throw them over the ropes!';
-    else if (e.isKO && e.state === 'ragdoll') hint = 'They’re OUT! Grab the body (CLICK) and hurl it out of the ring!';
-    else if (e.isKO && e.state === 'carried' && e.carriedBy === p) hint = 'CLICK — throw them over the ropes!';
+    if (p.carrying || (e.isKO && e.state === 'carried' && e.carriedBy === p)) hint = 'Press E — throw them over the ropes!';
+    else if (e.isKO && e.state === 'ragdoll') {
+      hint = p.pos.distanceTo(e.ragdoll.center()) < 2.0
+        ? 'Press E to grab'
+        : 'They’re OUT! Get close and press E to grab them';
+    }
   }
   if (hint !== lastHint) { lastHint = hint; subhint(hint); }
 }
@@ -3503,6 +4063,11 @@ function frame(now) {
   // pause when unlocked mid-fight
   const fighting = game.state === 'fight';
   if (fighting && !game.locked && !game.matchOver && !game.online) sdt = 0;   // online never pauses
+  // HITSTOP: a big hit freezes the fight for a few frames (the camera keeps going)
+  if (game.hitstop > 0) {
+    if (fighting && sdt > 0) { game.hitstop -= dt; sdt = 0; }
+    else if (!fighting) game.hitstop = 0;
+  }
 
   if (fighting && game.online === 'guest') {
     Online.guestFrame(dt, t);
@@ -3531,8 +4096,8 @@ function frame(now) {
 
     updateLandings(game.player);
     updateLandings(game.enemy);
-    checkRingOut(game.player);
-    checkRingOut(game.enemy);
+    checkRingOut(game.player, sdt);
+    checkRingOut(game.enemy, sdt);
 
     updateHUD();
     if (game.online === 'host') Online.hostSend(dt);
@@ -3576,7 +4141,11 @@ function frame(now) {
   world.displayLight.intensity += ((onStage ? 0.8 : 0) - world.displayLight.intensity) * Math.min(1, dt * 6);
   world.displayFill.intensity += ((onStage ? 0.28 : 0) - world.displayFill.intensity) * Math.min(1, dt * 6);
 
+  if (EndStage.active) EndStage.step(dt, t);   // also tears itself down once you leave
   world.crowd.update(t, dt);
+  const fxDt = fighting ? sdt : dt;   // slow-mo, pause and hitstop hold the ropes and dust too
+  RingRopes.update(fxDt);
+  MatDust.update(fxDt);
   updateSparks(dt);
   updateCracks(dt);
   updateRingWarp(dt);

@@ -22,7 +22,9 @@ class AIController {
     // harder: quicker combos, less standing about, less dodging. The AI was
     // only landing ~20% of its theoretical damage, which is why the upper
     // tiers felt like a walk.
-    const HEAT = { bronze: 0.3, silver: 0.65, gold: 1 };
+    // Challenges were missing from this table, so a challenge boss fell through
+    // to heat 0 — lazier than a bronze opponent. They fight like silver.
+    const HEAT = { bronze: 0.3, silver: 0.65, gold: 1, challenge: 0.65 };
     const diff = (window.difficultyHeat && window.difficultyHeat()) || 1;
     this.heat = (HEAT[(window.game && window.game.tournament) || 'bronze'] || 0) * diff;
     this.specialReady = false;

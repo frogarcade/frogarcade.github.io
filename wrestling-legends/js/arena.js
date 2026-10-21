@@ -21,6 +21,93 @@ function makeCanvasTexture(draw, w, h) {
   return tex;
 }
 
+// ============================================================
+// REACTIVE ROPES
+// Every rope is a little spring string pinned at the two posts. Bodies that
+// hit it — caught, or flying through and over — kick its nodes outward; it
+// sags, wobbles and settles. A rope's tube is only rebuilt while it's moving.
+// ============================================================
+const RingRopes = (() => {
+  const N = 13;                 // nodes along each rope, both ends pinned
+  const ropes = [];
+  const TUNE = { gain: 4.5, tension: 280, spring: 22, damp: 5.5 };
+  return {
+    TUNE,
+    register(mesh, curve, pa, pb, y) {
+      const normalAx = Math.abs(pa.z - pb.z) < 1e-6 ? 'z' : 'x';
+      const alongAx = normalAx === 'z' ? 'x' : 'z';
+      const base = [];
+      for (let i = 0; i < N; i++) base.push(curve.getPoint(i / (N - 1)));
+      ropes.push({ mesh, rest: mesh.geometry, normalAx, alongAx, sign: Math.sign(pa[normalAx]),
+                   a0: pa[alongAx], a1: pb[alongAx], y, base,
+                   d: new Float32Array(N), v: new Float32Array(N), live: false });
+    },
+    // a hit on the side facing `normalAx`/`sign`, at a point along it and a height
+    impact(normalAx, sign, along, y, strength) {
+      if (!(strength > 0)) return;
+      for (const r of ropes) {
+        if (r.normalAx !== normalAx || r.sign !== sign) continue;
+        const s = (along - r.a0) / (r.a1 - r.a0);
+        if (s < 0.02 || s > 0.98) continue;
+        const dy = (y - r.y) / 0.32;
+        const hf = 0.18 + 0.82 * Math.exp(-dy * dy);          // the nearest rope takes most of it
+        for (let i = 1; i < N - 1; i++) {
+          const ds = (i / (N - 1) - s) / 0.13;
+          r.v[i] += strength * TUNE.gain * hf * Math.exp(-ds * ds);
+        }
+        r.live = true;
+      }
+    },
+    // something standing at `pos` slammed into whichever side it's nearest
+    impactAt(pos, strength, y) {
+      const ax = Math.abs(pos.x) > Math.abs(pos.z) ? 'x' : 'z';
+      const al = ax === 'x' ? 'z' : 'x';
+      this.impact(ax, Math.sign(pos[ax]) || 1, pos[al], y == null ? RING.top + 0.95 : y, strength);
+    },
+    update(dt) {
+      for (const r of ropes) {
+        if (!r.live) continue;
+        // a damped string: tension pulls each node toward its neighbours, a
+        // softer spring pulls the whole rope back to rest
+        const steps = Math.max(1, Math.ceil(dt / (1 / 240)));
+        const h = dt / steps;
+        for (let k = 0; k < steps; k++) {
+          for (let i = 1; i < N - 1; i++) {
+            const acc = TUNE.tension * (r.d[i - 1] + r.d[i + 1] - 2 * r.d[i]) - TUNE.spring * r.d[i] - TUNE.damp * r.v[i];
+            r.v[i] += acc * h;
+          }
+          for (let i = 1; i < N - 1; i++) r.d[i] = Math.max(-0.12, Math.min(0.65, r.d[i] + r.v[i] * h));
+        }
+        let energy = 0;
+        for (let i = 1; i < N - 1; i++) energy += Math.abs(r.d[i]) + Math.abs(r.v[i]) * 0.05;
+        if (energy < 0.004) {
+          // settled: snap back to the exact rest geometry
+          r.d.fill(0); r.v.fill(0); r.live = false;
+          if (r.mesh.geometry !== r.rest) { r.mesh.geometry.dispose(); r.mesh.geometry = r.rest; }
+          continue;
+        }
+        const pts = [];
+        for (let i = 0; i < N; i++) {
+          const p = r.base[i].clone();
+          p[r.normalAx] += r.sign * r.d[i];            // bowed outward…
+          p.y -= Math.abs(r.d[i]) * 0.32;               // …and dragged down a little
+          pts.push(p);
+        }
+        const geo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 28, 0.028, 6);
+        if (r.mesh.geometry !== r.rest) r.mesh.geometry.dispose();
+        r.mesh.geometry = geo;
+      }
+    },
+    reset() {
+      for (const r of ropes) {
+        r.d.fill(0); r.v.fill(0); r.live = false;
+        if (r.mesh.geometry !== r.rest) { r.mesh.geometry.dispose(); r.mesh.geometry = r.rest; }
+      }
+    },
+    _ropes: ropes
+  };
+})();
+
 function buildWorld(scene) {
   scene.background = new THREE.Color(0x0a0b14);
   scene.fog = new THREE.Fog(0x0a0b14, 24, 46);
@@ -219,6 +306,7 @@ function buildWorld(scene) {
       const curve = new THREE.QuadraticBezierCurve3(pa, mid, pb);
       const rope = new THREE.Mesh(new THREE.TubeGeometry(curve, 12, 0.028, 6), rMat);
       ringGroup.add(rope);
+      RingRopes.register(rope, curve, pa, pb, RING.top + h);
     });
   });
 
