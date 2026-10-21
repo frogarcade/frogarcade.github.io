@@ -110,12 +110,38 @@
   <button class="back-btn" id="ch-back">&larr; BACK</button>
 </div>
 
-<!-- ============ ROLL REVEAL ============ -->
-<div id="roll-overlay" class="hidden">
-  <div class="roll-box">
-    <div class="roll-label" id="roll-label"></div>
-    <div class="roll-name" id="roll-name">???</div>
-    <div class="roll-sub" id="roll-sub"></div>
+<!-- ============ NEW WRESTLER UNLOCKED ============ -->
+<div id="unlock-screen" class="screen hidden">
+  <div class="unl-rays"></div>
+  <canvas id="unl-fx"></canvas>
+  <div class="unl-flash"></div>
+  <div class="unl-stage">
+    <div class="unl-eyebrow">NEW WRESTLER UNLOCKED</div>
+    <div class="unl-card" id="unl-card">
+      <div class="unl-halo"></div>
+      <img class="unl-face" id="unl-face" alt="">
+      <div class="unl-shine"></div>
+      <svg class="unl-lock" viewBox="0 0 120 140" aria-hidden="true">
+        <defs>
+          <linearGradient id="lkBody" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#ffe27a"/><stop offset="0.5" stop-color="#e2a21c"/><stop offset="1" stop-color="#9a6206"/>
+          </linearGradient>
+          <linearGradient id="lkShackle" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#8d96a6"/><stop offset="0.5" stop-color="#e9eef5"/><stop offset="1" stop-color="#7c8596"/>
+          </linearGradient>
+        </defs>
+        <path class="lk-shackle" d="M32 66 V40 a28 28 0 0 1 56 0 V66" fill="none" stroke="url(#lkShackle)" stroke-width="13" stroke-linecap="round"/>
+        <rect x="14" y="60" width="92" height="72" rx="14" fill="url(#lkBody)" stroke="#5a3a04" stroke-width="4"/>
+        <rect x="22" y="68" width="76" height="8" rx="4" fill="rgba(255,255,255,0.35)"/>
+        <circle cx="60" cy="94" r="10" fill="#3a2402"/>
+        <path d="M55 98 L65 98 L62 118 L58 118 Z" fill="#3a2402"/>
+      </svg>
+    </div>
+    <div class="unl-name" id="unl-name"></div>
+    <div class="unl-tag" id="unl-tag"></div>
+    <div class="unl-special" id="unl-special"></div>
+    <div class="unl-count" id="unl-count"></div>
+    <div class="unl-skip">CLICK TO CONTINUE</div>
   </div>
 </div>
 
@@ -189,6 +215,11 @@
   <div class="pause-box">
     <div class="pause-title">PAUSED</div>
     <div class="pause-sub">Click to return to the fight</div>
+    <div class="pause-menu">
+      <button class="big-btn" id="pause-resume">RESUME</button>
+      <button class="big-btn secondary" id="pause-settings">SETTINGS</button>
+      <button class="big-btn secondary pause-quit" id="pause-quit">QUIT RUN</button>
+    </div>
   </div>
 </div>
 
@@ -197,10 +228,7 @@
   <div class="crate-title" id="crate-title">SUPPLY CRATES</div>
   <div class="crate-rarity" id="crate-rarity">COMMON</div>
   <div class="crate-sub" id="crate-sub">1 crate remaining</div>
-  <div class="crate-box" id="crate-box">
-    <div class="crate-lid"></div>
-    <div class="crate-face">?</div>
-  </div>
+  <div class="crate-stage" id="crate-stage"></div>
   <div class="crate-result" id="crate-result"></div>
   <button class="big-btn" id="btn-crate">OPEN CRATE</button>
 </div>
@@ -305,6 +333,7 @@
 
 <!-- ============ END SCREEN ============ -->
 <div id="end-screen" class="screen hidden">
+  <div id="end-stage" class="hidden"></div>
   <div class="end-medal" id="end-medal">🏆</div>
   <div class="end-title" id="end-title">CHAMPION!</div>
   <div class="end-sub" id="end-sub">You won the Bronze Tournament!</div>
@@ -319,6 +348,7 @@
 <script src="js/arena.js"></script>
 <script src="js/boxer.js"></script>
 <script src="js/ai.js"></script>
+<script src="js/crate3d.js"></script>
 <script src="js/main.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script src="js/online.js"></script>
