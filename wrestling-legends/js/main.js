@@ -1587,25 +1587,28 @@ function clearCutModel() {
 // ------------------------------------------------------------
 // Supply crates — the reward for winning a fight
 // ------------------------------------------------------------
-// Every opponent you throw out is a 20% roll for a supply crate, in every
-// tournament, up to three per run. Earned rather than issued.
+// Every opponent you throw out is a 35% roll for a supply crate, in every
+// tournament, up to three per run. Winning the whole run guarantees at least
+// one. (Raised from 20% when the user asked for easier steroids.)
 const SWAT_PUSH = 7.5, SWAT_LIFT = 3.75;   // 2.5x the old 3/1.5 shove
 const KO_MAX = 8;                     // ...and can't be pinned down forever
-const CRATE_CHANCE = 0.20;
+const CRATE_CHANCE = 0.35;
 const CRATES_MAX_PER_RUN = 3;
-const CRATE_CONSOLATION = 0.25;   // threw nobody out all run? one last roll
+const CRATE_CONSOLATION = 0.50;   // threw nobody out all run? one last roll
 const UPGRADE_CHANCES = 4;          // clicks you get to gamble the rarity up
-// Each chance: 15% climbs one tier, 10% climbs two, the rest is a dud.
-const UPGRADE_ONE = 0.10;
-const UPGRADE_TWO = 0.05;
+// Each chance: 6% climbs one tier, 2% climbs two, the rest is a dud.
+// (made rarer when every crate started paying out at least one steroid)
+const UPGRADE_ONE = 0.06;
+const UPGRADE_TWO = 0.02;
 
 // Each rarity's loot table, as cumulative thresholds on one roll.
-// [nothing, one, two, three]
+// [nothing, one, two, three] — every crate pays at least one steroid now
+// (the user did away with the "TOO LATE!" empty crate)
 const RARITY = [
-  { name: 'COMMON',   cls: 'common',   odds: [0.50, 0.50, 0.00, 0.00] },
-  { name: 'RARE',     cls: 'rare',     odds: [0.40, 0.30, 0.20, 0.10] },
-  { name: 'EPIC',     cls: 'epic',     odds: [0.20, 0.40, 0.25, 0.15] },
-  { name: 'MYTHICAL', cls: 'mythical', odds: [0.00, 0.20, 0.40, 0.40] }
+  { name: 'COMMON',   cls: 'common',   odds: [0, 1.00, 0.00, 0.00] },
+  { name: 'RARE',     cls: 'rare',     odds: [0, 0.60, 0.30, 0.10] },
+  { name: 'EPIC',     cls: 'epic',     odds: [0, 0.45, 0.35, 0.20] },
+  { name: 'MYTHICAL', cls: 'mythical', odds: [0, 0.20, 0.40, 0.40] }
 ];
 
 function rollLoot(tier) {
@@ -1613,9 +1616,9 @@ function rollLoot(tier) {
   let r = Math.random(), acc = 0;
   for (let i = 0; i < odds.length; i++) {
     acc += odds[i];
-    if (r < acc) return i;          // 0 = nothing, else that many steroids
+    if (r < acc) return Math.max(1, i);   // that many steroids, never none
   }
-  return 0;
+  return 1;
 }
 
 let crateQueue = 0, crateNext = null, crateState = 'upgrade';
@@ -1700,7 +1703,7 @@ $('btn-crate').addEventListener('click', () => {
     crateState = 'revealed';
     res.textContent = '';
     Crate3D.open();                 // strains, leaks light, then the lid blows off
-    const shown = cratePending > 0 ? cratePending : 1;   // always teases at least one
+    const shown = cratePending;
     setTimeout(() => Crate3D.reveal(shown), 850);
     setTimeout(() => {
       res.className = 'crate-result';
@@ -1713,21 +1716,14 @@ $('btn-crate').addEventListener('click', () => {
     return;
   }
 
-  // ---- phase 3: claim (or get robbed) ----
+  // ---- phase 3: claim ----
   if (crateState === 'revealed') {
-    if (cratePending > 0) {
-      save.steroids += cratePending;
-      persist();
-      res.className = 'crate-result';
-      res.textContent = 'CLAIMED +' + cratePending;
-      AudioFX.fanfare();
-      Crate3D.claim();
-    } else {
-      res.className = 'crate-result toolate';
-      res.textContent = 'TOO LATE!';
-      AudioFX.hit(0.6);
-      Crate3D.fizzle();
-    }
+    save.steroids += cratePending;
+    persist();
+    res.className = 'crate-result';
+    res.textContent = 'CLAIMED +' + cratePending;
+    AudioFX.fanfare();
+    Crate3D.claim();
     hold(500);
     crateState = 'claimed';
     $('crate-sub').textContent = crateQueue + (crateQueue === 1 ? ' crate left' : ' crates left');
@@ -2108,7 +2104,7 @@ function finishFight() {
     const proceed = more ? beginCutscene : runFinale;
     // One roll per opponent thrown out — banked now, opened when the run ends.
     rollCrate();
-    let next = more ? proceed : () => openCrates(crateTally(), proceed);
+    let next = more ? proceed : () => openCrates(crateTally(true), proceed);
     if (!more) {
       // took the cup: if this wrestler has never worn this medal, hold the
       // ceremony before anything else — it's the whole point of the run
@@ -2141,10 +2137,10 @@ function runFinale() {
   showUnlocks(ids, showEndScreen);
 }
 
-// A run that never put anyone over the ropes still gets one 25% roll, so you
-// never walk away from a bad night completely empty-handed.
-function crateTally() {
-  if ((game.cratesWon | 0) === 0 && Math.random() < CRATE_CONSOLATION) game.cratesWon = 1;
+// A run that never banked a crate still gets one 50% roll, so you rarely
+// walk away from a bad night empty-handed — and a run you WON always pays.
+function crateTally(wonRun) {
+  if ((game.cratesWon | 0) === 0 && (wonRun || Math.random() < CRATE_CONSOLATION)) game.cratesWon = 1;
   return game.cratesWon | 0;
 }
 
