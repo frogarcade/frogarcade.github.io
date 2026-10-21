@@ -163,8 +163,8 @@ function musicUpdate(dt) {
   }
 }
 // ---------------------------------------------------------------- recorded sound effects (Pixabay), gains set from measured loudness
-const SFILES = { launch: 'audio/sfx-launch.mp3', explosion: 'audio/sfx-explosion.mp3', victory: 'audio/sfx-victory.mp3', defeat: 'audio/sfx-defeat.mp3', click: 'audio/sfx-click.mp3' };
-const SGAIN = { launch: .3, sealHit: .17, explosion: .8, victory: .9, defeat: .95, click: 1.3 };
+const SFILES = { launch: 'audio/sfx-launch.mp3', explosion: 'audio/sfx-explosion.mp3', victory: 'audio/sfx-victory.mp3', defeat: 'audio/sfx-defeat.mp3', click: 'audio/sfx-click.mp3', stretch: 'audio/sfx-stretch.mp3' };
+const SGAIN = { launch: .3, sealHit: .17, explosion: .8, victory: .9, defeat: .95, click: 1.3, stretch: .55 };
 const BUF = {};
 function loadSfx() {
   for (const k in SFILES) fetch(SFILES[k]).then(r => { if (!r.ok) throw 0; return r.arrayBuffer(); })
@@ -179,6 +179,20 @@ function playBuf(k, o = {}) {
     if (o.max) { ga.gain.setValueAtTime(v, t + o.max * .6); ga.gain.linearRampToValueAtTime(0, t + o.max); src.stop(t + o.max + .05); }
     return true;
   } catch (e) { return false; }
+}
+// slingshot stretch: only the creak (0-1.36s) of the Pixabay file ever plays; the release snap after it is never heard
+let stretchSnd = null;
+function startStretch() {
+  const b = BUF.stretch; if (!A.c || !b || stretchSnd) return;
+  const t = A.c.currentTime, src = A.c.createBufferSource(), ga = A.c.createGain(), v = SGAIN.stretch, END = 1.36;
+  try {
+    src.buffer = b; ga.gain.setValueAtTime(v, t); ga.gain.setValueAtTime(v, t + END - .16); ga.gain.linearRampToValueAtTime(0, t + END);
+    src.connect(ga); ga.connect(A.sfx); src.start(t, 0, END); stretchSnd = { src, ga };
+  } catch (e) { }
+}
+function stopStretch() {
+  if (!stretchSnd) return; const { src, ga } = stretchSnd; stretchSnd = null;
+  try { const t = A.c.currentTime; ga.gain.cancelScheduledValues(t); ga.gain.setValueAtTime(ga.gain.value, t); ga.gain.linearRampToValueAtTime(0, t + .06); src.stop(t + .08); } catch (e) { }
 }
 function audioInit() {
   if (!M.started) { M.started = true; const w = wantedTrack(); if (save.music && M.els[w]) M.els[w].play().catch(() => { }); }
@@ -880,7 +894,7 @@ let WAVE_T = 1.05, BOSS_T = 4, ST_K = .22;           // wave / boss HP in "turns
 
 const TUT = {
   welcome: { text: 'The seals are invading our colony! Help me bounce them off the ice.', tap: 1 },
-  aim:     { text: 'Drag anywhere to aim, then let go to launch your whole flock!', tap: 0 },
+  aim:     { text: 'Pull back like a slingshot to aim, then let go to launch your whole flock!', tap: 0 },
   fence:   { text: 'See the fence? It bounces each penguin back into battle 2 times, then lets it through.', tap: 0, dur: 4.5 },
   march:   { text: 'After every shot the seals waddle one row closer. If one crosses the red line, you lose a heart!', tap: 1 },
   walls:   { text: 'Walls never move and seals sneak around them diagonally. TNT explodes when its HP hits zero, and Crabeater krill flies right over walls!', tap: 1 },
@@ -2014,7 +2028,7 @@ function drawHelp() {
   panel(40, 170, 640, 960, '#ffffff', 34);
   ribbon(W / 2, 175, 340, 'HOW TO PLAY', 'purple', 40);
   const tips = [
-    ['aim', 'Drag to aim, release to launch your whole flock.'],
+    ['aim', 'Pull back like a slingshot to aim, release to launch your whole flock.'],
     ['fence', 'The fence bounces every penguin back up 2 times.'],
     ['line', 'Seals move one row per shot. Crossing the red line costs a heart.'],
     ['walls', "Walls don't move and have HP. TNT explodes at zero!"],
@@ -2047,11 +2061,8 @@ function drawBoard() {
   g.fillStyle = dark ? 'rgba(255,255,255,.07)' : 'rgba(30,90,150,.08)';
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if ((r + c) % 2 === 0) g.fillRect(BX + c * C, BY + r * C, C, C);
   g.restore();
-  const warn = S.objs.some(o => o.cat === 'seal' && !o.dead && o.row + o.h >= ROWS);
-  g.save(); g.setLineDash([22, 14]); g.lineDashOffset = -T * 40; g.lineWidth = 6;
-  g.strokeStyle = warn ? `rgba(255,70,50,${.6 + Math.sin(T * 10) * .4})` : 'rgba(255,90,70,.55)';
+  g.save(); g.setLineDash([22, 14]); g.lineDashOffset = -T * 40; g.lineWidth = 6; g.strokeStyle = 'rgba(255,90,70,.55)';
   g.beginPath(); g.moveTo(BX, DANGER); g.lineTo(BR, DANGER); g.stroke(); g.restore();
-  if (warn) { g.fillStyle = `rgba(255,40,30,${.12 + Math.sin(T * 10) * .08})`; g.fillRect(BX, DANGER - C, BR - BX, C); }
 }
 function drawWalls() {
   const top = BY - 22, bot = EXIT - 6;
@@ -2071,7 +2082,7 @@ function drawLauncher() {
   g.beginPath(); g.moveTo(LX, LY + 4); g.lineTo(LX, LY - 18); g.moveTo(LX, LY - 18); g.lineTo(LX - 22, fy); g.moveTo(LX, LY - 18); g.lineTo(LX + 22, fy);
   g.lineWidth = 15; g.strokeStyle = OL; g.stroke(); g.lineWidth = 9; g.strokeStyle = '#a5672e'; g.stroke();
   let px = LX, py = fy + 6;
-  if (aim) { px = LX - Math.cos(S.aimA) * 22; py = fy + 6 - Math.sin(S.aimA) * 22; }
+  if (aim) { const d = 22 + (S.pull || 0) * 30; px = LX - Math.cos(S.aimA) * d; py = fy + 6 - Math.sin(S.aimA) * d; }
   py -= kick * 14;
   g.beginPath(); g.moveTo(LX - 22, fy); g.lineTo(px, py); g.lineTo(LX + 22, fy); g.lineWidth = 6; g.strokeStyle = '#5a2c12'; g.stroke();
   const q = S.phase === 'fire' ? S.queue.map(e => e.t) : flockQueue();
@@ -2103,7 +2114,6 @@ function drawPlay(dt) {
       for (const dx of [-14, 14]) { g.beginPath(); g.moveTo(c.x + dx - 9, c.y + dy - 40); g.lineTo(c.x + dx, c.y + dy - 50); g.lineTo(c.x + dx + 9, c.y + dy - 40); g.stroke(); } g.restore(); }
     o.holdKrill = o.kind === 'crabeater' && S.crabAct === 'shoot' && !o.frozen && ['aim', 'fire', 'advance', 'bossMove', 'meet', 'waveIntro'].includes(S.phase);
     drawSeal(o, c.x, c.y + dy, look);
-    if (o.row + o.h >= ROWS && !o.boss) txt('!', c.x + sealRad(o) * .9, c.y - sealRad(o) * .8, 40 + Math.sin(T * 12) * 6, '#ff4a3a');
   }
   g.restore();
   drawWalls(); drawFence(S.fenceFlash); drawLauncher();
@@ -2325,9 +2335,13 @@ function drawSealNoBadge(o, x, y, look) { drawSeal(o, x, y, look, true); }
 function worldPt(e) { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left - OX) / SC, y: (e.clientY - r.top - OY) / SC }; }
 function hitUI(p) { for (let i = UI.length - 1; i >= 0; i--) { const u = UI[i]; if (p.x >= u.x && p.x <= u.x + u.w && p.y >= u.y && p.y <= u.y + u.h) return u; } return null; }
 function setAim(p) {
-  if (p.y > FENCE_Y - 10) { S.aimValid = false; return; }
-  let a = Math.atan2(p.y - LY, p.x - LX); a = clamp(a, -Math.PI + .16, -.16);
-  S.aimA = a; S.aimValid = true; S.path = trace(a);
+  // slingshot style: pull back from where you touched and the shot flies the opposite way.
+  // a tiny pull aims nothing (let go there to cancel); pulling "forward" just pins at the shallowest angle
+  const o = S.pull0 || p, dx = o.x - p.x, dy = o.y - p.y, len = Math.hypot(dx, dy);
+  if (len < 24) { S.aimValid = false; S.pull = 0; stopStretch(); return; }
+  if (S.aiming) startStretch();
+  let a = Math.atan2(Math.min(dy, -1), dx); a = clamp(a, -Math.PI + .16, -.16);
+  S.pull = clamp((len - 24) / 140, 0, 1); S.aimA = a; S.aimValid = true; S.path = trace(a);
 }
 cv.addEventListener('pointerdown', e => {
   audioInit(); const p = worldPt(e);
@@ -2340,7 +2354,7 @@ cv.addEventListener('pointerdown', e => {
   if (scene === 'lobby' && tab === 'rookery' && !helpOpen && !settingsOpen) rookTap(p);
   const u = hitUI(p);
   if (u) { if (!u.off) pressId = u.id; return; }
-  if (scene === 'play' && S && S.phase === 'aim' && !S.paused) { S.aiming = true; setAim(p); }
+  if (scene === 'play' && S && S.phase === 'aim' && !S.paused) { S.aiming = true; S.pull0 = p; setAim(p); }
   else if (scene === 'play' && S && S.phase === 'fire' && !S.paused) S.swipeY = p.y;
 });
 cv.addEventListener('pointermove', e => {
@@ -2352,10 +2366,10 @@ cv.addEventListener('pointermove', e => {
 cv.addEventListener('pointerup', e => {
   const p = worldPt(e); drag = null;
   if (pressId) { const u = hitUI(p); const id = pressId; pressId = null; if (u && u.id === id && u.fn) u.fn(); return; }
-  if (scene === 'play' && S) { S.swipeY = null; if (S.aiming) { S.aiming = false; if (S.phase === 'aim') { setAim(p); if (S.aimValid) fire(); } } }
+  if (scene === 'play' && S) { S.swipeY = null; if (S.aiming) { S.aiming = false; if (S.phase === 'aim') { setAim(p); if (S.aimValid) fire(); } } stopStretch(); }
 });
 addEventListener('wheel', e => { if (scene === 'lobby' && tab === 'penguins') penScroll = clamp(penScroll + e.deltaY * .8, 0, penScrollMax); if (scene === 'lobby' && tab === 'shop') shopScroll = clamp(shopScroll + e.deltaY * .8, 0, shopScrollMax); }, { passive: true });
-cv.addEventListener('pointercancel', () => { drag = null; pressId = null; if (S) S.aiming = false; });
+cv.addEventListener('pointercancel', () => { drag = null; pressId = null; if (S) S.aiming = false; stopStretch(); });
 addEventListener('keydown', e => {
   audioInit();
   if (scene !== 'play' || !S) return;
