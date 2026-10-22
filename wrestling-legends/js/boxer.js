@@ -466,7 +466,10 @@ class Boxer {
     this.walkPhase = 0;
     this.victoryT = 0;
     this.kdCd = 0;         // knockdown cooldown (prevents stagger-lock spam)
-    this.jumpVel = 0;   // vertical velocity; nothing launches it now that jumping is out
+    this.jumpVel = 0;   // vertical velocity; only an uppercut pops you now that jumping is out
+    // 3-hit combo: jab -> hook -> uppercut. comboStep is the NEXT punch's slot,
+    // comboWin how long you have left to throw it
+    this.comboStep = 0; this.comboWin = 0; this.punchKind = 'jab';
     this.slam = null;      // Blaze: leap-and-crash
     this.roll = null;      // Honk: rolling riot
     this.wall = null;      // Brick: guard-and-counter
@@ -1257,6 +1260,13 @@ class Boxer {
 
   startPunch(speedMul = 1) {
     if (this.punchCd > 0 || this.punchT >= 0) return false;
+    // plain punches chain; flurries, counters and display punches are jabs
+    let kind = 'jab';
+    if (speedMul === 1 && !this.barrage && this.comboWin > 0) {
+      kind = this.comboStep === 1 ? 'hook' : this.comboStep === 2 ? 'upper' : 'jab';
+    }
+    this.punchKind = kind;
+    if (kind === 'upper') speedMul *= 0.8;          // heavier, and you can see it coming
     if (this.shield > 0) speedMul *= 2;              // Rising Tide: twice as fast
     if (this.feast && this.feast.eating <= 0) speedMul *= 1.5;  // Burger Break: 50% quicker
     this.punchArm = this.punchArm === 'R' ? 'L' : 'R';
@@ -1274,6 +1284,7 @@ class Boxer {
     this.flinch = Math.min(1, this.flinch + (big ? 1 : 0.7));
     this.flinchSide = Math.random() < 0.5 ? -1 : 1;
     this.stun = Math.max(this.stun, big ? 0.45 : 0.26);
+    this.comboStep = 0; this.comboWin = 0;   // getting hit breaks your combo
     if (!this.isRagdolled) {
       this.vel.addScaledVector(fromDir, (big ? 4.5 : 2.6) / this.mass);
     }
@@ -1640,6 +1651,7 @@ class Boxer {
       }
     }
     this.flinch = Math.max(0, this.flinch - dt * 3.2);
+    if (this.comboWin > 0 && (this.comboWin -= dt) <= 0) this.comboStep = 0;
     // the medal sways on its ribbon
     if (this.medalPivot) this.medalPivot.rotation.z = Math.sin(t * 1.9) * 0.06 + Math.sin(t * 3.1) * 0.02;
 
@@ -2281,15 +2293,38 @@ class Boxer {
         const pt2 = this.punchT;
         const ext = pt2 < 0.42 ? (pt2 / 0.42) : 1 - (pt2 - 0.42) / 0.58; // extend then retract
         const e = ext * ext * (3 - 2 * ext);
-        const pose = {
-          // arm swings from the guard all the way to straight-out front
-          shX: -1.05 - e * 0.72, shY: 0, shZ: 0.42 - e * 0.46,
-          elX: -1.7 + e * 1.7,
-          // cartoon reach: the whole arm extends as the punch lands
-          stretch: 1 + e * 0.42
-        };
-        torsoTwist += (this.punchArm === 'R' ? 1 : -1) * e * 0.5;
-        torsoLean += e * 0.16;
+        const sideSign = this.punchArm === 'R' ? 1 : -1;
+        let pose;
+        if (this.punchKind === 'hook') {
+          // HOOK: elbow up and bent, the fist sweeps in from the side
+          pose = {
+            shX: -1.25 - e * 0.3, shY: 0, shZ: 0.95 - e * 1.15,
+            elX: -1.55 + e * 0.55,
+            stretch: 1 + e * 0.25
+          };
+          torsoTwist += sideSign * (e * 0.95 - 0.15);
+          torsoLean += e * 0.1;
+        } else if (this.punchKind === 'upper') {
+          // UPPERCUT: dip, then drive the fist up through the chin
+          const dip = Math.max(0, 1 - pt2 / 0.25);   // starts low
+          pose = {
+            shX: -0.3 - e * 1.2, shY: 0, shZ: 0.3 - e * 0.42,
+            elX: -2.1 + e * 0.9,
+            stretch: 1 + e * 0.4
+          };
+          torsoTwist += sideSign * e * 0.35;
+          torsoLean += dip * 0.25 - e * 0.28;
+        } else {
+          pose = {
+            // arm swings from the guard all the way to straight-out front
+            shX: -1.05 - e * 0.72, shY: 0, shZ: 0.42 - e * 0.46,
+            elX: -1.7 + e * 1.7,
+            // cartoon reach: the whole arm extends as the punch lands
+            stretch: 1 + e * 0.42
+          };
+          torsoTwist += sideSign * e * 0.5;
+          torsoLean += e * 0.16;
+        }
         if (this.punchArm === 'R') punchPoseR = pose; else punchPoseL = pose;
       }
     }

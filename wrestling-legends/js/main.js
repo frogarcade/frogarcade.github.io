@@ -981,11 +981,38 @@ function scaleDesc(text, st) {
   });
 }
 
-function statRow(label, val, max, cls) {
-  return '<div class="stat" data-stat="' + label + '"><span>' + label + '</span><div class="bar"><div class="fill ' + cls +
-    '" style="--w:' + Math.round(val / max * 100) + '%"></div></div><b>' + val + '</b></div>';
+// The middle of every stat bar is the ROSTER AVERAGE: below average fills
+// 0-50%, above average fills 50-100% up to the best on the roster. Player
+// cards measure against everyone's player-side numbers, boss cards against
+// the enemy-side ones.
+let statScales = null;
+function statScale(side, key) {
+  if (!statScales) {
+    statScales = {};
+    const pick = {
+      player: { hp: c => c.playerHp != null ? c.playerHp : c.maxHp,
+                speed: c => c.playerSpeed != null ? c.playerSpeed : c.speed,
+                dmg: c => c.playerDmg != null ? c.playerDmg : c.dmg },
+      enemy:  { hp: c => c.maxHp, speed: c => c.speed, dmg: c => c.dmg }
+    };
+    for (const sd in pick) {
+      statScales[sd] = {};
+      for (const k in pick[sd]) {
+        const vals = ROSTER.map(id => pick[sd][k](BOXER_DEFS[id]));
+        statScales[sd][k] = { avg: vals.reduce((a, b) => a + b, 0) / vals.length, max: Math.max(...vals) };
+      }
+    }
+  }
+  return statScales[side][key];
 }
-function tierClass(v, hi, mid) { return v >= hi ? 'f-high' : v >= mid ? 'f-avg' : 'f-low'; }
+function statRow(label, val, side, key) {
+  const { avg, max } = statScale(side, key);
+  const w = val <= avg ? 50 * val / avg : 50 + 50 * Math.min(1, (val - avg) / Math.max(1, max - avg));
+  // red under average, blue around it, gold above it
+  const cls = val >= avg * 1.12 ? 'f-high' : val >= avg * 0.9 ? 'f-avg' : 'f-low';
+  return '<div class="stat" data-stat="' + label + '"><span>' + label + '</span><div class="bar"><div class="fill ' + cls +
+    '" style="--w:' + Math.round(w) + '%"></div></div><b>' + val + '</b></div>';
+}
 
 function selectBoxer(id) {
   game.selectedId = id;
@@ -1003,10 +1030,9 @@ function selectBoxer(id) {
   const shownHp = Math.round((c.playerHp != null ? c.playerHp : c.maxHp) * (1 + 0.20 * st.hp));
   const shownDmg = Math.round((c.playerDmg != null ? c.playerDmg : c.dmg) * (1 + 0.15 * st.dmg));
   $('sel-stats').innerHTML =
-    statRow('HEALTH', shownHp, 750, tierClass(shownHp, 420, 250)) +
-    (sp => statRow('SPEED', sp, 200, tierClass(sp, 125, 100)))(
-      c.playerSpeed != null ? c.playerSpeed : c.speed) +
-    statRow('POWER', shownDmg, 50, tierClass(shownDmg, 40, 25));
+    statRow('HEALTH', shownHp, 'player', 'hp') +
+    statRow('SPEED', c.playerSpeed != null ? c.playerSpeed : c.speed, 'player', 'speed') +
+    statRow('POWER', shownDmg, 'player', 'dmg');
   // your card quotes YOUR numbers — and the special's numbers move with your
   // steroid stacks, so {d:n} scales by damage and {h:n} by health
   $('sel-special').innerHTML = '<b>SPECIAL — ' + c.specialName + ':</b> ' +
@@ -1458,9 +1484,9 @@ function pickChallengeBoss(id) {
   $('ch-boss-tag').textContent = '"' + c.tag + '"';
   // a boss card quotes the ENEMY numbers — that's what you're walking into
   $('ch-boss-stats').innerHTML =
-    statRow('HEALTH', c.maxHp, 750, tierClass(c.maxHp, 420, 250)) +
-    statRow('SPEED', c.speed, 200, tierClass(c.speed, 125, 100)) +
-    statRow('POWER', c.dmg, 50, tierClass(c.dmg, 40, 25));
+    statRow('HEALTH', c.maxHp, 'enemy', 'hp') +
+    statRow('SPEED', c.speed, 'enemy', 'speed') +
+    statRow('POWER', c.dmg, 'enemy', 'dmg');
   $('ch-boss-special').innerHTML = '<b>SPECIAL — ' + c.specialName + ':</b> ' + c.specialDesc;
   $('ch-reward').textContent = done
     ? '✔ CLEARED — first-clear reward already banked'
@@ -3291,6 +3317,18 @@ function endRage(p) {
 // ------------------------------------------------------------
 // Punch resolution
 // ------------------------------------------------------------
+// 3-HIT COMBO. Land a punch and the next one within COMBO_WINDOW steps up:
+// jab -> hook -> uppercut. The uppercut pops them off their feet. Tuned to make
+// the game only a touch easier: a perfect chain is ~8% more damage per second
+// than plain jabs, and the AI only carries its chain on some of the time.
+const COMBO_WINDOW = 0.9;
+const COMBO_MUL = { jab: 1, hook: 1.1, upper: 1.4 };
+const AI_COMBO_CHANCE = 0.35;
+function breakCombo(b, whiffed) {
+  if (whiffed && b.punchKind === 'upper') b.punchCd += 0.35;   // a whiffed uppercut leaves you open
+  b.comboStep = 0; b.comboWin = 0;
+}
+
 function resolvePunches(attacker, defender, dt) {
   if (attacker.punchT < 0) { attacker._pp = -1; return; }
   const prev = attacker._pp === undefined ? -1 : attacker._pp;
@@ -3312,15 +3350,16 @@ function resolvePunches(attacker, defender, dt) {
   const slow = Math.max(0, 100 - attacker.speed) / 100;
   const reach = 1.5 + 0.35 * bulk + 0.35 * slow;
   // a whiff mid-flurry drops the Vicious Five back to its first rung
-  if (dist > reach) { if (attacker.barrage && attacker.barrage.ladder) attacker.barrage.rung = 0; return; }
+  if (dist > reach) { if (attacker.barrage && attacker.barrage.ladder) attacker.barrage.rung = 0; breakCombo(attacker, true); return; }
   const fw = attacker.isPlayer ? camForward() : camForwardOf(attacker);
-  if (fw.dot(to.normalize()) < 0.45) { if (attacker.barrage && attacker.barrage.ladder) attacker.barrage.rung = 0; return; }
+  if (fw.dot(to.normalize()) < 0.45) { if (attacker.barrage && attacker.barrage.ladder) attacker.barrage.rung = 0; breakCombo(attacker, true); return; }
 
   const dir = to.clone();
   const isBarrage = !!attacker.barrage;
   const rungDmg = isBarrage && attacker.barrage.ladder
     ? sp(attacker, attacker.barrage.ladder[attacker.barrage.rung]) : null;
-  const dmg = isBarrage ? (rungDmg != null ? rungDmg : attacker.barrage.dmg) : attacker.dmg;
+  const kind = isBarrage ? 'jab' : (attacker.punchKind || 'jab');
+  const dmg = isBarrage ? (rungDmg != null ? rungDmg : attacker.barrage.dmg) : attacker.dmg * COMBO_MUL[kind];
 
   if (defender.state === 'fight') {
     const guarded = defender.shield > 0 || !!defender.wall;
@@ -3346,6 +3385,28 @@ function resolvePunches(attacker, defender, dt) {
       if (defender.isPlayer) { flashVignette(); game.kickP += 0.18; }
     }
     world.crowd.excitement = Math.min(1, world.crowd.excitement + 0.12);
+    // ---- combo: step up the chain, or land the uppercut ----
+    if (!isBarrage) {
+      if (dealt > 0 && kind !== 'upper') {
+        const ai = !(attacker.isPlayer || attacker.remote);
+        if (!ai || Math.random() < AI_COMBO_CHANCE) {
+          attacker.comboStep = kind === 'jab' ? 1 : 2;
+          attacker.comboWin = COMBO_WINDOW;
+        } else breakCombo(attacker, false);
+      } else breakCombo(attacker, false);
+      if (kind === 'upper' && dealt > 0 && defender.hp > 0 && !big) {
+        // popped clean off their feet, and reeling when they come down
+        defender.stun = Math.max(defender.stun, 0.55);
+        defender.flinch = 1;
+        if (defender.state === 'fight' && !defender.airborne) defender.jumpVel = 3.4;
+        AudioFX.hit(1.6);
+        spawnSpark(defender.chestWorldPos(TMP.v3).add(new THREE.Vector3(0, 0.25, 0)), true);
+        if (attacker.isPlayer) { hitstop(3); camRoll(0.04, dir); }
+        if (defender.isPlayer) { camRoll(0.06, dir); game.kickP += 0.22; }
+      } else if (kind === 'hook' && dealt > 0 && defender.isPlayer) {
+        game.kickY += (Math.random() < 0.5 ? -1 : 1) * 0.12;   // a hook turns your head
+      }
+    }
     // you earn your special by landing clean punches — flurries don't count
     if ((attacker.isPlayer || attacker.remote) && !isBarrage && dealt > 0 && attacker.meter < 1) {
       // Five clean punches to charge, unless the wrestler's card says otherwise.
