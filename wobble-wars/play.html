@@ -624,7 +624,9 @@ function evoAvail(k){ return !!EVO[k] && save.lv[k] >= UPG[k].max && !evoOn(k); 
 function lvOf(k){ return (U[k].team>0 && save.lv && save.lv[k]) ? save.lv[k] : 1; }
 function uhp(k){ return Math.round((U[k].hp + (U[k].hpUp||0)*(lvOf(k)-1)) * (evoOn(k)? EVO[k].hpMul : 1)); }
 function udmg(k){ return Math.round((U[k].dmg + (U[k].dmgUp||0)*(lvOf(k)-1)) * (evoOn(k)&&EVO[k].dmgMul? EVO[k].dmgMul : 1)); }
-function ucd(k){ return U[k].cd * (evoOn(k) && EVO[k].cdMul ? EVO[k].cdMul : 1); }   // an evolution can stretch the cooldown
+function cheatOpt(o){ return !!(save.cheat && save[o]); }          // the cheat menu's switches (only while cheating)
+function ucost(k){ return cheatOpt('cheatFree') ? 0 : U[k].cost; }   // CHEAT: FREE makes every blob cost nothing
+function ucd(k){ if(cheatOpt('cheatNoCd')) return 0; return U[k].cd * (evoOn(k) && EVO[k].cdMul ? EVO[k].cdMul : 1); }   // an evolution can stretch the cooldown
 function uspd(k){ return U[k].spd * (evoOn(k)? (EVO[k].spdMul||1) : 1); }
 function income(){ return INCOME[(save.lv.flow||1)-1] * (reinfOn('flow')?1.35:1) * finMul('flow'); }
 function juiceCap(){ return Math.round(CAPS[(save.lv.tank||1)-1] * (reinfOn('tank')?1.35:1) * finMul('tank')); }
@@ -5738,7 +5740,7 @@ function aiTick(dt){
   const foes = B.units.some(o => o.team<0 && !o.dead && !o.dying);   // never waste a shot on an empty lane
   if(foes && Math.random() < 0.08 && B.cannon.ch>=100) fireCannon();
   // only blobs that are ready right now (off cooldown) and that the tank can actually hold
-  const squad = teamUnits().filter(k => !(U[k].once && B.used[k]) && B.cd[k]<=0 && U[k].cost <= B.cap);
+  const squad = teamUnits().filter(k => !(U[k].once && B.used[k]) && B.cd[k]<=0 && ucost(k) <= B.cap);
   // pick something to save up for — the wealthy blob more often than any one blob
   if(!B.aiPick || (B.aiPick!=='wealth' && squad.indexOf(B.aiPick)<0)
      || (B.aiPick==='wealth' && WEALTH_COST[B.wealth]==null)){
@@ -5750,12 +5752,12 @@ function aiTick(dt){
   }
   if(!B.aiPick) return;
   if(B.aiPick==='wealth'){                       // save for it, then buy it and choose again
-    const c = WEALTH_COST[B.wealth];
+    const c = cheatOpt('cheatFree') ? 0 : WEALTH_COST[B.wealth];
     if(c!=null && B.juice >= c){ buyWealth(); B.aiPick=null; }
     return;
   }
   const d = U[B.aiPick];
-  if(B.cd[B.aiPick]<=0 && B.juice >= d.cost){ tryDeploy(B.aiPick); B.aiPick=null; }
+  if(B.cd[B.aiPick]<=0 && B.juice >= ucost(B.aiPick)){ tryDeploy(B.aiPick); B.aiPick=null; }
 }
 
 /* ---- boss bars: one strip per boss on the field, stacked under the title ---- */
@@ -6073,7 +6075,7 @@ function spawnUnit(k, asBoss, quiet){
 function buyWealth(){
   if(!B || B.over || B.paused) return;
   if(B.wealth>=WEALTH_COST.length){ SFX.deny(); return; }
-  const c = WEALTH_COST[B.wealth];
+  const c = cheatOpt('cheatFree') ? 0 : WEALTH_COST[B.wealth];
   if(B.juice < c){ SFX.deny(); return; }
   B.juice -= c; B.wealth++;
   SFX.upgrade();
@@ -6087,15 +6089,15 @@ function tryDeploy(k){
   if(B.tryOut && B.tryOut.step===0 && k!==B.tryOut.k){ SFX.deny(); return; }   // this one first
   if(d.once && B.used[k]){ SFX.deny(); return; }   // one of him a battle, and that is that
   if(B.cd[k]>0){ SFX.deny(); return; }
-  if(B.juice < d.cost){ SFX.deny(); return; }
-  B.juice -= d.cost; B.cd[k]=ucd(k);
+  if(B.juice < ucost(k)){ SFX.deny(); return; }
+  B.juice -= ucost(k); B.cd[k]=ucd(k);
   if(d.once) B.used[k]=1;
   const u=spawnUnit(k);
   SFX.spawn();
   for(let i=0;i<10;i++) puff(u.x, GY-14, U[k].c[1]);
   if(B.tryOut && B.tryOut.step===0 && k===B.tryOut.k){       // there he goes: the fight starts, and a word on him
     B.tryOut.step = 1; B.tryOut.t = 0; delete save.tryOut; persist();
-    B.juice = Math.min(B.cap, B.juice + d.cost);           // and the juice really is on us
+    B.juice = Math.min(B.cap, B.juice + ucost(k));           // and the juice really is on us
   }
   if(d.hitman) launchHitman(u);
   else if(d.aero || d.reap || d.elderCane || d.samurai) beginEntrance(u, d.aero? 'aero' : d.reap? 'reaper' : d.samurai? 'samurai' : 'elder');
@@ -6876,7 +6878,7 @@ function updateFX(dt){
 function updateBattle(dt){
   const L=B.L;
   if(B.tryOut && B.tryOut.step===0 && !B.over){     // the fight holds still until the new blob goes in
-    const k=B.tryOut.k; B.juice = Math.max(B.juice, U[k].cost); B.cd[k] = 0; return;
+    const k=B.tryOut.k; B.juice = Math.max(B.juice, ucost(k)); B.cd[k] = 0; return;
   }
   if(B.over==='win' && B.winT!=null){            // VICTORY: confetti over the cheering squad, then the scoreboard
     const fans = B.units.filter(u => u.team>0 && !u.dead && !u.dying);
@@ -6896,6 +6898,7 @@ function updateBattle(dt){
   for(const k in B.cd) B.cd[k]=Math.max(0, B.cd[k]-dt);
   // cannon charge
   const C=B.cannon;
+  if(cheatOpt('cheatNoCd') && C.ch<100){ C.ch=100; C.ready=true; }   // CHEAT: NO COOLDOWN keeps the cannon loaded
   if(C.ch<100){ const was=C.ch; C.ch=Math.min(100, C.ch + C.rate*dt);
     if(was<100 && C.ch>=100){ C.ready=true; SFX.ready(); } }
   C.recoil=Math.max(0, C.recoil-dt*3.5);
@@ -8201,7 +8204,7 @@ function drawBar(){
   (function(){
     const x=198, y=BAR_Y+12, w=96, h=82;
     const maxed = B.wealth>=WEALTH_COST.length;
-    const cost = maxed? null : WEALTH_COST[B.wealth];
+    const cost = maxed? null : (cheatOpt('cheatFree') ? 0 : WEALTH_COST[B.wealth]);
     const afford = !maxed && B.juice>=cost && !B.over;
     const hov = mouse.x>=x&&mouse.x<=x+w&&mouse.y>=y&&mouse.y<=y+h;
     buttons.push({x,y,w,h,fn:buyWealth,dis:false});
@@ -8236,7 +8239,7 @@ function drawBar(){
     if(i===0) TUT_AT.card = {x, y, w, h};
     TUT_AT.cards[k] = {x, y, w, h};
     const spent = !!(d.once && B.used[k]);
-    const cdp = B.cd[k]/ucd(k), afford = B.juice>=d.cost && B.cd[k]<=0 && !B.over && !spent;
+    const cdp = B.cd[k]/(ucd(k)||1), afford = B.juice>=ucost(k) && B.cd[k]<=0 && !B.over && !spent;
     const hov = mouse.x>=x&&mouse.x<=x+w&&mouse.y>=y&&mouse.y<=y+h;
     buttons.push({x,y,w,h,fn:()=>tryDeploy(k),dis:false});
     X.save();
@@ -8255,7 +8258,7 @@ function drawBar(){
       X.restore();
       X.textAlign='center';
       X.fillStyle='#d8f6ff'; X.font='800 12px ui-rounded, Trebuchet MS, sans-serif';
-      X.fillText('\u00a4'+d.cost, x+w/2, y+72);
+      X.fillText('\u00a4'+ucost(k), x+w/2, y+72);
       X.textAlign='left';
     } else if(compact){
       // portrait on top, name and cost stacked under it
@@ -8268,7 +8271,7 @@ function drawBar(){
       while(fs>7 && X.measureText(nm).width > w-10){ fs--; X.font='800 '+fs+'px ui-rounded, Trebuchet MS, sans-serif'; }
       X.fillStyle='#ffffff'; X.fillText(nm, x+w/2, y+56);
       X.fillStyle='#d8f6ff'; X.font='800 14px ui-rounded, Trebuchet MS, sans-serif';
-      X.fillText('\u00a4'+d.cost, x+w/2, y+74);
+      X.fillText('\u00a4'+ucost(k), x+w/2, y+74);
       X.textAlign='left';
     } else {
       X.save(); rr(x,y-lift,w,h,12); X.clip();
@@ -8280,7 +8283,7 @@ function drawBar(){
       while(fs>8 && X.measureText(nm).width > w-(tx-x)-26){ fs--; X.font='800 '+fs+'px ui-rounded, Trebuchet MS, sans-serif'; }
       X.fillStyle='#ffffff'; X.fillText(nm, tx, y+24);
       X.fillStyle='#d8f6ff'; X.font='800 16px ui-rounded, Trebuchet MS, sans-serif';
-      X.fillText('\u00a4'+d.cost, tx, y+48);
+      X.fillText('\u00a4'+ucost(k), tx, y+48);
       X.fillStyle='rgba(255,255,255,.72)'; X.font='700 10px ui-rounded, Trebuchet MS, sans-serif';
       X.fillText(d.bolts? d.bolts.n+' BOLTS' : d.coin? 'OUT + BACK' : d.aoe?'AREA':'SINGLE', tx, y+66);
     }
@@ -8889,8 +8892,8 @@ function drawAudioPop(){
   buttons.unshift({x:0, y:0, w:W, h:H, dis:false, fn:()=>{ audioPop = 0; }});
 }
 
-/* ---- POP-UPS: the cheat passcode and "are you sure?" before a reset ---- */
-let modal = null;                                   // {kind:'cheat'|'reset', t, code, bad}
+/* ---- POP-UPS: the cheat passcode, the cheat menu, and "are you sure?" before a reset ---- */
+let modal = null;                                   // {kind:'cheat'|'cheatopts'|'reset', t, code, bad}
 const CHEAT_CODE = 'FROG';                          // capitals or not, it doesn't matter
 const codeIn = document.createElement('input');     // an invisible box so a phone brings up its keyboard
 codeIn.type='text'; codeIn.autocomplete='off'; codeIn.spellcheck=false; codeIn.maxLength=12;
@@ -8917,7 +8920,7 @@ function openModal(kind){
 function closeModal(){ modal = null; codeFocus = false; codeIn.value=''; codeIn.blur(); }
 function submitCode(){
   if(!modal || modal.kind!=='cheat') return;
-  if(modal.code === CHEAT_CODE){ closeModal(); cheatAll(); }
+  if(modal.code === CHEAT_CODE){ closeModal(); cheatAll(); openModal('cheatopts'); }
   else { modal.bad = 1; modal.shake = 0.45; modal.code=''; codeIn.value=''; SFX.deny(); }
 }
 function modalKey(e){                               // a real keyboard, when the hidden box lost focus
@@ -8931,11 +8934,11 @@ function modalKey(e){                               // a real keyboard, when the
 }
 function drawModal(dt){
   modal.t += dt; modal.shake = Math.max(0, modal.shake - dt);
-  const base = buttons.length, cheat = modal.kind==='cheat';
+  const base = buttons.length, cheat = modal.kind==='cheat', opts = modal.kind==='cheatopts';
   X.save();
   const a = Math.min(1, modal.t/0.18);
   X.fillStyle='rgba(2,10,18,'+(0.70*a)+')'; X.fillRect(0,0,W,H);
-  const pw=540, ph=cheat? 300 : 270;
+  const pw=540, ph=cheat? 300 : opts? 330 : 270;
   const px=(W-pw)/2 + (modal.shake>0? Math.sin(modal.t*70)*12*modal.shake/0.45 : 0), py=(H-ph)/2 - 20;
   const sc = 0.9 + 0.1*(1-Math.pow(1-a,3));
   X.translate(W/2, py+ph/2); X.scale(sc, sc); X.translate(-W/2, -(py+ph/2));
@@ -8943,7 +8946,32 @@ function drawModal(dt){
   X.fillStyle='rgba(6,22,38,.94)'; rr(px+14, py+14, pw-28, ph-28, 12); X.fill();
   X.strokeStyle='rgba(255,233,184,.30)'; X.lineWidth=2; X.stroke();
   X.textAlign='center';
-  if(cheat){
+  if(opts){                                          // THE CHEAT MENU: two switches
+    X.save(); X.translate(W/2, py+2);
+    X.fillStyle='#3a1f0b'; X.beginPath(); X.arc(0,0,26,0,7); X.fill();
+    X.fillStyle='#8affc9'; const r=16; X.beginPath(); X.moveTo(r*0.25,-r*1.05); X.lineTo(-r*0.55,r*0.15); X.lineTo(-r*0.02,r*0.15);
+    X.lineTo(-r*0.30,r*1.05); X.lineTo(r*0.60,-r*0.25); X.lineTo(r*0.05,-r*0.25); X.closePath(); X.fill(); X.restore();
+    X.fillStyle='#8affc9'; X.font='900 28px ui-rounded, Trebuchet MS, sans-serif';
+    X.fillText('CHEATS', W/2, py+64);
+    const rows = [['cheatFree', 'EVERYTHING COSTS 0', 'blobs and wealth are free'], ['cheatNoCd', 'NO COOLDOWN', 'blobs and the cannon are always ready']];
+    rows.forEach(([key, title, sub2], i) => {
+      const ry = py + 92 + i*86, on = !!save[key], rx = px+40, rw = pw-80, rh = 72;
+      buttons.push({x:rx, y:ry, w:rw, h:rh, dis:false, fn:()=>{ save[key] = on ? 0 : 1; persist(); on ? SFX.click() : SFX.upgrade(); }});
+      X.fillStyle = on ? 'rgba(60,180,110,.22)' : 'rgba(4,18,31,.9)'; rr(rx, ry, rw, rh, 14); X.fill();
+      X.strokeStyle = on ? '#8affc9' : 'rgba(255,233,184,.25)'; X.lineWidth = 2; X.stroke();
+      X.textAlign = 'left';
+      X.fillStyle = '#ffe9b8'; X.font = '900 20px ui-rounded, Trebuchet MS, sans-serif'; X.fillText(title, rx+20, ry+32);
+      X.fillStyle = '#8fb4cd'; X.font = '700 14px ui-rounded, Trebuchet MS, sans-serif'; X.fillText(sub2, rx+20, ry+54);
+      const sx = rx+rw-96, sy = ry+20, sw2 = 76, sh2 = 34, k2 = on ? 1 : 0;       // the switch
+      X.fillStyle = on ? '#2f9b3f' : '#3a4a5a'; rr(sx, sy, sw2, sh2, 17); X.fill();
+      X.fillStyle = '#ffffff'; X.beginPath(); X.arc(sx + 17 + k2*(sw2-34), sy+17, 13, 0, 7); X.fill();
+      X.fillStyle = on ? '#2f9b3f' : '#8a9aaa'; X.font = '900 11px ui-rounded, Trebuchet MS, sans-serif'; X.textAlign = 'center';
+      X.fillText(on ? 'ON' : 'OFF', sx + 17 + k2*(sw2-34), sy+21);
+      X.textAlign = 'center';
+    });
+    X.textAlign='left';
+    btn(px+pw/2-100, py+ph-70, 200, 50, 'DONE', ()=>closeModal(), {fs:18, r:12, c1:'#8affc9', c2:'#2f9b3f'});
+  } else if(cheat){
     // a lightning bolt badge on the lid
     X.save(); X.translate(W/2, py+2);
     X.fillStyle='#3a1f0b'; X.beginPath(); X.arc(0,0,26,0,7); X.fill();
@@ -9213,7 +9241,7 @@ function drawMenu(dt){
     X.fillStyle= save.cheat? '#8affc9' : '#ffe9b8';       // a lightning bolt
     X.beginPath(); X.moveTo(r*0.25,-r*1.05); X.lineTo(-r*0.55,r*0.15); X.lineTo(-r*0.02,r*0.15);
     X.lineTo(-r*0.30,r*1.05); X.lineTo(r*0.60,-r*0.25); X.lineTo(r*0.05,-r*0.25); X.closePath(); X.fill();
-  }, ()=>{ if(save.cheat){ SFX.deny(); return; } openModal('cheat'); });
+  }, ()=>{ SFX.click(); openModal(save.cheat ? 'cheatopts' : 'cheat'); });
 
   // ---- capsule shelf, bottom centre ----
   const shx=330, shy=430, shw=400, shh=74;
@@ -10008,7 +10036,7 @@ function drawEquip(dt){
       X.font='800 '+(nm.length>13? 9 : 11)+'px ui-rounded, Trebuchet MS, sans-serif';
       X.fillText(nm, x+sw/2, sy2+84);
       X.fillStyle='rgba(255,255,255,.75)'; X.font='800 9px ui-rounded, Trebuchet MS, sans-serif';
-      X.fillText('\u00a4'+U[k].cost+'  \u00b7  drag to move', x+sw/2, sy2+98);
+      X.fillText('\u00a4'+ucost(k)+'  \u00b7  drag to move', x+sw/2, sy2+98);
     } else {
       X.strokeStyle='rgba(255,255,255,.22)'; X.lineWidth=2.5; X.setLineDash([6,6]);
       rr(x+22, sy2+28, sw-44, sh-50, 12); X.stroke(); X.setLineDash([]);
@@ -10059,7 +10087,7 @@ function drawEquip(dt){
     X.fillStyle='#ffffff'; X.font='800 '+(nm.length>12? 8 : 9)+'px ui-rounded, Trebuchet MS, sans-serif';
     X.fillText(nm, cxp+cw/2, cyp+(shTab? 55 : 62));
     X.fillStyle='rgba(255,255,255,.8)'; X.font='800 9px ui-rounded, Trebuchet MS, sans-serif';
-    X.fillText('¤'+U[k].cost, cxp+cw/2, cyp+(shTab? 66 : 76));
+    X.fillText('¤'+ucost(k), cxp+cw/2, cyp+(shTab? 66 : 76));
     if(inTeam){ X.fillStyle='#8affc9'; X.font='900 8px ui-rounded, Trebuchet MS, sans-serif';
                 X.fillText('EQUIPPED', cxp+cw/2, cyp+15); }
     X.textAlign='left'; X.restore();
