@@ -445,7 +445,7 @@ const U = {
           swT:1.0, hitP:0.88, sludge:1, boss:1, noKB:1,
           c:['#e2c2f6','#9a5cc6','#4a2268']},          // the jaw opens far too high, then slams: every 1s, no knockback ever
   drice: {nm:'DOCTOR ICE', traits:['ice'], team:-1, hp:6000, dmg:0, rate:40, spd:22, rng:380, r:60, wide:1,
-          swT:1.6, hitP:0.62, drIce:1, summon:'reincarnate', boss:1, bossTrack:1, kbStep:0.25,
+          swT:1.6, hitP:0.62, drIce:1, summon:'reincarnate', boss:1, bossTrack:1, kbStep:1/21,   // knocked back 20 times on the way down (user)
           c:['#eefaff','#8fd0f2','#2f6f9a']},          // never attacks: every 40s he raises something dead (80% yeti, 20% sludge; the first is always the sludge)
   rsludge:{nm:'REINCARNATED SLUDGE', traits:['toxic'], team:-1, hp:9000, dmg:100, rate:0.005, spd:96, rng:50, r:64, wide:1.25,
           swT:0.5, hitP:0.88, sludge:1, iceKing:1, noKB:1,
@@ -921,13 +921,16 @@ function endHM(w){ const v = w-1; return 0.7 * (1 + 0.40*v + 0.025*v*v) * Math.p
 // so a Brute on wave 25 is a monster and an Avalanche on wave 5 is beatable
 const END_NATIVE = {brute:3, blower:4, scrapjaw:5, oak:6, golem:6, mib:8, sludge:12, toad:12, phoenix:13,
                     yeti:14, devilr:14, lord:16, drice:20, avalanche:22, king:7, clock:15};
+const END_BOSS_HP = 2.0, END_BOSS_DMG = 1.5;          // endless bosses hit like bosses...
+const END_PEON_HP = 0.55, END_PEON_DMG = 0.6;         // ...and the crowd in between is thinner (user: make it major)
+const END_HP_ADJ = {lord:0.5};                        // the Tide washes everyone back every swing: at full HP it was an 8-15 minute slog
 function endScale(u, w, boss){                       // waves get tougher: more HP, more bite
   if(boss){
     const f = Math.pow(endHM(w) / endHM(END_NATIVE[u.k] || w), 0.8);
-    u.max = Math.max(Math.round(u.max*f), Math.round(600*Math.pow(endHM(w),0.8)/10)*10); u.hp = u.max; u.dmgMul = (u.dmgMul||1)*Math.sqrt(f); u.endF = f;   // (never a pushover)
+    u.max = Math.round(Math.max(u.max*f, 600*Math.pow(endHM(w),0.8)) * END_BOSS_HP * (END_HP_ADJ[u.k]||1) / 10)*10; u.hp = u.max; u.dmgMul = (u.dmgMul||1)*Math.sqrt(f)*END_BOSS_DMG; u.endF = f;   // (never a pushover)
     return;
   }
-  u.max = Math.round(u.max*endHM(w)); u.hp = u.max; u.dmgMul = (u.dmgMul||1)*0.7*(1 + 0.15*(w-1));
+  u.max = Math.max(1, Math.round(u.max*endHM(w)*END_PEON_HP)); u.hp = u.max; u.dmgMul = (u.dmgMul||1)*0.7*(1 + 0.15*(w-1))*END_PEON_DMG;
 }
 function endStart(){
   const E = B.endless = {wave:0, state:'break', t:2.5, queue:[], gap:1, boss:null, xp:0, mus:null, base:{sky:B.L.sky, hill:B.L.hill, night:B.L.night, snow:B.L.snow}};
@@ -955,7 +958,7 @@ function endSpawnBoss(){
   if(mega) k = endPick(endPool(w).filter(x => !U[x].throwArc));
   const u = spawnUnit(k, true); u.isBoss = true;
   if(mega){                                         // literally just a slime — absurdly buffed
-    u.max = Math.round(1100 * Math.pow(endHM(w),0.8)); u.hp = u.max; u.dmgMul = (3 + 0.15*w) * (12/Math.max(6, U[k].dmg||12)) ** 0.5; u.rs = 2.4;   // same bar whatever it was
+    u.max = Math.round(1100 * Math.pow(endHM(w),0.8) * END_BOSS_HP); u.hp = u.max; u.dmgMul = (3 + 0.15*w) * (12/Math.max(6, U[k].dmg||12)) ** 0.5 * END_BOSS_DMG; u.rs = 2.4;   // same bar whatever it was
     u.nmOverride = 'MEGA ' + U[k].nm.replace(/^THE /,'');
   } else endScale(u, w, true);
   E.boss = u;
@@ -6582,6 +6585,8 @@ function endAir(u){
     }
     splat(u.x, GY-U[u.k].r*0.7, U[u.k].c[1], 18, 210);
     SFX.splat();
+  } else if(u.kbQueue>0 && u.hp>0){
+    u.kbQueue--; knockback(u, 1, false);          // the owed knockbacks go off one after another
   } else {
     u.atk = U[u.k].rate*0.6;   // needs a moment to wind up again
   }
@@ -6800,6 +6805,7 @@ function dmgUnit(u, amount, from, src){
     const crossed = Math.floor((1 - u.hp/u.max)/d.kbStep + 1e-9);
     if(crossed > u.kbCount){
       if(d.reborn) u.haste = (u.haste||1) * Math.pow(1.2, crossed - u.kbCount);   // DEVIL REBORN: each of his 5 knockbacks, 20% faster
+      if(d.drIce) u.kbQueue = (u.kbQueue||0) + (crossed - u.kbCount - 1);   // DOCTOR ICE: a big hit owes him one knockback per step it skipped
       u.kbCount = crossed; knockback(u, 1, false);
     }
   }
