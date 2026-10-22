@@ -1370,45 +1370,200 @@ class Boxer {
   // STEEL KNUCKLES — the gloves go metal for a few punches, then back to leather
   // A championship medal on a ribbon, hung round the neck. Rebuilt whenever the
   // tier changes; null clears it.
+  // A proper medal: beveled coin with a raised rim and a star (laurels on
+  // silver and gold, a gem on gold), hung from a two-strip ribbon that is
+  // laid ON this wrestler's actual chest. Every placement number is measured
+  // off the body with rays, so it sits right on Joe's pecs, Honk's belly and
+  // Bean's sphere alike instead of floating or sinking in.
   wearMedal(medal) {
     if (this.medalGroup) {
       this.parts.torso.remove(this.medalGroup);
-      this.medalGroup.traverse(o => { if (o.geometry) o.geometry.dispose(); });
-      this.medalGroup = null;
+      this.medalGroup.traverse(o => {
+        if (o.geometry) o.geometry.dispose();
+        if (o.material && o.material.map) o.material.map.dispose();
+      });
+      this.medalGroup = null; this.medalPivot = null;
     }
     if (!medal) return;
-    const torsoLen = RIG.chestY - RIG.hipY;
-    const g = new THREE.Group();
-    const ribbonM = new THREE.MeshStandardMaterial({ color: medal.ribbon, roughness: 0.85 });
-    const metalM = new THREE.MeshStandardMaterial({
-      color: medal.metal, metalness: 0.85, roughness: 0.22 });
-    // Hang it off the ACTUAL chest surface. The old formula (0.17 + bulk*0.06)
-    // grew far too slowly: Honk's belly reaches ~0.48 out at bulk 1.95 and the
-    // medal sat at 0.30 — completely buried inside him. These are the same
-    // numbers buildRig uses for the chest sphere.
+    const P = this.parts, torso = P.torso;
     const bulk = this.cfg.bulk || 1;
-    const jacked = this.cfg.physique === 'jacked';
-    const chestDepth = this.cfg.build === 'bean'
-      ? 0.5 * 0.72                                   // his body IS the sphere
-      : 0.34 * (jacked ? 0.62 : 0.72) * bulk;
-    const reach = chestDepth + 0.05;
-    const hangY = torsoLen * 0.72;
-    const hangZ = reach + 0.015;
-    for (const side of [1, -1]) {
-      const strap = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.26, 0.018), ribbonM);
-      strap.position.set(side * reach * 0.36, hangY + 0.19, reach - 0.01);
-      strap.rotation.set(-0.12, 0, side * 0.3);
-      g.add(strap);
+    const torsoLen = RIG.chestY - RIG.hipY;
+
+    // ---- measure the body ----
+    this.root.updateWorldMatrix(true, true);
+    const skip = new Set([P.armL.shoulder, P.armR.shoulder, P.neck]);
+    const body = [];
+    const walk = (o) => {
+      if (skip.has(o) || (o.userData && o.userData.headPart)) return;
+      if (o.isMesh && o.visible) body.push(o);
+      for (const ch of o.children) walk(ch);
+    };
+    for (const ch of torso.children) walk(ch);
+    const ray = new THREE.Raycaster();
+    const a = new THREE.Vector3(), b = new THREE.Vector3();
+    // z of the body surface seen from the front at torso-local (x, y)
+    const surfZ = (x, y) => {
+      torso.localToWorld(a.set(x, y, 3));
+      torso.localToWorld(b.set(x, y, -3));
+      ray.set(a, b.sub(a).normalize());
+      const hit = ray.intersectObjects(body, false)[0];
+      return hit ? torso.worldToLocal(hit.point.clone()).z : null;
+    };
+    const neckMeshes = [];
+    P.neck.traverse(o => { if (o.isMesh) neckMeshes.push(o); });
+    // half-width of the neck where the ribbon goes round it
+    const neckBaseY = P.neck.position.y;
+    let neckHalf = 0.085 * Math.min(1.5, bulk);
+    torso.localToWorld(a.set(1, neckBaseY + 0.06, 0));
+    torso.localToWorld(b.set(-1, neckBaseY + 0.06, 0));
+    const nh = new THREE.Raycaster(a, b.clone().sub(a).normalize()).intersectObjects(neckMeshes, false)[0];
+    if (nh) neckHalf = Math.max(0.05, Math.min(0.2, torso.worldToLocal(nh.point.clone()).x));
+
+    // ---- size and hang point ----
+    const R = 0.082 * Math.min(1.3, Math.sqrt(bulk));
+    const T = 0.022;                                   // coin thickness
+    // mid-chest: higher on the bean (all head) and on the jacked builds,
+    // whose belt rides up
+    const hangY = torsoLen * (this.cfg.build === 'bean' ? 0.8
+      : this.cfg.physique === 'jacked' ? 0.68 : 0.56);
+    // hang off the most forward bit of chest behind the coin so it never clips
+    let front = -1;
+    for (let iy = -2; iy <= 2; iy++) for (let ix = -2; ix <= 2; ix++) {
+      const z = surfZ(ix / 2 * R, hangY + iy / 2 * R);
+      if (z != null) front = Math.max(front, z);
     }
-    const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.018, 18), metalM);
-    disc.rotation.x = Math.PI / 2;
-    disc.position.set(0, hangY, hangZ);
-    g.add(disc);
-    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.011, 8, 20), metalM);
-    rim.position.copy(disc.position);
-    g.add(rim);
-    this.parts.torso.add(g);
+    if (front < 0) front = 0.34 * 0.72 * bulk;
+    const coinZ = front + T * 0.5 + 0.012;
+    const claspY = hangY + R + 0.045;
+
+    // ---- materials ----
+    const metal = new THREE.Color(medal.metal);
+    const metalM = new THREE.MeshStandardMaterial({
+      color: metal, metalness: 0.55, roughness: 0.28,
+      emissive: metal.clone().multiplyScalar(0.22) });
+    const faceM = new THREE.MeshStandardMaterial({
+      color: metal.clone().multiplyScalar(0.78), metalness: 0.45, roughness: 0.42,
+      emissive: metal.clone().multiplyScalar(0.12) });
+    const tier = medal.tier || 1;
+
+    // ribbon: the medal's colour with this wrestler's own colour down the middle
+    const rc = document.createElement('canvas'); rc.width = 64; rc.height = 8;
+    const rg = rc.getContext('2d');
+    const hex = (n) => '#' + new THREE.Color(n).getHexString();
+    rg.fillStyle = hex(medal.ribbon); rg.fillRect(0, 0, 64, 8);
+    rg.fillStyle = hex(medal.metal); rg.fillRect(6, 0, 4, 8); rg.fillRect(54, 0, 4, 8);
+    rg.fillStyle = this.cfg.uiColor || '#ffffff'; rg.fillRect(24, 0, 16, 8);
+    const ribbonTex = new THREE.CanvasTexture(rc);
+    const ribbonM = new THREE.MeshStandardMaterial({ map: ribbonTex, roughness: 0.8, side: THREE.DoubleSide });
+
+    const g = new THREE.Group();
+
+    // ---- ribbon: two strips from the base of the neck down to the clasp ----
+    const W = 0.052 * Math.min(1.3, Math.sqrt(bulk));
+    // start where the body actually is beside the neck — above that the ribbon
+    // would be floating (it disappears round the back of the neck from here)
+    let topY = neckBaseY + 0.16;
+    while (topY > claspY + 0.05 && surfZ(neckHalf + 0.01, topY) == null) topY -= 0.01;
+    for (const side of [1, -1]) {
+      const pts = [];
+      const N = 10;
+      for (let i = 0; i <= N; i++) {
+        const k = i / N;
+        const x = side * (neckHalf + 0.01 + (0.016 - neckHalf - 0.01) * k);
+        const y = topY + (claspY - topY) * k;
+        const sz = surfZ(x, y);
+        let z = (sz != null ? sz : (pts.length ? pts[pts.length - 1].z - 0.008 : coinZ - T)) + 0.008;
+        const blend = Math.max(0, (k - 0.55) / 0.45);
+        z = z + (Math.max(z, coinZ - T * 0.5) - z) * blend * blend * (3 - 2 * blend);
+        pts.push(new THREE.Vector3(x, y, z));
+      }
+      const pos = [], uv = [], idx = [];
+      const tan = new THREE.Vector3(), sideV = new THREE.Vector3(), fwd = new THREE.Vector3(0, 0, 1);
+      let len = 0;
+      for (let i = 0; i < pts.length; i++) {
+        const p0 = pts[Math.max(0, i - 1)], p1 = pts[Math.min(pts.length - 1, i + 1)];
+        tan.subVectors(p1, p0).normalize();
+        sideV.crossVectors(tan, fwd).normalize().multiplyScalar(W / 2);
+        if (i > 0) len += pts[i].distanceTo(pts[i - 1]);
+        pos.push(pts[i].x - sideV.x, pts[i].y - sideV.y, pts[i].z - sideV.z,
+                 pts[i].x + sideV.x, pts[i].y + sideV.y, pts[i].z + sideV.z);
+        uv.push(0, len * 8, 1, len * 8);
+        if (i > 0) { const q = (i - 1) * 2; idx.push(q, q + 1, q + 2, q + 1, q + 3, q + 2); }
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+      geo.setIndex(idx);
+      geo.computeVertexNormals();
+      g.add(new THREE.Mesh(geo, ribbonM));
+    }
+
+    // ---- clasp bar + the medal on a pivot so it can swing ----
+    const clasp = new THREE.Mesh(new THREE.BoxGeometry(W * 1.9, 0.026, 0.02), metalM);
+    clasp.position.set(0, claspY, coinZ - T * 0.2);
+    g.add(clasp);
+    const pivot = new THREE.Group();
+    pivot.position.set(0, claspY, coinZ);
+    g.add(pivot);
+    const coin = new THREE.Group();
+    coin.position.y = -(claspY - hangY);
+    pivot.add(coin);
+
+    const loop = new THREE.Mesh(new THREE.TorusGeometry(0.016, 0.005, 6, 12), metalM);
+    loop.position.y = R + 0.012;
+    coin.add(loop);
+
+    // beveled coin with a raised rim and a recessed face (lathe, turned to face +z)
+    const prof = [
+      [0.0001, -T / 2], [R * 0.96, -T / 2], [R, -T * 0.25], [R, T * 0.25],
+      [R * 0.95, T / 2], [R * 0.84, T / 2], [R * 0.8, T * 0.18], [0.0001, T * 0.18]
+    ].map(([r, y]) => new THREE.Vector2(r, y));
+    const body3 = new THREE.Mesh(new THREE.LatheGeometry(prof, 32), metalM);
+    body3.rotation.x = Math.PI / 2;
+    coin.add(body3);
+    const face = new THREE.Mesh(new THREE.CircleGeometry(R * 0.8, 32), faceM);
+    face.position.z = T * 0.18 + 0.0005;
+    coin.add(face);
+
+    // the star
+    const star = new THREE.Shape();
+    for (let i = 0; i < 10; i++) {
+      const rr = i % 2 ? R * 0.22 : R * (tier >= 3 ? 0.5 : 0.56);
+      const an = Math.PI / 2 + i * Math.PI / 5;
+      star[i ? 'lineTo' : 'moveTo'](Math.cos(an) * rr, Math.sin(an) * rr);
+    }
+    const starGeo = new THREE.ExtrudeGeometry(star, {
+      depth: T * 0.35, bevelEnabled: true, bevelThickness: T * 0.12, bevelSize: R * 0.03, bevelSegments: 1 });
+    const starM = new THREE.Mesh(starGeo, metalM);
+    starM.position.z = T * 0.18;
+    coin.add(starM);
+
+    // laurels round the bottom of the face for silver and gold
+    if (tier >= 2) {
+      const leafGeo = new THREE.SphereGeometry(1, 8, 6);
+      for (const sd of [1, -1]) {
+        for (let i = 0; i < 5; i++) {
+          const an = -Math.PI / 2 + sd * (0.35 + i * 0.27);
+          const leaf = new THREE.Mesh(leafGeo, metalM);
+          leaf.scale.set(R * 0.11, R * 0.05, T * 0.18);
+          leaf.position.set(Math.cos(an) * R * 0.66, Math.sin(an) * R * 0.66, T * 0.3);
+          leaf.rotation.z = an + sd * Math.PI / 2 + sd * 0.5;
+          coin.add(leaf);
+        }
+      }
+    }
+    // gold gets a ruby in the heart of the star
+    if (tier >= 3) {
+      const gem = new THREE.Mesh(new THREE.SphereGeometry(R * 0.14, 12, 8),
+        new THREE.MeshStandardMaterial({ color: 0xe0203a, roughness: 0.15, metalness: 0.1, emissive: 0x5a0010 }));
+      gem.scale.z = 0.6;
+      gem.position.z = T * 0.18 + T * 0.55;
+      coin.add(gem);
+    }
+
+    torso.add(g);
     this.medalGroup = g;
+    this.medalPivot = pivot;
   }
 
   setSteel(n) {
@@ -1485,6 +1640,8 @@ class Boxer {
       }
     }
     this.flinch = Math.max(0, this.flinch - dt * 3.2);
+    // the medal sways on its ribbon
+    if (this.medalPivot) this.medalPivot.rotation.z = Math.sin(t * 1.9) * 0.06 + Math.sin(t * 3.1) * 0.02;
 
     // Catch your breath: 3 clean seconds and you start healing back up. Getting
     // up from a knockdown resets this clock, so a knockdown never heals you —

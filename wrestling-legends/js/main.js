@@ -1624,12 +1624,14 @@ function rollLoot(tier) {
 let crateQueue = 0, crateNext = null, crateState = 'upgrade';
 let cratePending = 0, crateTier = 0, crateChances = UPGRADE_CHANCES;
 
-function paintCrate() {
-  const tier = RARITY[crateTier];
+// shownTier: what the label should say right now (lags the real tier while
+// the crate is still mid-spin)
+function paintCrate(shownTier = crateTier) {
+  const tier = RARITY[shownTier];
   $('crate-rarity').textContent = tier.name;
   $('crate-rarity').className = 'crate-rarity ' + tier.cls;
   $('crate-sub').textContent = crateQueue + (crateQueue === 1 ? ' crate left · ' : ' crates left · ') +
-    (crateTier >= RARITY.length - 1
+    (shownTier >= RARITY.length - 1
       ? 'maxed out!'
       : crateChances + (crateChances === 1 ? ' upgrade chance' : ' upgrade chances'));
 }
@@ -1672,27 +1674,34 @@ $('btn-crate').addEventListener('click', () => {
     const roll = Math.random();
     const gain = roll < UPGRADE_ONE ? 1 : (roll < UPGRADE_ONE + UPGRADE_TWO ? 2 : 0);
     const before = crateTier;
-    if (gain > 0 && crateTier < RARITY.length - 1) {
-      crateTier = Math.min(RARITY.length - 1, crateTier + gain);
-      const jumped = crateTier - before;
-      // No shouty line — the rarity label above the box already changes name
-      // and colour, and the shake plus the sparkle sell the jump.
-      res.className = 'crate-result upgraded' + (jumped > 1 ? ' double' : '');
-      res.textContent = '';
-      AudioFX.sparkle(jumped > 1 ? 6 : 4);
-      Crate3D.upgrade(crateTier, jumped);
-    } else {
-      res.className = 'crate-result nothing';
-      res.textContent = 'NO LUCK';
-      AudioFX.hit(0.35);
-      Crate3D.dud();
-    }
-    hold(350);
+    const up = gain > 0 && crateTier < RARITY.length - 1;
+    if (up) crateTier = Math.min(RARITY.length - 1, crateTier + gain);
+    const tierNow = crateTier, jumped = crateTier - before;
+    res.className = 'crate-result';
+    res.textContent = '';
+    // the crate hops and spins first; the result lands with it
+    Crate3D.spin(() => {
+      if (up) {
+        // No shouty line — the rarity label above the box already changes name
+        // and colour, and the shake plus the sparkle sell the jump.
+        res.className = 'crate-result upgraded' + (jumped > 1 ? ' double' : '');
+        res.textContent = '';
+        AudioFX.sparkle(jumped > 1 ? 6 : 4);
+        Crate3D.upgrade(tierNow, jumped);
+      } else {
+        res.className = 'crate-result nothing';
+        res.textContent = 'NO LUCK';
+        AudioFX.hit(0.35);
+        Crate3D.dud();
+      }
+      paintCrate();
+    });
+    hold(Crate3D.SPIN_MS + 250);
     if (crateChances <= 0 || crateTier >= RARITY.length - 1) {
       crateState = 'ready';
       btn.textContent = 'OPEN CRATE';
     }
-    paintCrate();
+    paintCrate(before);   // the rarity label only changes when the crate lands
     return;
   }
 
@@ -2307,7 +2316,7 @@ function playerGrabThrow(b, opp, lookDir) {
   if (e.isKO && e.state === 'ragdoll') {
     const c = e.ragdoll.center();
     if (p.pos.distanceTo(c) < 2.0) { combatAPI.tryGrab(p, e); return; }
-    if (p.remote) Online.toGuest(['ann', 'TOO FAR', '#8b96bd']); else announce('TOO FAR', '#8b96bd');
+    // out of reach: no banner — the "get close and press E" hint already says so
   }
 }
 
@@ -2538,7 +2547,6 @@ const combatAPI = {
     RingRopes.impactAt(b.pos, 6.5);       // the bull meets the ropes
     AudioFX.slam();
     game.shake = Math.max(game.shake, 0.4);
-    announce('MISSED!', '#8b96bd');
   },
 
   // SLUMBERJACK — down for a nap, healing hard, wide open

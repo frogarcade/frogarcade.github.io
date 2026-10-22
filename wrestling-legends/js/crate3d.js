@@ -24,7 +24,9 @@ const Crate3D = (() => {
   // animation state
   const S = { shake: 0, drop: 0, dropping: false, opening: -1, openDone: false,
               lidAng: 0, lidVel: 0, lidLift: 0, glow: 0, glowTarget: 0.15,
-              kick: 0, flash: 0, icons: [], iconMode: 'none', camZoom: 0 };
+              kick: 0, flash: 0, icons: [], iconMode: 'none', camZoom: 0,
+              spin: -1, spinCb: null };
+  const SPIN_DUR = 0.8;   // the upgrade roll: hop, two full turns, land
 
   // ---------------------------------------------------------------- textures
   function woodTexture() {
@@ -384,10 +386,39 @@ const Crate3D = (() => {
     S.kick *= Math.exp(-7 * dt);
     const settle = Math.sin(t * 22) * S.kick * 0.06;
 
+    // ---- upgrade roll: the crate hops and spins, shedding a spiral of sparks,
+    // and only shows whether it upgraded once it lands
+    let spinYaw = 0, spinTilt = 0;
+    if (S.spin >= 0) {
+      S.spin += dt;
+      const k = Math.min(1, S.spin / SPIN_DUR);
+      const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;   // ease in-out
+      spinYaw = e * Math.PI * 4;
+      spinTilt = Math.sin(k * Math.PI) * 0.22;
+      y += Math.sin(k * Math.PI) * 0.32;
+      const col = RARITY_LOOK[tier].glow;
+      const rate = 160 * Math.sin(k * Math.PI) + 20;
+      for (let n = Math.floor(rate * dt + Math.random()); n > 0; n--) {
+        const a = -0.55 + spinYaw + Math.random() * Math.PI * 2;
+        const r = Math.max(W, D) * 0.62, py = y + Math.random() * H;
+        // flung off tangentially, the way the crate is turning
+        spawn({ x: Math.cos(a) * r, y: py, z: Math.sin(a) * r,
+                vx: -Math.sin(a) * 2.6 + Math.cos(a) * 0.6, vy: 0.4 + Math.random() * 1.2, vz: Math.cos(a) * 2.6 + Math.sin(a) * 0.6,
+                life: 0.6 + Math.random() * 0.5, size: 4 + Math.random() * 6,
+                color: Math.random() < 0.35 ? 0xffffff : col, grav: -2, drag: 1.4 });
+      }
+      if (k >= 1) {
+        S.spin = -1; S.kick = 0.3; S.shake = Math.max(S.shake, 0.4);
+        dust(10);
+        const cb = S.spinCb; S.spinCb = null;
+        if (cb) cb();
+      }
+    }
+
     // idle sway, plus shake
     S.shake *= Math.exp(-5 * dt);
     const jx = (Math.random() - 0.5) * S.shake * 0.12, jz = (Math.random() - 0.5) * S.shake * 0.12;
-    crate.rotation.set(jx, -0.55 + Math.sin(t * 0.55) * 0.07, jz);
+    crate.rotation.set(jx + spinTilt, -0.55 + Math.sin(t * 0.55) * 0.07 + spinYaw, jz);
     crate.position.y = y + Math.abs(settle);
     blobShadow.scale.setScalar(1 - Math.min(0.6, y * 0.15));
     blobShadow.material.opacity = 1 - Math.min(0.8, y * 0.25);
@@ -572,7 +603,7 @@ const Crate3D = (() => {
       S.opening = -1; S.popped = false; S.lidAng = 0; S.lidVel = 0; S.lidLift = 0;
       lidPivot.rotation.x = 0; lidPivot.position.y = H;
       innerLight.intensity = 0; interiorMat.emissiveIntensity = 0; rays.material.opacity = 0;
-      S.dropping = true; S.drop = 0; S.camZoom = 0;
+      S.dropping = true; S.drop = 0; S.camZoom = 0; S.spin = -1; S.spinCb = null;
       clearIcons(); P.length = 0;
       setLook(rarity || 0, true);
       sizedW = sizedH = 0; resize();
@@ -584,6 +615,13 @@ const Crate3D = (() => {
       burstRing(0xffffff, 14, H);
     },
     dud() { S.shake = 0.35; S.kick = 0.18; dust(8); },
+    // hop-and-spin; onLand fires when it touches down (reveal the result then)
+    spin(onLand) {
+      if (S.spin >= 0 && S.spinCb) { const cb = S.spinCb; S.spinCb = null; cb(); }
+      S.spin = 0; S.spinCb = onLand || null;
+      if (window.AudioFX && AudioFX.whoosh) AudioFX.whoosh();
+    },
+    SPIN_MS: SPIN_DUR * 1000,
     open() { S.opening = 0; S.popped = false; },
     reveal(n) { showIcons(n); },
     claim() { S.iconMode = 'claim'; for (const ic of S.icons) ic.t = 0; burstRing(0x7dffa2, 30, H + 1); },
